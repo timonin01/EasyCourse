@@ -1,0 +1,138 @@
+package org.core.service;
+
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.core.domain.Lesson;
+import org.core.domain.Model;
+import org.core.dto.lesson.CreateLessonDTO;
+import org.core.dto.lesson.LessonResponseDTO;
+import org.core.dto.lesson.UpdateLessonDTO;
+import org.core.exception.LessonNotFoundException;
+import org.core.exception.ModelNotFoundException;
+import org.core.repository.LessonRepository;
+import org.core.repository.ModelRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Slf4j
+@Transactional
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+public class LessonService {
+
+    private final LessonRepository lessonRepository;
+    private final ModelRepository modelRepository;
+
+    public LessonResponseDTO createLesson(CreateLessonDTO createDTO) {
+        Model model = modelRepository.findById(createDTO.getModelId())
+            .orElseThrow(() -> new ModelNotFoundException("Model not found"));
+        Integer position = createDTO.getPosition();
+        if (position == null) {
+            position = getNextPosition(model.getId());
+        } else {
+            shiftLessonsPositions(model.getId(), position);
+        }
+
+        Lesson lesson = new Lesson();
+        lesson.setModel(model);
+        lesson.setTitle(createDTO.getTitle());
+        lesson.setDescription(createDTO.getDescription());
+        lesson.setPosition(position);
+
+        log.info("Created new lesson with ID: {} in model: {}", lesson.getId(), model.getId());
+
+        return mapToResponseDTO(lessonRepository.save(lesson));
+    }
+
+    public LessonResponseDTO getLessonByLessonID(Long lessonId) {
+        Lesson lesson = findLessonById(lessonId);
+        return mapToResponseDTO(lesson);
+    }
+
+    public List<LessonResponseDTO> getModelLessonsByModelId(Long modelId) {
+        List<Lesson> lessons = lessonRepository.findByModelIdOrderByPositionAsc(modelId);
+        return lessons.stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public LessonResponseDTO updateLesson(Long lessonId, UpdateLessonDTO updateDTO) {
+        Lesson lesson = findLessonById(lessonId);
+
+        if (updateDTO.getTitle() != null) {
+            lesson.setTitle(updateDTO.getTitle());
+        }
+        if (updateDTO.getDescription() != null) {
+            lesson.setDescription(updateDTO.getDescription());
+        }
+        if (updateDTO.getPosition() != null && !updateDTO.getPosition().equals(lesson.getPosition())) {
+            changeLessonPosition(lesson, updateDTO.getPosition());
+        }
+
+        Lesson updatedLesson = lessonRepository.save(lesson);
+        log.info("Updated lesson with ID: {}", lessonId);
+
+        return mapToResponseDTO(updatedLesson);
+    }
+
+    public void deleteLesson(Long lessonId) {
+        Lesson lesson = findLessonById(lessonId);
+        Long modelId = lesson.getModel().getId();
+        Integer position = lesson.getPosition();
+
+        lessonRepository.delete(lesson);
+        reorderLessonsAfterDeletion(modelId, position);
+        
+        log.info("Deleted lesson with ID: {} from model: {}", lessonId, modelId);
+    }
+
+    private Lesson findLessonById(Long lessonId) {
+        return lessonRepository.findById(lessonId)
+            .orElseThrow(() -> new LessonNotFoundException("Lesson not found"));
+    }
+
+    private Integer getNextPosition(Long modelId) {
+        return lessonRepository.findMaxPositionByModelId(modelId)
+            .map(pos -> pos + 1)
+            .orElse(1);
+    }
+
+    private void shiftLessonsPositions(Long modelId, Integer fromPosition) {
+        lessonRepository.incrementPositionsFromPosition(modelId, fromPosition);
+    }
+
+    private void changeLessonPosition(Lesson lesson, Integer newPosition) {
+        Long modelId = lesson.getModel().getId();
+        Integer oldPosition = lesson.getPosition();
+        if (newPosition < oldPosition) {
+            lessonRepository.incrementPositionsRange(modelId, newPosition, oldPosition - 1);
+        } else {
+            lessonRepository.decrementPositionsRange(modelId, oldPosition + 1, newPosition);
+        }
+        lesson.setPosition(newPosition);
+    }
+
+    private void reorderLessonsAfterDeletion(Long modelId, Integer deletedPosition) {
+        lessonRepository.decrementPositionsFromPosition(modelId, deletedPosition);
+    }
+
+    private LessonResponseDTO mapToResponseDTO(Lesson lesson) {
+        return LessonResponseDTO.builder()
+                .id(lesson.getId())
+                .title(lesson.getTitle())
+                .description(lesson.getDescription())
+                .position(lesson.getPosition())
+                .modelId(lesson.getModel().getId())
+                .createdAt(lesson.getCreatedAt())
+                .updatedAt(lesson.getUpdatedAt())
+                .build();
+    }
+}
