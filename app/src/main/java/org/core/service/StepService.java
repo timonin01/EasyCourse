@@ -43,30 +43,25 @@ public class StepService {
         step.setType(createStepDTO.getType());
         step.setContent(createStepDTO.getContent());
         step.setPosition(position);
-        Step savedStep = stepRepository.save(step);
 
-        log.info("Step created with id: {} in lesson: {}", savedStep.getId(), lesson.getId());
-        return mapToResponseDto(savedStep);
+        log.info("Step created with id: {} in lesson: {}", step.getId(), lesson.getId());
+        return mapToResponseDto(stepRepository.save(step));
     }
 
-    public StepResponseDTO getStepById(Long id) {
-        Step step = stepRepository.findById(id)
-                .orElseThrow(() -> new StepNotFoundException("Step not found"));
-
+    public StepResponseDTO getStepById(Long stepId) {
+        Step step = getStepByStepId(stepId);
         return mapToResponseDto(step);
     }
 
-    public List<StepResponseDTO> getLessonSteps(Long lessonId) {
+    public List<StepResponseDTO> getLessonStepsByLessonId(Long lessonId) {
         List<Step> steps = stepRepository.findByLessonIdOrderByPositionAsc(lessonId);
         return steps.stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
 
-    public StepResponseDTO updateStep(Long stepId, UpdateStepDTO updateDto) {
-        Step step = stepRepository.findById(stepId)
-                .orElseThrow(() -> new StepNotFoundException("Step not found"));
-
+    public StepResponseDTO updateStep(UpdateStepDTO updateDto) {
+        Step step = getStepByStepId(updateDto.getStepId());
         if (updateDto.getType() != null) {
             step.setType(updateDto.getType());
         }
@@ -76,24 +71,24 @@ public class StepService {
         if (updateDto.getPosition() != null && !updateDto.getPosition().equals(step.getPosition())) {
             changeStepPosition(step, updateDto.getPosition());
         }
-        Step updatedStep = stepRepository.save(step);
-
-        log.info("Step updated with ID: {}", stepId);
-        return mapToResponseDto(updatedStep);
+        log.info("Step updated with ID: {}", updateDto.getStepId());
+        return mapToResponseDto(stepRepository.save(step));
     }
 
     public void deleteStep(Long stepId) {
-        Step step = stepRepository.findById(stepId)
-                .orElseThrow(() -> new StepNotFoundException("Step not found"));
-
+        Step step = getStepByStepId(stepId);
         Long lessonId = step.getLesson().getId();
         Integer position = step.getPosition();
 
         stepRepository.delete(step);
-
         reorderStepsAfterDeletion(lessonId, position);
 
         log.info("Step deleted with ID: {} from lesson: {}", stepId, lessonId);
+    }
+
+    private Step getStepByStepId(Long stepId){
+        return stepRepository.findById(stepId)
+                .orElseThrow(() -> new StepNotFoundException("Step not found"));
     }
 
     private Integer getNextPosition(Long lessonId) {

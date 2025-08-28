@@ -48,7 +48,6 @@ public class LessonService {
         lesson.setPosition(position);
 
         log.info("Created new lesson with ID: {} in model: {}", lesson.getId(), model.getId());
-
         return mapToResponseDTO(lessonRepository.save(lesson));
     }
 
@@ -64,9 +63,8 @@ public class LessonService {
                 .collect(Collectors.toList());
     }
 
-    public LessonResponseDTO updateLesson(Long lessonId, UpdateLessonDTO updateDTO) {
-        Lesson lesson = findLessonById(lessonId);
-
+    public LessonResponseDTO updateLesson(UpdateLessonDTO updateDTO) {
+        Lesson lesson = findLessonById(updateDTO.getLessonId());
         if (updateDTO.getTitle() != null) {
             lesson.setTitle(updateDTO.getTitle());
         }
@@ -77,10 +75,8 @@ public class LessonService {
             changeLessonPosition(lesson, updateDTO.getPosition());
         }
 
-        Lesson updatedLesson = lessonRepository.save(lesson);
-        log.info("Updated lesson with ID: {}", lessonId);
-
-        return mapToResponseDTO(updatedLesson);
+        log.info("Updated lesson with ID: {}", updateDTO.getLessonId());
+        return mapToResponseDTO(lessonRepository.save(lesson));
     }
 
     public void deleteLesson(Long lessonId) {

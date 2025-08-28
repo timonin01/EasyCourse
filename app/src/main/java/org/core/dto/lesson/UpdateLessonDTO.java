@@ -11,6 +11,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UpdateLessonDTO {
 
+    private Long lessonId;
     private String title;
     private String description;
     private Integer position;

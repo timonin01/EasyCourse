@@ -12,7 +12,7 @@ import org.core.domain.StepType;
 @AllArgsConstructor
 public class UpdateStepDTO {
 
-    private Long id;
+    private Long stepId;
     private StepType type;
     private String content;
     private String title;
