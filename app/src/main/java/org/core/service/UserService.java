@@ -4,10 +4,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.User;
-import org.core.dto.user.CreateUserDTO;
-import org.core.dto.user.UserLoginDTO;
-import org.core.dto.user.UserLoginResponseDTO;
-import org.core.dto.user.UserResponseDTO;
+import org.core.dto.user.*;
+import org.core.exception.EmailAlreadyExistsException;
 import org.core.exception.InvalidPasswordException;
 import org.core.exception.UserAlreadyExistsException;
 import org.core.exception.UserNotFoundException;
@@ -16,6 +14,7 @@ import org.core.util.JwtUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.ExemptionMechanismException;
 import java.util.Optional;
 
 @Service
@@ -38,7 +37,6 @@ public class UserService {
         user.setPassword(createDto.getPassword());
 
         log.info("Create user with name - {} and email - {}", user.getName(),user.getEmail());
-
         return mapToResponseDto(userRepository.save(user));
     }
 
@@ -52,47 +50,27 @@ public class UserService {
         }
 
         String token = jwtUtil.generateToken(user);
-
         return new UserLoginResponseDTO(mapToResponseDto(user), token);
     }
 
-    public User changeUserName(Long id, String newName){
-        User user = checkUserEmptyOrNot(id);
-        if(newName.equals(user.getName())) return user;
-        user.setName(newName);
-
-        log.info("Change name by id - {}",id);
-
-        return userRepository.save(user);
-    }
-
-    public User changeUserEmail(Long id, String newEmail){
-        User user = checkUserEmptyOrNot(id);
-        if(newEmail.equals(user.getEmail())) return user;
-        user.setEmail(newEmail);
-
-        log.info("Change email by id - {}",id);
-
-        return userRepository.save(user);
-    }
-
-    public User changeUserPassword(Long id, String newPassword){
-        User user = checkUserEmptyOrNot(id);
-        if(newPassword.equals(user.getPassword())) return user;
-        user.setPassword(newPassword);
-
-        log.info("Change password by id - {}",id);
-
-        return userRepository.save(user);
-    }
-
-    private User checkUserEmptyOrNot(Long id) throws UserNotFoundException{
-        Optional<User> user = userRepository.findById(id);
-        if(user.isEmpty()){
-            log.warn("User with this {} was not found", id);
-            throw new UserNotFoundException("User was not found");
+    public UserResponseDTO updateUser(UpdateUserDTO updateDTO){
+        User user = userRepository.findById(updateDTO.getUserId())
+                .orElseThrow(() -> new UserNotFoundException("User was not found"));
+        if(updateDTO.getName() != null && !updateDTO.getName().equals(user.getName())){
+            user.setName(updateDTO.getName());
         }
-        return user.get();
+        if(validationService.checkUserInDBByEmail(updateDTO.getEmail())){
+            throw new EmailAlreadyExistsException("User with this email");
+        }
+        if(updateDTO.getEmail() != null){
+            user.setEmail(updateDTO.getEmail());
+        }
+        if(updateDTO.getPassword() != null && updateDTO.getPassword().equals(user.getPassword())){
+            user.setPassword(updateDTO.getPassword());
+        }
+
+        log.info("User updated with ID: {}", updateDTO.getUserId());
+        return mapToResponseDto(userRepository.save(user));
     }
 
     private UserResponseDTO mapToResponseDto(User user) {

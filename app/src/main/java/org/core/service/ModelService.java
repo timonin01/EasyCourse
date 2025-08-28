@@ -61,8 +61,8 @@ public class ModelService {
                 .collect(Collectors.toList());
     }
 
-    public ModelResponseDTO updateModel(Long modelId, UpdateModelDTO updateDTO){
-        Model model = findModelByModelId(modelId);
+    public ModelResponseDTO updateModel(UpdateModelDTO updateDTO){
+        Model model = findModelByModelId(updateDTO.getModelId());
         if(updateDTO.getTitle() != null){
             model.setTitle(updateDTO.getTitle());
         }
@@ -73,7 +73,7 @@ public class ModelService {
             changeLessonPosition(model,updateDTO.getPosition());
         }
 
-        log.info("Updated model with ID: {}", modelId);
+        log.info("Updated model with ID: {}", updateDTO.getModelId());
         return mapToResponseDTO(modelRepository.save(model));
     }
 

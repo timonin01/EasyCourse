@@ -12,8 +12,6 @@ import java.util.Optional;
 
 @Repository
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
-
-    Optional<Lesson> findById(Long id);
     
     List<Lesson> findByModelIdOrderByPositionAsc(Long modelId);
     
