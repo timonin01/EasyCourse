@@ -35,7 +35,8 @@ public class User {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Lesson> lessons = new ArrayList<>();
+    @OrderBy("createdAt DESC")
+    private List<Course> courses = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlatformUser> platformUsers = new ArrayList<>();

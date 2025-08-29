@@ -45,7 +45,6 @@ public class ModelService {
         model.setDescription(createDTO.getDescription());
 
         log.info("Created new model with ID: {} in course: {}", model.getId(), course.getId());
-
         return mapToResponseDTO(modelRepository.save(model));
     }
 
