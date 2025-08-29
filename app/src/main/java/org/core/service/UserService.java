@@ -53,9 +53,13 @@ public class UserService {
         return new UserLoginResponseDTO(mapToResponseDto(user), token);
     }
 
+    public UserResponseDTO getUserByUserId(Long userId){
+        User user = findUserBiUserId(userId);
+        return mapToResponseDto(user);
+    }
+
     public UserResponseDTO updateUser(UpdateUserDTO updateDTO){
-        User user = userRepository.findById(updateDTO.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("User was not found"));
+        User user = findUserBiUserId(updateDTO.getUserId());
         if(updateDTO.getName() != null && !updateDTO.getName().equals(user.getName())){
             user.setName(updateDTO.getName());
         }
@@ -71,6 +75,18 @@ public class UserService {
 
         log.info("User updated with ID: {}", updateDTO.getUserId());
         return mapToResponseDto(userRepository.save(user));
+    }
+
+    public void deleteUser(Long userId){
+        User user = findUserBiUserId(userId);
+
+        userRepository.delete(user);
+        log.info("Delete user with ID: {}",userId);
+    }
+
+    private User findUserBiUserId(Long userId){
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User was not found"));
     }
 
     private UserResponseDTO mapToResponseDto(User user) {
