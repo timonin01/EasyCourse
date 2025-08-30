@@ -1,10 +1,7 @@
 package org.core.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,6 +13,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Lesson {
 
     @Id
@@ -34,6 +32,7 @@ public class Lesson {
 
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
+    @Builder.Default
     private List<Step> steps = new ArrayList<>();
 
     @Column(name = "position", nullable = false)

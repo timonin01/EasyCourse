@@ -7,6 +7,7 @@ import org.core.exception.UserAlreadyExistsException;
 import org.core.exception.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.util.JwtUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
