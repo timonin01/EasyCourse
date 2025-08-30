@@ -46,7 +46,7 @@ public class CourseService {
     }
 
     public List<CourseResponseDTO> getUserCoursesByUserId(Long userId){
-        List<Course> courses = courseRepository.findByUserIdOrderByPositionAsc(userId);
+        List<Course> courses = courseRepository.findByAuthorId(userId);
         return courses.stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());

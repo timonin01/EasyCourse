@@ -17,9 +17,11 @@
                 <constraints nullable="false"/>
             </column>
             <column name="author_id" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="fk_courses_author" references="users(id)"/>
+                <constraints nullable="false"/>
             </column>
-            <column name="target_platform" type="VARCHAR(50)"/>
+            <column name="target_platform" type="ENUM('stepik', 'udemy')">
+                <constraints nullable="true"/>
+            </column>
             <column name="created_at" type="DATETIME">
                 <constraints nullable="false"/>
             </column>
@@ -27,7 +29,6 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
         <addForeignKeyConstraint
                 baseTableName="courses"
                 baseColumnNames="author_id"

@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.User;
 import org.core.dto.user.*;
-import org.core.exception.EmailAlreadyExistsException;
 import org.core.exception.InvalidPasswordException;
 import org.core.exception.UserAlreadyExistsException;
 import org.core.exception.UserNotFoundException;
@@ -13,9 +12,6 @@ import org.core.repository.UserRepository;
 import org.core.util.JwtUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.crypto.ExemptionMechanismException;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -64,7 +60,7 @@ public class UserService {
             user.setName(updateDTO.getName());
         }
         if(validationService.checkUserInDBByEmail(updateDTO.getEmail())){
-            throw new EmailAlreadyExistsException("User with this email");
+            throw new UserAlreadyExistsException("User with this email");
         }
         if(updateDTO.getEmail() != null){
             user.setEmail(updateDTO.getEmail());

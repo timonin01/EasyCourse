@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DelegationContextManager">
+    <lastDelegates>
+      <entry key="org.core.service.CourseService" value="org.core.rest.CourseController" />
+      <entry key="org.core.service.ModelService" value="org.core.rest.ModelController" />
+      <entry key="org.core.service.LessonService" value="org.core.rest.LessonController" />
+      <entry key="org.core.service.StepService" value="org.core.rest.StepController" />
+    </lastDelegates>
+  </component>
+</project>

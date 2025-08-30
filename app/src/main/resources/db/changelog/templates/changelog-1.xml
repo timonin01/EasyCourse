@@ -9,7 +9,7 @@
     <changeSet id="1" author="tim" >
 
         <createTable tableName="users">
-            <column name="id" type="BIGINT">
+            <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false" primaryKeyName="pk_users"/>
             </column>
 
