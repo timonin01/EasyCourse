@@ -11,11 +11,12 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="user_id" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="fk_platform_user_user" references="users(id)"/>
-            </column>
-            <column name="platform" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
+            <column name="platform" type="ENUM('stepik', 'udemy')">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ИСПРАВЛЕНО: platform_username должен быть VARCHAR -->
             <column name="platform_username" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>

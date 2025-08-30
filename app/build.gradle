@@ -1,13 +1,19 @@
 plugins {
     id 'java'
     id 'idea'
-    id 'org.springframework.boot' version "3.4.5"
+    id 'org.springframework.boot' version '3.2.0'
+    id 'io.spring.dependency-management' version '1.1.4'
     id 'com.palantir.docker' version '0.35.0'
 }
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21)) // Use JDK 21
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
     }
 }
 
@@ -24,7 +30,7 @@ repositories {
 }
 
 ext {
-    set("springBootVersion", "3.4.5")
+    set('springBootVersion', '3.2.0')
 }
 
 dependencies {
@@ -60,10 +66,25 @@ dependencies {
 
     implementation('io.github.resilience4j:resilience4j-spring-boot3:2.0.2')
 
+    // Добавляем явную зависимость для тестов
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.7.0'
+    testImplementation 'org.assertj:assertj-core:3.24.2'
 }
 
 test {
     useJUnitPlatform()
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
+    
+    systemProperties = System.properties
+    systemProperty 'file.encoding', 'UTF-8'
+    maxHeapSize = '1G'
 }
 
 clean.doFirst {
@@ -75,6 +96,11 @@ clean.doFirst {
 
     delete "${projectDir}/build/"
     println "${projectDir}/build/"
+}
+
+// Добавляем задачу для очистки кэша Gradle
+task cleanGradleCache(type: Delete) {
+    delete "${gradle.gradleUserHomeDir}/caches/"
 }
 
 
