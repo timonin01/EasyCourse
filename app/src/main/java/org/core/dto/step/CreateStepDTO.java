@@ -20,8 +20,6 @@ public class CreateStepDTO {
     private StepType type;
 
     private String content;
-    
-    private String title;
 
     private Integer position;
 
