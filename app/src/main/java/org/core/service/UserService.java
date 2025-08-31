@@ -59,17 +59,20 @@ public class UserService {
         if(updateDTO.getName() != null && !updateDTO.getName().equals(user.getName())){
             user.setName(updateDTO.getName());
         }
-        if(validationService.checkUserInDBByEmail(updateDTO.getEmail())){
-            throw new UserAlreadyExistsException("User with this email");
+        if(updateDTO.getEmail() != null && !updateDTO.getEmail().equals(user.getEmail())){
+            if(validationService.checkUserInDBByEmail(updateDTO.getEmail())){
+                throw new UserAlreadyExistsException("User with email " + updateDTO.getEmail() + " already exists");
+            }
+            user.setEmail(updateDTO.getEmail());
         }
         if(updateDTO.getEmail() != null){
             user.setEmail(updateDTO.getEmail());
         }
-        if(updateDTO.getPassword() != null && updateDTO.getPassword().equals(user.getPassword())){
+        if(updateDTO.getPassword() != null && !user.getPassword().equals(updateDTO.getPassword())){
             user.setPassword(updateDTO.getPassword());
         }
-
         log.info("User updated with ID: {}", updateDTO.getUserId());
+
         return mapToResponseDto(userRepository.save(user));
     }
 

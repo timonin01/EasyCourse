@@ -23,7 +23,7 @@ public class LessonController {
         return lessonService.getLessonByLessonID(lessonId);
     }
 
-    @GetMapping("/{modelId}")
+    @GetMapping("/all_lessons/{modelId}")
     public List<LessonResponseDTO> getModelLessonsByModelId(@PathVariable Long modelId) {
         return lessonService.getModelLessonsByModelId(modelId);
     }

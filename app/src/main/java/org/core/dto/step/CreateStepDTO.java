@@ -1,6 +1,7 @@
 package org.core.dto.step;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,7 @@ import org.core.domain.StepType;
 @AllArgsConstructor
 public class CreateStepDTO {
 
-    @NotBlank(message = "LessonId is required")
+    @NotNull(message = "LessonId is required")
     private Long lessonId;
 
     @NotBlank(message = "StepType is required")

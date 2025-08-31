@@ -19,7 +19,7 @@
             <column name="author_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="target_platform" type="ENUM('stepik', 'udemy')">
+            <column name="target_platform" type="ENUM('STEPIK', 'UDEMY')">
                 <constraints nullable="true"/>
             </column>
             <column name="created_at" type="DATETIME">

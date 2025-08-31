@@ -22,6 +22,5 @@ public class CreateLessonDTO {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @NotNull(message = "Position is required")
     private Integer position;
 }

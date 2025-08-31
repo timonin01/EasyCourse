@@ -1,10 +1,8 @@
 package org.core.dto.course;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
 import org.core.domain.TargetPlatform;
 
 @Getter
@@ -13,7 +11,7 @@ import org.core.domain.TargetPlatform;
 @AllArgsConstructor
 public class CreateCourseDTO {
 
-    @NotBlank(message = "UserId is required")
+    @NotNull(message = "UserId is required")
     private Long userId;
 
     @NotBlank(message = "Title is required")
@@ -22,7 +20,7 @@ public class CreateCourseDTO {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @NotBlank(message = "TargetPlatform is required")
+    @NotNull(message = "TargetPlatform is required")
     private TargetPlatform targetPlatform;
 
 }

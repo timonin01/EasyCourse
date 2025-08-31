@@ -23,7 +23,7 @@ public class ModelController {
         return modelService.getModelBuModelId(modelId);
     }
 
-    @GetMapping("/{courseId}")
+    @GetMapping("/all_models/{courseId}")
     public List<ModelResponseDTO> getCourseModelsByCourseId(@PathVariable Long courseId) {
         return modelService.getCourseModelsByCourseId(courseId);
     }

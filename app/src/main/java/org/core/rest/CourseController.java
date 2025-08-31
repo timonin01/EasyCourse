@@ -24,7 +24,7 @@ public class CourseController {
         return courseService.getCourseByCourseId(courseId);
     }
 
-    @GetMapping("/{userId}")
+    @GetMapping("/all_courses/{userId}")
     public List<CourseResponseDTO> getUserCoursesByUserId(@PathVariable Long userId) {
         return courseService.getUserCoursesByUserId(userId);
     }

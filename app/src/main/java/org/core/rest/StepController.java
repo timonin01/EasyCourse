@@ -22,7 +22,7 @@ public class StepController {
         return stepService.getStepById(stepId);
     }
 
-    @GetMapping("/{lessonId}")
+    @GetMapping("/all_steps/{lessonId}")
     public List<StepResponseDTO> getLessonStepsByLessonId(@PathVariable Long lessonId) {
         return stepService.getLessonStepsByLessonId(lessonId);
     }
