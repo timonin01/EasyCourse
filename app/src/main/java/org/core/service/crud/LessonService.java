@@ -1,4 +1,4 @@
-package org.core.service;
+package org.core.service.crud;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -12,10 +12,6 @@ import org.core.exception.LessonNotFoundException;
 import org.core.exception.ModelNotFoundException;
 import org.core.repository.LessonRepository;
 import org.core.repository.ModelRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -1,4 +1,4 @@
-package org.core.service;
+package org.core.service.crud;
 
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;

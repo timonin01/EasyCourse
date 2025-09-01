@@ -1,4 +1,4 @@
-package org.core.service;
+package org.core.service.crud;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +9,7 @@ import org.core.exception.InvalidPasswordException;
 import org.core.exception.UserAlreadyExistsException;
 import org.core.exception.UserNotFoundException;
 import org.core.repository.UserRepository;
+import org.core.service.UserValidationService;
 import org.core.util.JwtUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.lesson.UpdateLessonDTO;
-import org.core.service.LessonService;
+import org.core.service.crud.LessonService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

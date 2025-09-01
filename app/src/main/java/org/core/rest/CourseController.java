@@ -6,8 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.course.CreateCourseDTO;
 import org.core.dto.course.UpdateCourseDTO;
-import org.core.service.CourseService;
-import org.springframework.http.ResponseEntity;
+import org.core.service.crud.CourseService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

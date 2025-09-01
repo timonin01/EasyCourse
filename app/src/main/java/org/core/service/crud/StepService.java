@@ -1,4 +1,4 @@
-package org.core.service;
+package org.core.service.crud;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

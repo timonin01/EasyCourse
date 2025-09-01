@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
-import org.core.service.StepService;
+import org.core.service.crud.StepService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

@@ -8,6 +8,7 @@ import org.core.exception.LessonNotFoundException;
 import org.core.exception.ModelNotFoundException;
 import org.core.repository.LessonRepository;
 import org.core.repository.ModelRepository;
+import org.core.service.crud.LessonService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
