@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%%, #7c3aed 100%%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .code-container {
+            text-align: center;
+            margin: 30px 0;
+            padding: 30px;
+            background: linear-gradient(135deg, #f0f9ff 0%%, #e0f2fe 100%%);
+            border-radius: 15px;
+            border: 2px dashed #93c5fd;
+        }
+
+        .verification-code {
+            font-family: 'Arial', sans-serif;
+            font-size: 48px;
+            font-weight: bold;
+            color: #dc2626;
+            letter-spacing: 6px;
+            padding: 20px;
+            background: white;
+            border: 3px solid #dc2626;
+            border-radius: 10px;
+            display: block;
+            text-align: center;
+            margin: 20px auto;
+            line-height: 1;
+        }
+
+        .instructions {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .instructions h3 {
+            color: #4f46e5;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+
+        .warning {
+            background: #fef2f2;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-left: 4px solid #dc2626;
+        }
+
+        .warning p {
+            color: #dc2626;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning p::before {
+            content: "⚠️";
+            font-size: 18px;
+        }
+
+        .footer {
+            background: #f1f5f9;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer p {
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .support {
+            color: #4f46e5;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .support:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 20px;
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .verification-code {
+                font-size: 32px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <h1>🎯 Verify Your Email Address</h1>
+        <p>Complete your registration process</p>
+    </div>
+
+    <div class="content">
+        <p>Welcome to our platform! To complete your registration and start using your account, please verify your email address by entering the following verification code:</p>
+
+        <div class="code-container">
+            <div class="verification-code">{{code}}</div>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 How to use this code:</h3>
+            <ol>
+                <li><strong>Copy</strong> the 6-digit verification code above</li>
+                <li><strong>Return</strong> to the application or website</li>
+                <li><strong>Paste</strong> the code in the verification field</li>
+                <li><strong>Click</strong> "Verify Email" to complete the process</li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <p>This code will expire in <strong>15 minutes</strong> for security reasons</p>
+        </div>
+
+        <p>If you encounter any issues or didn't request this email, please contact our support team immediately.</p>
+    </div>
+
+    <div class="footer">
+        <p>Need help? <a href="mailto:support@example.com" class="support">Contact Support</a></p>
+        <p>© 2024 Your Company Name. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
