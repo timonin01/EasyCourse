@@ -8,6 +8,7 @@ import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepNotFoundException;
 import org.core.repository.LessonRepository;
 import org.core.repository.StepRepository;
+import org.core.service.crud.StepService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

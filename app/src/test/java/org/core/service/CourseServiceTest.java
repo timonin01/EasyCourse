@@ -10,6 +10,7 @@ import org.core.exception.CourseNotFoundException;
 import org.core.exception.UserNotFoundException;
 import org.core.repository.CourseRepository;
 import org.core.repository.UserRepository;
+import org.core.service.crud.CourseService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

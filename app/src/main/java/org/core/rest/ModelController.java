@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.core.dto.model.CreateModelDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.model.UpdateModelDTO;
-import org.core.service.ModelService;
+import org.core.service.crud.ModelService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

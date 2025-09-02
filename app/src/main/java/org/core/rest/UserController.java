@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.core.dto.user.*;
-import org.core.service.UserService;
+import org.core.service.crud.UserService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

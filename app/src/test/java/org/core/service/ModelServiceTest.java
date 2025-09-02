@@ -11,6 +11,7 @@ import org.core.exception.CourseNotFoundException;
 import org.core.exception.ModelNotFoundException;
 import org.core.repository.CourseRepository;
 import org.core.repository.ModelRepository;
+import org.core.service.crud.ModelService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

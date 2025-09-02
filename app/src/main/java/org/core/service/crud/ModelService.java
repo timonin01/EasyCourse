@@ -1,11 +1,10 @@
-package org.core.service;
+package org.core.service.crud;
 
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
-import org.core.domain.Lesson;
 import org.core.domain.Model;
 import org.core.dto.model.CreateModelDTO;
 import org.core.dto.model.ModelResponseDTO;
