@@ -14,6 +14,7 @@ public class Choice {
 
     private String text;
     private int index;
+    private Message message;
 
     @JsonProperty("finish_reason")
     private String finishReason;

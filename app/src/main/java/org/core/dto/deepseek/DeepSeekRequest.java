@@ -20,8 +20,8 @@ public class DeepSeekRequest {
     @JsonProperty("top_p")
     private double topP;
 
-    public DeepSeekRequest(String prompt) {
-        this.model = "deepseek-chat";
+    public DeepSeekRequest(String model,String prompt) {
+        this.model = model;
         this.prompt = prompt;
         this.temperature = 0.7;
         this.max_tokens = 2000;

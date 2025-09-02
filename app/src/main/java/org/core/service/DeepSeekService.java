@@ -1,7 +1,6 @@
 package org.core.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.deepseek.DeepSeekRequest;
@@ -16,21 +15,24 @@ import java.util.Collections;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+@RequiredArgsConstructor
 public class DeepSeekService {
 
-    @Value("${deepseek.api.key}")
+    @Value("${deepseek.api.key}") // ← ЗДЕСЬ используется ключ
     private String apiKey;
 
     @Value("${deepseek.api.url}")
     private String url;
+
+    @Value("${deepseek.api.model}")
+    private String model;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     public String generateResponse(String prompt) {
         try {
-            DeepSeekRequest request = new DeepSeekRequest(prompt);
+            DeepSeekRequest request = new DeepSeekRequest(model, prompt);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -46,14 +48,14 @@ public class DeepSeekService {
             );
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                return response.getBody().getChoices().get(0).getText();
+                return response.getBody().getChoices().get(0).getMessage().getContent();
             }
 
         } catch (Exception e) {
             log.error("Error calling DeepSeek API: {}", e.getMessage());
             throw new DeepSeekException("Sorry, I couldn't generate a response at the moment.");
         }
+
         return "Sorry, I couldn't generate a response at the moment.";
     }
-
 }
