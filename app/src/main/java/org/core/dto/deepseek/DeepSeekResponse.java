@@ -1,5 +1,6 @@
 package org.core.dto.deepseek;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,5 +20,8 @@ public class DeepSeekResponse {
     private String model;
     private List<Choice> choices;
     private Usage usage;
+    
+    @JsonProperty("system_fingerprint")
+    private String systemFingerprint;
 
 }

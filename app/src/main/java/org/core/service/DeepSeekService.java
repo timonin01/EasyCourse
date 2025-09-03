@@ -18,7 +18,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class DeepSeekService {
 
-    @Value("${deepseek.api.key}") // ← ЗДЕСЬ используется ключ
+    @Value("${deepseek.api.key}")
     private String apiKey;
 
     @Value("${deepseek.api.url}")

@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -13,18 +15,37 @@ import lombok.Setter;
 public class DeepSeekRequest {
 
     private String model;
-    private String prompt;
-    private double temperature;
-    private int max_tokens;
-
+    private List<Message> messages;
+    private Double temperature;
+    private Integer maxTokens;
+    
     @JsonProperty("top_p")
-    private double topP;
-
-    public DeepSeekRequest(String model,String prompt) {
+    private Double topP;
+    
+    private Integer n;
+    private Boolean stream;
+    private List<String> stop;
+    
+    @JsonProperty("presence_penalty")
+    private Double presencePenalty;
+    
+    @JsonProperty("frequency_penalty")
+    private Double frequencyPenalty;
+    
+    @JsonProperty("logit_bias")
+    private Object logitBias;
+    
+    private String user;
+    
+    public DeepSeekRequest(String model, String prompt) {
         this.model = model;
-        this.prompt = prompt;
+        this.messages = List.of(new Message("user", prompt));
         this.temperature = 0.7;
-        this.max_tokens = 2000;
+        this.maxTokens = 2000;
         this.topP = 0.9;
+        this.n = 1;
+        this.stream = false;
+        this.presencePenalty = 0.0;
+        this.frequencyPenalty = 0.0;
     }
 }
