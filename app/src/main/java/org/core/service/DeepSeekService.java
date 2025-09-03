@@ -28,7 +28,6 @@ public class DeepSeekService {
     private String model;
 
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
 
     public String generateResponse(String prompt) {
         try {
