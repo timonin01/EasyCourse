@@ -1,4 +1,4 @@
-package org.core.service;
+package org.core.service.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.dto.yandexgpt.YandexGptRequest;
 import org.core.dto.yandexgpt.YandexGptResponse;
 import org.core.exception.YandexGptException;
+import org.core.service.AiService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,7 @@ import java.util.Collections;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class YandexGptService {
+public class YandexGptService implements AiService {
 
     @Value("${yandex.gpt.api.key}")
     private String apiKey;
@@ -30,6 +31,7 @@ public class YandexGptService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
+    @Override
     public String generateResponse(String prompt) {
         if (prompt == null || prompt.trim().isEmpty()) {
             throw new YandexGptException("Prompt cannot be empty");

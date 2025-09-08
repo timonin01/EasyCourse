@@ -1,4 +1,4 @@
-package org.core.rest;
+package org.core.rest.crud;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
