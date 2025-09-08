@@ -1,11 +1,11 @@
-package org.core.service;
+package org.core.service.ai;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.deepseek.DeepSeekRequest;
 import org.core.dto.deepseek.DeepSeekResponse;
 import org.core.exception.DeepSeekException;
+import org.core.service.AiService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -16,7 +16,7 @@ import java.util.Collections;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class DeepSeekService {
+public class DeepSeekService implements AiService {
 
     @Value("${deepseek.api.key}")
     private String apiKey;
@@ -29,6 +29,7 @@ public class DeepSeekService {
 
     private final RestTemplate restTemplate;
 
+    @Override
     public String generateResponse(String prompt) {
         try {
             DeepSeekRequest request = new DeepSeekRequest(model, prompt);

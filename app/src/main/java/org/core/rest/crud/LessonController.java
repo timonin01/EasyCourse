@@ -1,4 +1,4 @@
-package org.core.rest;
+package org.core.rest.crud;
 
 import jakarta.validation.Valid;
 import lombok.AccessLevel;

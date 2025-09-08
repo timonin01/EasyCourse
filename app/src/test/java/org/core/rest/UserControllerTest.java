@@ -1,5 +1,6 @@
 package org.core.rest;
 
+import org.core.rest.crud.UserController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
