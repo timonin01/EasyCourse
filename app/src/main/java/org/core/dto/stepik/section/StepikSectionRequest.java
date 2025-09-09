@@ -1,4 +1,4 @@
-package org.core.dto.stepik.course;
+package org.core.dto.stepik.section;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,9 +10,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class StepikCourseRequest {
+public class StepikSectionRequest {
 
-    @JsonProperty("course")
-    private StepikCourseRequestData course;
+    @JsonProperty("section")
+    private StepikSectionRequestData section;
 
 }

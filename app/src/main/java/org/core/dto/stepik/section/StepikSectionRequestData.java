@@ -1,4 +1,4 @@
-package org.core.dto.stepik.course;
+package org.core.dto.stepik.section;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,16 +10,14 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class StepikCourseData {
+public class StepikSectionRequestData {
 
     private String title;
     private String description;
-    private String language = "ru";
+    private String course;
+    private Integer position = 1;
 
-    @JsonProperty("is_public")
-    private boolean isPublic = false;
-
-    @JsonProperty("course_type")
-    private String courseType = "basic";
+    @JsonProperty("required_percent")
+    private Integer requiredPercent = 100;
 
 }
