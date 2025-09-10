@@ -1,7 +1,6 @@
 package org.core.service;
 
 import org.core.domain.Course;
-import org.core.domain.TargetPlatform;
 import org.core.domain.User;
 import org.core.dto.course.CreateCourseDTO;
 import org.core.dto.course.CourseResponseDTO;
@@ -64,7 +63,6 @@ public class CourseServiceTest {
                 .id(1L)
                 .title("Test Course")
                 .description("Test Description")
-                .targetPlatform(TargetPlatform.STEPIK)
                 .author(testUser)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -76,7 +74,7 @@ public class CourseServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(courseRepository.save(any(Course.class))).thenReturn(testCourse);
 
-        CreateCourseDTO testCreateDTO = new CreateCourseDTO(1L, "Test Course", "Test Description", TargetPlatform.STEPIK);
+        CreateCourseDTO testCreateDTO = new CreateCourseDTO(1L, "Test Course", "Test Description");
 
         CourseResponseDTO result = courseService.createCourse(testCreateDTO);
 
@@ -92,7 +90,7 @@ public class CourseServiceTest {
     void createNewCourseWhereUserNotExists() {
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
         
-        CreateCourseDTO nonExistentUserDTO = new CreateCourseDTO(999L, "Title", "Description", TargetPlatform.STEPIK);
+        CreateCourseDTO nonExistentUserDTO = new CreateCourseDTO(999L, "Title", "Description");
 
         assertThatThrownBy(() -> courseService.createCourse(nonExistentUserDTO))
                 .isInstanceOf(UserNotFoundException.class)

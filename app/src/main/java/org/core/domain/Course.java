@@ -35,9 +35,8 @@ public class Course {
     @Builder.Default
     private List<Model> models = new ArrayList<>();
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "target_platform")
-    private TargetPlatform targetPlatform;
+    @Column(name = "stepik_CourseId")
+    private Long stepikCourseId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
