@@ -15,6 +15,7 @@ public class CourseResponseDTO {
     private Long userId;
     private String title;
     private String description;
+    private Long stepikCourseId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -6,6 +6,7 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
 
     <changeSet id="2" author="tim">
+        <validCheckSum>9:d70b24b3ba0f11ad7a96a589a1104a5d</validCheckSum>
         <createTable tableName="courses">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -19,7 +20,7 @@
             <column name="author_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="target_platform" type="ENUM('STEPIK', 'UDEMY')">
+            <column name="stepik_course_id" type="BIGINT">
                 <constraints nullable="true"/>
             </column>
             <column name="created_at" type="DATETIME">
