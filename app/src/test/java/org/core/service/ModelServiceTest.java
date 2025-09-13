@@ -2,7 +2,6 @@ package org.core.service;
 
 import org.core.domain.Course;
 import org.core.domain.Model;
-import org.core.domain.TargetPlatform;
 import org.core.domain.User;
 import org.core.dto.model.CreateModelDTO;
 import org.core.dto.model.ModelResponseDTO;
@@ -62,7 +61,6 @@ public class ModelServiceTest {
                 .id(1L)
                 .title("Test Course")
                 .description("Test Description")
-                .targetPlatform(TargetPlatform.STEPIK)
                 .author(testUser)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

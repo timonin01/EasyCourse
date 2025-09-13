@@ -22,10 +22,6 @@ public class PlatformUser {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "platform", nullable = false)
-    private TargetPlatform platform;
-
     @Column(name = "platform_username",nullable = false)
     private String platformUsername;
 

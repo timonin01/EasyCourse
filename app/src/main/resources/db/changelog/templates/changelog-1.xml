@@ -6,7 +6,8 @@
                         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.2.xsd">
 
 
-    <changeSet id="1" author="tim" >
+    <changeSet id="1" author="tim">
+        <validCheckSum>9:2699b6b6dd1b8923ab0e796fbc783cb9</validCheckSum>
 
         <createTable tableName="users">
             <column name="id" type="BIGINT" autoIncrement="true">
@@ -25,7 +26,7 @@
                 <constraints nullable="false"/>
             </column>
 
-            <column name="created_at" type="TIMESTAMP">
+            <column name="created_at" type="DATETIME">
                 <constraints nullable="false"/>
             </column>
         </createTable>

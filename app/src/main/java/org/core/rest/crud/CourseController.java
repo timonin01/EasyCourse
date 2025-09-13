@@ -28,8 +28,13 @@ public class CourseController {
         return courseService.getUserCoursesByUserId(userId);
     }
 
+    @GetMapping("/unsynced/{userId}")
+    public List<CourseResponseDTO> getUnsyncedCoursesByUserId(@PathVariable Long userId) {
+        return courseService.getUnsyncedCoursesByUserId(userId);
+    }
+
     @PostMapping
-    public CourseResponseDTO createCourse(@Valid  @RequestBody CreateCourseDTO createDTO) {
+    public CourseResponseDTO createCourse(@Valid @RequestBody CreateCourseDTO createDTO) {
         return courseService.createCourse(createDTO);
     }
 
@@ -41,5 +46,12 @@ public class CourseController {
     @DeleteMapping("/delete/{courseId}")
     public void deleteCourse(@PathVariable Long courseId) {
         courseService.deleteCourse(courseId);
+    }
+
+    @PutMapping("/{courseId}/stepik-id/{stepikCourseId}")
+    public CourseResponseDTO updateCourseStepikId(
+            @PathVariable Long courseId, 
+            @PathVariable Long stepikCourseId) {
+        return courseService.updateCourseStepikId(courseId, stepikCourseId);
     }
 }

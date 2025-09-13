@@ -4,6 +4,7 @@ plugins {
     id 'org.springframework.boot' version '3.2.0'
     id 'io.spring.dependency-management' version '1.1.4'
     id 'com.palantir.docker' version '0.35.0'
+    id 'org.liquibase.gradle' version '2.2.0'
 }
 
 java {
@@ -15,6 +16,7 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    liquibaseRuntime.extendsFrom runtime
 }
 
 compileJava {
@@ -66,7 +68,7 @@ dependencies {
 
     implementation('io.github.resilience4j:resilience4j-spring-boot3:2.0.2')
 
-    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation "org.springframework.boot:spring-boot-starter-mail:$springBootVersion"
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
@@ -99,7 +101,6 @@ clean.doFirst {
     println "${projectDir}/build/"
 }
 
-// Добавляем задачу для очистки кэша Gradle
 task cleanGradleCache(type: Delete) {
     delete "${gradle.gradleUserHomeDir}/caches/"
 }
@@ -113,4 +114,16 @@ bootJar {
     enabled = true
     archiveBaseName = 'easy-course-app'
     archiveVersion = '1.0.0'
+}
+
+liquibase {
+    activities {
+        main {
+            changeLogFile 'src/main/resources/db/changelog/changelog-master.xml'
+            url 'jdbc:mysql://localhost:3306/easy_course'
+            username 'root'
+            password 'root'
+            driver 'com.mysql.cj.jdbc.Driver'
+        }
+    }
 }

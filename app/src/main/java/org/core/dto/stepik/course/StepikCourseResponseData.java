@@ -22,5 +22,8 @@ public class StepikCourseResponseData {
 
     @JsonProperty("owner_id")
     private Long ownerId;
+    
+    // Токен капчи для последующих операций с курсом
+    private String captcha;
 
 }

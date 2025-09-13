@@ -66,7 +66,6 @@ class LessonServiceTest {
                 .id(1L)
                 .title("Test Course")
                 .description("Test Description")
-                .targetPlatform(TargetPlatform.STEPIK)
                 .author(testUser)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
