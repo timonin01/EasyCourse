@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Тест Stepik API с капчей</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button { 
+            background: #007cba; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #005a8b; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .response { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 15px 0; 
+            border-left: 4px solid #007cba;
+            white-space: pre-wrap; 
+            font-family: monospace;
+        }
+        .error { background: #ffebee; border-left-color: #f44336; color: #c62828; }
+        .success { background: #e8f5e8; border-left-color: #4caf50; color: #2e7d32; }
+        .warning { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
+        .step {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #2196f3;
+        }
+        #captcha-section { 
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 2px solid #ff9800;
+            display: none;
+        }
+        #recaptcha { margin: 15px 0; }
+        .log { font-size: 12px; color: #666; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Тестирование Stepik API с капчей</h1>
+        
+        <div class="step">
+            <h3>📋 План тестирования:</h3>
+            <ol>
+                <li>Нажмите "Тест 1" - получите ответ что нужна капча</li>
+                <li>Автоматически появится reCAPTCHA</li>
+                <li>Решите капчу (поставьте галочку)</li>
+                <li>Нажмите "Тест 2" - отправите с токеном капчи</li>
+                <li>Получите результат создания курса</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testStep1()" id="btn-step1">
+                🚀 Тест 1: Запрос без капчи
+            </button>
+            <button onclick="testStep2()" id="btn-step2" disabled>
+                ✅ Тест 2: Запрос с капчей
+            </button>
+        </div>
+
+        <div id="captcha-section">
+            <h3>🔒 Требуется решить капчу:</h3>
+            <p>Stepik требует подтверждения что вы не робот:</p>
+            <div id="recaptcha"></div>
+            <div class="log" id="captcha-status">Решите капчу выше...</div>
+        </div>
+
+        <div>
+            <h3>📄 Ответ сервера:</h3>
+            <div id="response" class="response">Нажмите кнопку "Тест 1" чтобы начать...</div>
+        </div>
+
+        <div>
+            <h3>📊 Логи:</h3>
+            <div id="logs" class="response" style="max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentCourseId = 3;
+        let siteKey = '';
+        let captchaToken = null;
+
+        function addLog(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            const logEntry = `[${time}] ${message}\n`;
+            logs.textContent += logEntry;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(logEntry);
+        }
+
+        // Тест 1: Запрос без капчи
+        async function testStep1() {
+            try {
+                addLog('🚀 Отправляем запрос без капчи...');
+                document.getElementById('btn-step1').disabled = true;
+                
+                const response = await fetch(`http://localhost:8080/api/v1/stepik/sync-course?courseId=${currentCourseId}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                addLog('✅ Ответ получен');
+                
+                // Показываем полный ответ
+                showResponse(JSON.stringify(data, null, 2), 'info');
+                
+                // Проверяем нужна ли капча
+                if (data.siteKey) {
+                    addLog(`🔒 Требуется капча! Site Key: ${data.siteKey}`);
+                    showCaptcha(data.siteKey);
+                } else if (data.captchaKey && data.captchaKey.match(/^\d+$/)) {
+                    addLog(`🎉 Курс создан! Stepik ID: ${data.captchaKey}`);
+                    showResponse(`🎉 Успех без капчи!\n\nStepik Course ID: ${data.captchaKey}\nMessage: ${data.message}`, 'success');
+                } else {
+                    addLog('❓ Неожиданный ответ');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Ошибка: ${error.message}`);
+                showResponse(`❌ Ошибка запроса:\n\n${error.message}\n\nПроверьте:\n1. Запущен ли сервер на порту 8080\n2. Существует ли курс с ID=${currentCourseId}`, 'error');
+            } finally {
+                document.getElementById('btn-step1').disabled = false;
+            }
+        }
+
+        // Показываем капчу
+        function showCaptcha(captchaSiteKey) {
+            siteKey = captchaSiteKey;
+            document.getElementById('captcha-section').style.display = 'block';
+            
+            addLog(`🔧 Инициализируем reCAPTCHA с site key: ${siteKey}`);
+            
+            // Очищаем предыдущую капчу если была
+            document.getElementById('recaptcha').innerHTML = '';
+            
+            // Инициализируем новую reCAPTCHA
+            try {
+                grecaptcha.render('recaptcha', {
+                    'sitekey': siteKey,
+                    'callback': onCaptchaSuccess,
+                    'expired-callback': onCaptchaExpired
+                });
+                addLog('✅ reCAPTCHA инициализирована');
+                document.getElementById('captcha-status').textContent = 'Решите капчу выше чтобы продолжить...';
+            } catch (error) {
+                addLog(`❌ Ошибка инициализации reCAPTCHA: ${error.message}`);
+            }
+        }
+
+        // Капча решена успешно
+        function onCaptchaSuccess(token) {
+            captchaToken = token;
+            addLog(`✅ Капча решена! Токен получен (${token.length} символов)`);
+            document.getElementById('captcha-status').textContent = '✅ Капча решена! Теперь можно отправить запрос.';
+            document.getElementById('btn-step2').disabled = false;
+            
+            // Показываем первые символы токена для проверки
+            addLog(`🔍 Токен начинается с: ${token.substring(0, 30)}...`);
+        }
+
+        // Капча истекла
+        function onCaptchaExpired() {
+            captchaToken = null;
+            addLog('⚠️ Капча истекла, решите заново');
+            document.getElementById('captcha-status').textContent = '⚠️ Капча истекла, решите заново';
+            document.getElementById('btn-step2').disabled = true;
+        }
+
+        // Тест 2: Запрос с капчей
+        async function testStep2() {
+            if (!captchaToken) {
+                alert('Сначала решите капчу!');
+                return;
+            }
+
+            try {
+                addLog('🚀 Отправляем запрос с токеном капчи...');
+                document.getElementById('btn-step2').disabled = true;
+                
+                const url = `http://localhost:8080/api/v1/stepik/sync-course?courseId=${currentCourseId}&captchaToken=${encodeURIComponent(captchaToken)}`;
+                addLog(`📡 URL: ${url.substring(0, 100)}...`);
+                
+                const response = await fetch(url, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                addLog('✅ Ответ с капчей получен');
+                
+                // Показываем результат
+                showResponse(JSON.stringify(data, null, 2), 'info');
+                
+                if (data.captchaKey && data.captchaKey.match(/^\d+$/)) {
+                    addLog(`🎉 УСПЕХ! Курс создан в Stepik с ID: ${data.captchaKey}`);
+                    showResponse(`🎉 Курс успешно создан!\n\nStepik Course ID: ${data.captchaKey}\nMessage: ${data.message}`, 'success');
+                    
+                    // Скрываем капчу после успеха
+                    document.getElementById('captcha-section').style.display = 'none';
+                } else if (data.siteKey) {
+                    addLog('⚠️ Всё ещё требуется капча, возможно токен истёк');
+                    showResponse(`⚠️ Капча всё ещё требуется\n\nВозможно токен истёк или недействителен.\nПопробуйте решить капчу заново.`, 'warning');
+                } else {
+                    addLog('❓ Неожиданный ответ после отправки капчи');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Ошибка при отправке с капчей: ${error.message}`);
+                showResponse(`❌ Ошибка запроса с капчей:\n\n${error.message}`, 'error');
+            } finally {
+                // Разрешаем повторную отправку только если капча всё ещё решена
+                if (captchaToken) {
+                    document.getElementById('btn-step2').disabled = false;
+                }
+            }
+        }
+
+        // Показываем ответ сервера
+        function showResponse(text, type) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.textContent = text;
+            responseDiv.className = `response ${type}`;
+        }
+
+        // Инициализация
+        addLog('🔧 Страница загружена, готов к тестированию');
+        addLog(`📋 Будем тестировать с courseId=${currentCourseId}`);
+        addLog('💡 Убедитесь что сервер запущен на http://localhost:8080');
+    </script>
+</body>
+</html>

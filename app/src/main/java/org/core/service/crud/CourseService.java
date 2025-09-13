@@ -147,6 +147,14 @@ public class CourseService {
         return mapToResponseDTO(savedCourse);
     }
 
+    public CourseResponseDTO updateCourseStepikCaptchaToken(Long courseId, String captchaToken) {
+        Course course = findCourseByCourseId(courseId);
+        course.setStepikCaptchaToken(captchaToken);
+        Course savedCourse = courseRepository.save(course);
+        log.info("Updated course ID: {} with Stepik captcha token", courseId);
+        return mapToResponseDTO(savedCourse);
+    }
+
     private Course findCourseByCourseId(Long courseId){
         return courseRepository.findById(courseId)
                 .orElseThrow(()->new CourseNotFoundException("Course not found"));

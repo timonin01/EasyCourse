@@ -48,11 +48,6 @@ public class CourseController {
         courseService.deleteCourse(courseId);
     }
 
-    @PostMapping("/{courseId}/sync-stepik")
-    public CourseResponseDTO syncCourseWithStepik(@PathVariable Long courseId) {
-        return courseService.syncCourseWithStepik(courseId);
-    }
-
     @PutMapping("/{courseId}/stepik-id/{stepikCourseId}")
     public CourseResponseDTO updateCourseStepikId(
             @PathVariable Long courseId, 

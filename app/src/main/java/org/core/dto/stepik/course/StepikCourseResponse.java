@@ -6,13 +6,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class StepikCourseResponse {
 
-    @JsonProperty("course")
-    private StepikCourseResponseData course;
+    @JsonProperty("courses")
+    private List<StepikCourseResponseData> courses;
+
+    public StepikCourseResponseData getCourse() {
+        return courses != null && !courses.isEmpty() ? courses.get(0) : null;
+    }
 
 }
