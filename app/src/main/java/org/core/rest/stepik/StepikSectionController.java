@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.service.crud.ModelService;
-import org.core.service.stepik.StepikSectionSyncService;
+import org.core.service.stepik.section.StepikSectionSyncService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,14 +1,12 @@
 package org.core.rest.stepik;
 
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.CaptchaChallenge;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.service.crud.CourseService;
-import org.core.service.stepik.StepikCourseSyncService;
-import org.core.service.crud.CourseService;
+import org.core.service.stepik.course.StepikCourseSyncService;
 
 import java.util.List;
 import org.springframework.http.ResponseEntity;

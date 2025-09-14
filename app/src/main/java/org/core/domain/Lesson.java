@@ -38,6 +38,9 @@ public class Lesson {
     @Column(name = "position", nullable = false)
     private Integer position;
 
+    @Column(name = "stepik_lesson_id")
+    private Long stepikLessonId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -10,11 +10,9 @@ import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.course.CreateCourseDTO;
 import org.core.dto.course.UpdateCourseDTO;
 import org.core.exception.CourseNotFoundException;
-import org.core.exception.StepikCourseIntegrationException;
 import org.core.exception.UserNotFoundException;
 import org.core.repository.CourseRepository;
 import org.core.repository.UserRepository;
-import org.core.service.stepik.StepikCourseService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
