@@ -59,6 +59,14 @@ public class ModelService {
                 .collect(Collectors.toList());
     }
 
+    public List<ModelResponseDTO> getUnsyncedModelsByCourseId(Long courseId){
+        List<Model> unsyncedModels = modelRepository.findByCourseIdAndStepikSectionIdIsNullOrderByPositionAsc(courseId);
+        log.info("Found {} unsynced models for course: {}", unsyncedModels.size(), courseId);
+        return unsyncedModels.stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     public ModelResponseDTO updateModel(UpdateModelDTO updateDTO){
         Model model = findModelByModelId(updateDTO.getModelId());
         if(updateDTO.getTitle() != null){
@@ -70,9 +78,9 @@ public class ModelService {
         if (updateDTO.getPosition() != null && !updateDTO.getPosition().equals(model.getPosition())){
             changeLessonPosition(model,updateDTO.getPosition());
         }
-
+        Model savedModel = modelRepository.save(model);
         log.info("Updated model with ID: {}", updateDTO.getModelId());
-        return mapToResponseDTO(modelRepository.save(model));
+        return mapToResponseDTO(savedModel);
     }
 
     public void deleteModel(Long modelId){
@@ -86,6 +94,13 @@ public class ModelService {
         log.info("Deleted model with ID: {} from course: {}", modelId, courseId);
     }
 
+    public ModelResponseDTO updateModelStepikSectionId(Long modelId, Long stepikSectionId) {
+        Model model = findModelByModelId(modelId);
+        model.setStepikSectionId(stepikSectionId);
+        Model savedModel = modelRepository.save(model);
+        log.info("Updated model ID: {} with Stepik section ID: {}", modelId, stepikSectionId);
+        return mapToResponseDTO(savedModel);
+    }
 
     private Model findModelByModelId(Long modelId){
         return modelRepository.findById(modelId)
@@ -107,7 +122,7 @@ public class ModelService {
         Integer oldPosition = model.getPosition();
         if (newPosition < oldPosition) {
             modelRepository.incrementPositionsRange(courseId, newPosition, oldPosition - 1);
-        } else {
+        } else if (newPosition > oldPosition) {
             modelRepository.decrementPositionsRange(courseId, oldPosition + 1, newPosition);
         }
         model.setPosition(newPosition);
@@ -124,6 +139,7 @@ public class ModelService {
                 .description(model.getDescription())
                 .position(model.getPosition())
                 .courseId(model.getCourse().getId())
+                .stepikSectionId(model.getStepikSectionId())
                 .createdAt(model.getCreatedAt())
                 .updatedAt(model.getUpdatedAt())
                 .build();
