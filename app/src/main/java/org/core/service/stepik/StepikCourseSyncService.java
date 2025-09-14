@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
 import org.core.dto.CaptchaChallenge;
 import org.core.dto.course.CourseResponseDTO;
+import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.service.crud.CourseService;
 import org.springframework.stereotype.Service;
 
@@ -32,11 +33,39 @@ public class StepikCourseSyncService {
         return processStepikResponse(courseId, result);
     }
 
+    public StepikCourseResponseData updateCourseInStepik(Long courseId) {
+        log.info("Starting manual update of course ID: {} in Stepik", courseId);
+        
+        CourseResponseDTO courseDTO = courseService.getCourseByCourseId(courseId);
+        if (courseDTO.getStepikCourseId() == null) {
+            throw new IllegalStateException("Course is not synced with Stepik. Course ID: " + courseId);
+        }
+        Course course = mapToCourse(courseDTO);
+        StepikCourseResponseData responseData = stepikCourseService.updateCourse(courseDTO.getStepikCourseId(), course);
+        
+        log.info("Course {} successfully updated in Stepik with course ID: {}", courseId, responseData.getId());
+        return responseData;
+    }
+
+    public void deleteCourseFromStepik(Long courseId) {
+        log.info("Starting manual deletion of course ID: {} from Stepik", courseId);
+        
+        CourseResponseDTO courseDTO = courseService.getCourseByCourseId(courseId);
+        if (courseDTO.getStepikCourseId() == null) {
+            throw new IllegalStateException("Course is not synced with Stepik. Course ID: " + courseId);
+        }
+        stepikCourseService.deleteCourse(courseDTO.getStepikCourseId());
+        courseService.updateCourseStepikId(courseId, null);
+        
+        log.info("Course {} successfully deleted from Stepik and unlinked", courseId);
+    }
+
     private Course mapToCourse(CourseResponseDTO courseDTO) {
         Course course = new Course();
         course.setId(courseDTO.getId());
         course.setTitle(courseDTO.getTitle());
         course.setDescription(courseDTO.getDescription());
+        course.setStepikCourseId(courseDTO.getStepikCourseId());
         return course;
     }
 

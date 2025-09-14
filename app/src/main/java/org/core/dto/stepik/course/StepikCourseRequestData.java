@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL) // Не включаем null поля в JSON
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StepikCourseRequestData {
 
     private String title;

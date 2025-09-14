@@ -14,6 +14,8 @@ import java.util.Optional;
 public interface ModelRepository extends JpaRepository<Model, Long> {
 
     List<Model> findByCourseIdOrderByPositionAsc(Long courseId);
+    
+    List<Model> findByCourseIdAndStepikSectionIdIsNullOrderByPositionAsc(Long courseId);
 
     @Query("SELECT MAX(m.position) FROM Model m WHERE m.course.id = :courseId")
     Optional<Integer> findMaxPositionByCourseId(@Param("courseId") Long courseId);
