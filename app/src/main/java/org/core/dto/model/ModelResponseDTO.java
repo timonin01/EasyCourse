@@ -16,6 +16,7 @@ public class ModelResponseDTO {
     private String description;
     private Integer position;
     private Long courseId;
+    private Long stepikSectionId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
