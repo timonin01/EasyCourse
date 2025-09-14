@@ -9,9 +9,8 @@ import org.core.domain.User;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.course.CreateCourseDTO;
 import org.core.dto.course.UpdateCourseDTO;
-import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.exception.CourseNotFoundException;
-import org.core.exception.StepikIntegrationException;
+import org.core.exception.StepikCourseIntegrationException;
 import org.core.exception.UserNotFoundException;
 import org.core.repository.CourseRepository;
 import org.core.repository.UserRepository;
@@ -29,7 +28,6 @@ public class CourseService {
 
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
-    private final StepikCourseService stepikCourseService;
 
     public CourseResponseDTO createCourse(CreateCourseDTO createDTO){
         User user = userRepository.findById(createDTO.getUserId())
@@ -74,69 +72,14 @@ public class CourseService {
         if(updateDTO.getDescription() != null && !updateDTO.getDescription().equals(course.getDescription())){
             course.setDescription(updateDTO.getDescription());
         }
-
         Course savedCourse = courseRepository.save(course);
-        log.info("Updated course with ID: {}", updateDTO.getId());
-        try {
-            Long stepikCourseId = course.getStepikCourseId();
-            if (stepikCourseId != null) {
-                stepikCourseService.updateCourse(stepikCourseId, savedCourse);
-                log.info("Course successfully updated in Stepik with ID: {}", stepikCourseId);
-            }
-            log.warn("Stepik course update not implemented yet - need stepikCourseId field");
-        } catch (StepikIntegrationException e) {
-            log.error("Failed to update course in Stepik: {}", e.getMessage());
-        }
         return mapToResponseDTO(savedCourse);
     }
 
     public void deleteCourse(Long courseId){
         Course course = findCourseByCourseId(courseId);
-        try {
-            Long stepikCourseId = course.getStepikCourseId();
-            if (stepikCourseId != null) {
-                stepikCourseService.deleteCourse(stepikCourseId);
-                log.info("Course successfully deleted from Stepik with ID: {}", stepikCourseId);
-            }
-            courseRepository.delete(course);
-            log.info("Deleted course with ID: {} for user: {}", course.getId(), course.getAuthor().getId());
-        } catch (StepikIntegrationException e) {
-            log.error("Failed to delete course from Stepik: {}", e.getMessage());
-        }
-    }
-
-    public CourseResponseDTO syncCourseWithStepik(Long courseId) {
-        Course course = findCourseByCourseId(courseId);
-        
-        try {
-            Long stepikCourseId = course.getStepikCourseId();
-            if (stepikCourseId == null) {
-                log.info("Attempting to sync course with ID: {} to Stepik", courseId);
-                StepikCourseResponseData stepikResponse = stepikCourseService.createCourse(course);
-                log.info("Course successfully synced with Stepik, Stepik ID: {}", stepikResponse.getId());
-                course.setStepikCourseId(stepikResponse.getId());
-                courseRepository.save(course);
-            } else {
-                log.info("Course already synced with Stepik, Stepik ID: {}", stepikCourseId);
-            }
-        } catch (StepikIntegrationException e) {
-            String errorMessage = e.getMessage();
-            log.error("Failed to sync course with Stepik: {}", errorMessage);
-            
-            // Проверяем, является ли ошибка капчей
-            if (errorMessage.contains("captcha") || errorMessage.contains("Wrong captcha")) {
-                String stepikUrl = String.format("https://stepik.org/teach/?create_course=true&title=%s&description=%s", 
-                    course.getTitle(), course.getDescription());
-                throw new RuntimeException(String.format(
-                    "Stepik requires captcha verification. Please create the course manually at: %s " +
-                    "Then update the course with Stepik ID using: PUT /api/v1/courses/%d/stepik-id/{stepikCourseId}. Error: %s", 
-                    stepikUrl, courseId, errorMessage));
-            } else {
-                throw new RuntimeException("Failed to sync course with Stepik: " + errorMessage);
-            }
-        }
-
-        return mapToResponseDTO(course);
+        log.info("Course successfully deleted from Stepik with ID: {}", course.getStepikCourseId());
+        courseRepository.delete(course);
     }
 
     public CourseResponseDTO updateCourseStepikId(Long courseId, Long stepikCourseId) {

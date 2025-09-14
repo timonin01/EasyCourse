@@ -5,18 +5,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
 import org.core.dto.CaptchaChallenge;
+import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseRequest;
 import org.core.dto.stepik.course.StepikCourseRequestData;
 import org.core.dto.stepik.course.StepikCourseResponse;
 import org.core.dto.stepik.course.StepikCourseResponseData;
-import org.core.exception.StepikIntegrationException;
+import org.core.exception.StepikCourseIntegrationException;
+import org.core.service.crud.CourseService;
+import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.Collections;
 
 @Service
 @Slf4j
@@ -25,9 +25,6 @@ public class StepikCourseService {
 
     @Value("${stepik.api.base-url}")
     private String baseUrl;
-
-    @Value("${stepik.api.token}")
-    private String apiToken;
 
     @Value("${stepik.api.default-language:ru}")
     private String defaultLanguage;
@@ -41,6 +38,7 @@ public class StepikCourseService {
     @Value("${recaptcha.site-key}")
     private String recaptchaSiteKey;
 
+    private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
 
     public StepikCourseResponseData createCourse(Course course){
@@ -64,7 +62,7 @@ public class StepikCourseService {
             }
             request.setCourse(requestData);
 
-            HttpHeaders headers = createHeaders();
+            HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<StepikCourseRequest> entity = new HttpEntity<>(request, headers);
             ResponseEntity<StepikCourseResponse> response = restTemplate.exchange(
                     url, HttpMethod.POST, entity, StepikCourseResponse.class);
@@ -79,13 +77,13 @@ public class StepikCourseService {
                     return courseData;
                 } else {
                     log.error("Course data is null in response");
-                    throw new StepikIntegrationException("No course data in Stepik response");
+                    throw new StepikCourseIntegrationException("No course data in Stepik response");
                 }
             }
-            throw new StepikIntegrationException("Failed to create course in Stepik");
+            throw new StepikCourseIntegrationException("Failed to create course in Stepik");
         } catch (Exception e) {
             log.error("Error creating course in Stepik: {}", e.getMessage());
-            throw new StepikIntegrationException("Failed to create course in Stepik: " + e.getMessage());
+            throw new StepikCourseIntegrationException("Failed to create course in Stepik: " + e.getMessage());
         }
     }
 
@@ -97,7 +95,7 @@ public class StepikCourseService {
             StepikCourseRequestData requestData = createCourseRequestData(course);
             request.setCourse(requestData);
 
-            HttpHeaders headers = createHeaders();
+            HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<StepikCourseRequest> entity = new HttpEntity<>(request, headers);
             ResponseEntity<StepikCourseResponse> response = restTemplate.exchange(
                     url, HttpMethod.PUT, entity, StepikCourseResponse.class);
@@ -106,10 +104,10 @@ public class StepikCourseService {
                 log.info("Course updated in Stepik with ID: {}", courseId);
                 return response.getBody().getCourse();
             }
-            else throw new StepikIntegrationException("Failed to update course in Stepik");
+            else throw new StepikCourseIntegrationException("Failed to update course in Stepik");
         } catch (Exception e) {
             log.error("Error updating course in Stepik: {}", e.getMessage());
-            throw new StepikIntegrationException("Failed to update course in Stepik: " + e.getMessage());
+            throw new StepikCourseIntegrationException("Failed to update course in Stepik: " + e.getMessage());
         }
     }
 
@@ -117,7 +115,7 @@ public class StepikCourseService {
         try {
             String url = baseUrl + "/courses/" + courseId;
 
-            HttpHeaders headers = createHeaders();
+            HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<Void> response = restTemplate.exchange(
                     url, HttpMethod.DELETE, entity, Void.class);
@@ -125,23 +123,11 @@ public class StepikCourseService {
             if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
                 log.info("Course deleted from Stepik with ID: {}", courseId);
             }
-            else throw new StepikIntegrationException("Failed to delete course in Stepik");
+            else throw new StepikCourseIntegrationException("Failed to delete course in Stepik");
         } catch (Exception e) {
             log.error("Error deleting course in Stepik: {}", e.getMessage());
-            throw new StepikIntegrationException("Failed to delete course in Stepik: " + e.getMessage());
+            throw new StepikCourseIntegrationException("Failed to delete course in Stepik: " + e.getMessage());
         }
-    }
-
-    private HttpHeaders createHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-        
-        if (apiToken == null || apiToken.trim().isEmpty()) {
-            throw new StepikIntegrationException("Stepik API token is not configured");
-        }
-        headers.set("Authorization", "Bearer " + apiToken);
-        return headers;
     }
 
     public CaptchaChallenge tryCreateCourseAndGetCaptcha(Course course, String captchaToken) {
@@ -159,7 +145,7 @@ public class StepikCourseService {
                 result.setMessage("Course created successfully in Stepik");
             }
             return result;
-        } catch (StepikIntegrationException e) {
+        } catch (StepikCourseIntegrationException e) {
             if (e.getMessage().contains("captcha")) {
                 log.warn("Captcha required for course creation: {}", e.getMessage());
                 return CaptchaChallenge.requiresCaptcha(course.getId(), recaptchaSiteKey);
