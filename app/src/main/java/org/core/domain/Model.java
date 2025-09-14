@@ -38,6 +38,9 @@ public class Model {
     @Column(name = "position", nullable = false)
     private Integer position;
 
+    @Column(name = "stepik_section_id")
+    private Long stepikSectionId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

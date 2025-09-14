@@ -183,7 +183,7 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.updateUser(updateDto))
                 .isInstanceOf(UserAlreadyExistsException.class)
-                .hasMessage("User with this email");
+                .hasMessage("User with email existing@gmail.com already exists");
     }
 
     @Test
