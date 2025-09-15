@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
-import org.core.dto.CaptchaChallenge;
+import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.service.crud.CourseService;
@@ -18,7 +18,7 @@ public class StepikCourseSyncService {
     private final StepikCourseService stepikCourseService;
     private final CourseService courseService;
 
-    public CaptchaChallenge syncCourseWithStepik(Long courseId, String captchaToken) {
+    public CourseCaptchaChallenge syncCourseWithStepik(Long courseId, String captchaToken) {
         log.info("Starting sync course ID: {} with Stepik (captcha provided: {})", courseId, captchaToken != null);
         
         if (captchaToken != null) {
@@ -29,7 +29,7 @@ public class StepikCourseSyncService {
         CourseResponseDTO courseDTO = courseService.getCourseByCourseId(courseId);
         Course course = mapToCourse(courseDTO);
 
-        CaptchaChallenge result = stepikCourseService.tryCreateCourseAndGetCaptcha(course, captchaToken);
+        CourseCaptchaChallenge result = stepikCourseService.tryCreateCourseAndGetCaptcha(course, captchaToken);
         return processStepikResponse(courseId, result);
     }
 
@@ -69,7 +69,7 @@ public class StepikCourseSyncService {
         return course;
     }
 
-    private CaptchaChallenge processStepikResponse(Long courseId, CaptchaChallenge result) {
+    private CourseCaptchaChallenge processStepikResponse(Long courseId, CourseCaptchaChallenge result) {
         if (result.getCaptchaKey() != null && result.getCaptchaKey().matches("\\d+")) {
             return handleSuccessfulCourseCreation(courseId, result);
         }
@@ -80,7 +80,7 @@ public class StepikCourseSyncService {
         return result;
     }
 
-    private CaptchaChallenge handleSuccessfulCourseCreation(Long courseId, CaptchaChallenge result) {
+    private CourseCaptchaChallenge handleSuccessfulCourseCreation(Long courseId, CourseCaptchaChallenge result) {
         Long stepikCourseId = Long.parseLong(result.getCaptchaKey());
         courseService.updateCourseStepikId(courseId, stepikCourseId);
 

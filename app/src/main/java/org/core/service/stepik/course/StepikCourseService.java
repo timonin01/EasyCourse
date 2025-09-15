@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
-import org.core.dto.CaptchaChallenge;
+import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.stepik.course.StepikCourseRequest;
 import org.core.dto.stepik.course.StepikCourseRequestData;
 import org.core.dto.stepik.course.StepikCourseResponse;
@@ -128,13 +128,13 @@ public class StepikCourseService {
         }
     }
 
-    public CaptchaChallenge tryCreateCourseAndGetCaptcha(Course course, String captchaToken) {
+    public CourseCaptchaChallenge tryCreateCourseAndGetCaptcha(Course course, String captchaToken) {
         try {
             StepikCourseResponseData stepikCourse = createCourse(course, captchaToken);
             log.info("Course created successfully with Stepik ID: {} and captcha token: {}", 
                     stepikCourse.getId(), stepikCourse.getCaptcha() != null ? "present" : "absent");
 
-            CaptchaChallenge result = CaptchaChallenge.noCaptchaNeeded(course.getId());
+            CourseCaptchaChallenge result = CourseCaptchaChallenge.noCaptchaNeeded(course.getId());
             result.setCaptchaKey(stepikCourse.getId().toString());
             if (stepikCourse.getCaptcha() != null) {
                 result.setCaptchaImageUrl(stepikCourse.getCaptcha());
@@ -146,7 +146,7 @@ public class StepikCourseService {
         } catch (StepikCourseIntegrationException e) {
             if (e.getMessage().contains("captcha")) {
                 log.warn("Captcha required for course creation: {}", e.getMessage());
-                return CaptchaChallenge.requiresCaptcha(course.getId(), recaptchaSiteKey);
+                return CourseCaptchaChallenge.requiresCaptcha(course.getId(), recaptchaSiteKey);
             }
             log.error("Failed to create course in Stepik: {}", e.getMessage());
             throw e;

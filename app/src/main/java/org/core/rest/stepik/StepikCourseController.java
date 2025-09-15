@@ -2,7 +2,7 @@ package org.core.rest.stepik;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.dto.CaptchaChallenge;
+import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.service.crud.CourseService;
@@ -29,12 +29,12 @@ public class StepikCourseController {
     }
 
     @PostMapping("/sync-course")
-    public ResponseEntity<CaptchaChallenge> syncCourse(
+    public ResponseEntity<CourseCaptchaChallenge> syncCourse(
             @RequestParam Long courseId,
             @RequestParam(required = false) String captchaToken) {
         try {
             log.info("Starting sync for course: {} with captcha: {}", courseId, captchaToken != null);
-            CaptchaChallenge result = stepikCourseSyncService.syncCourseWithStepik(courseId, captchaToken);
+            CourseCaptchaChallenge result = stepikCourseSyncService.syncCourseWithStepik(courseId, captchaToken);
             return ResponseEntity.ok(result);
         } catch (IllegalStateException e) {
             log.warn("Sync failed for course {}: {}", courseId, e.getMessage());

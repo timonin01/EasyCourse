@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест синхронизации урока с Stepik</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="number"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        .btn-secondary {
+            background-color: #008CBA;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #007B9A;
+        }
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #da190b;
+        }
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background-color: #138496;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .captcha-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        #recaptcha { margin: 15px 0; }
+        .log { font-size: 12px; color: #666; margin: 5px 0; }
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #ddd;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 10px;
+            font-weight: bold;
+        }
+        .step.active {
+            background-color: #4CAF50;
+        }
+        .step.completed {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Тест синхронизации урока с Stepik</h1>
+        
+        <div class="step-indicator">
+            <div class="step active" id="step1">1</div>
+            <div class="step" id="step2">2</div>
+            <div class="step" id="step3">3</div>
+        </div>
+
+        <div class="form-group">
+            <label for="lessonId">ID урока:</label>
+            <input type="number" id="lessonId" value="3" placeholder="Введите ID урока">
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="syncLesson()">🔄 Синхронизировать урок</button>
+            <button class="btn-secondary" onclick="syncLessonWithCaptcha()">🔐 Синхронизировать с капчей</button>
+            <button class="btn-info" onclick="checkSyncStatus()">📊 Проверить статус</button>
+            <button class="btn-danger" onclick="clearResponse()">🗑️ Очистить</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Выполняется запрос...</div>
+        </div>
+
+        <div class="captcha-container" id="captchaContainer" style="display: none;">
+            <h3>🔒 Требуется решить капчу:</h3>
+            <p>Stepik требует подтверждения что вы не робот:</p>
+            <div id="recaptcha"></div>
+            <div class="log" id="captcha-status">Решите капчу выше...</div>
+        </div>
+
+        <div id="response" class="response" style="display: none;"></div>
+    </div>
+
+    <script>
+        let currentLessonId = null;
+        let currentCaptchaToken = null;
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('response').style.display = 'none';
+            document.getElementById('captchaContainer').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showResponse(content, type = 'info') {
+            hideLoading();
+            const responseDiv = document.getElementById('response');
+            responseDiv.textContent = content;
+            responseDiv.className = `response ${type}`;
+            responseDiv.style.display = 'block';
+        }
+
+        function addLog(message) {
+            const statusDiv = document.getElementById('captcha-status');
+            statusDiv.innerHTML += message + '<br>';
+        }
+
+        function showCaptcha(siteKey) {
+            hideLoading();
+            currentLessonId = document.getElementById('lessonId').value;
+            
+            const captchaContainer = document.getElementById('captchaContainer');
+            captchaContainer.style.display = 'block';
+            updateStepIndicator(2);
+            
+            addLog(`🔧 Инициализируем reCAPTCHA с site key: ${siteKey}`);
+            
+            // Очищаем предыдущую капчу если была
+            document.getElementById('recaptcha').innerHTML = '';
+            
+            // Инициализируем новую reCAPTCHA
+            try {
+                grecaptcha.render('recaptcha', {
+                    'sitekey': siteKey,
+                    'callback': onCaptchaSuccess,
+                    'expired-callback': onCaptchaExpired
+                });
+                addLog('✅ reCAPTCHA инициализирована успешно');
+            } catch (error) {
+                addLog(`❌ Ошибка инициализации reCAPTCHA: ${error.message}`);
+            }
+        }
+
+        function onCaptchaSuccess(token) {
+            addLog('✅ Капча решена! Токен получен.');
+            currentCaptchaToken = token;
+            addLog('🚀 Автоматически отправляем запрос с токеном капчи...');
+            syncLessonWithCaptcha();
+        }
+
+        function onCaptchaExpired() {
+            addLog('⚠️ Капча истекла. Решите её заново.');
+            currentCaptchaToken = null;
+        }
+
+        function updateStepIndicator(activeStep) {
+            for (let i = 1; i <= 3; i++) {
+                const step = document.getElementById(`step${i}`);
+                step.classList.remove('active', 'completed');
+                if (i < activeStep) {
+                    step.classList.add('completed');
+                } else if (i === activeStep) {
+                    step.classList.add('active');
+                }
+            }
+        }
+
+        function clearResponse() {
+            document.getElementById('response').style.display = 'none';
+            document.getElementById('captchaContainer').style.display = 'none';
+            document.getElementById('captchaInput').value = '';
+            updateStepIndicator(1);
+        }
+
+        async function syncLesson() {
+            const lessonId = document.getElementById('lessonId').value;
+            if (!lessonId) {
+                showResponse('Пожалуйста, введите ID урока', 'error');
+                return;
+            }
+
+            showLoading();
+            updateStepIndicator(2);
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/v1/stepik/lessons/sync-lesson?lessonId=${lessonId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.siteKey) {
+                        // Требуется капча
+                        showCaptcha(data.siteKey);
+                        showResponse(`Требуется капча для создания урока.\n\nОтвет сервера:\n${JSON.stringify(data, null, 2)}`, 'info');
+                    } else if (data.captchaKey) {
+                        // Урок создан успешно
+                        updateStepIndicator(3);
+                        showResponse(`✅ Урок успешно синхронизирован с Stepik!\n\nID урока в Stepik: ${data.captchaKey}\nID урока локально: ${data.lessonId}\n\nОтвет сервера:\n${JSON.stringify(data, null, 2)}`, 'success');
+                    } else {
+                        showResponse(`Ответ сервера:\n${JSON.stringify(data, null, 2)}`, 'info');
+                    }
+                } else {
+                    showResponse(`❌ Ошибка: ${response.status} ${response.statusText}\n\nОтвет сервера:\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                if (error.message.includes('Unexpected end of JSON input')) {
+                    showResponse(`❌ Ошибка: Сервер вернул пустой ответ или неверный JSON. Возможно, сервер недоступен или произошла внутренняя ошибка.`, 'error');
+                } else {
+                    showResponse(`❌ Ошибка сети: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function syncLessonWithCaptcha() {
+            const lessonId = document.getElementById('lessonId').value;
+            
+            if (!lessonId) {
+                showResponse('Пожалуйста, введите ID урока', 'error');
+                return;
+            }
+
+            if (!currentCaptchaToken) {
+                showResponse('Пожалуйста, решите капчу', 'error');
+                return;
+            }
+
+            showLoading();
+            updateStepIndicator(3);
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/v1/stepik/lessons/sync-lesson?lessonId=${lessonId}&captchaToken=${encodeURIComponent(currentCaptchaToken)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.captchaKey) {
+                        // Урок создан успешно
+                        updateStepIndicator(3);
+                        showResponse(`✅ Урок успешно синхронизирован с Stepik!\n\nID урока в Stepik: ${data.captchaKey}\nID урока локально: ${data.lessonId}\n\nОтвет сервера:\n${JSON.stringify(data, null, 2)}`, 'success');
+                        document.getElementById('captchaContainer').style.display = 'none';
+                        currentCaptchaToken = null;
+                    } else if (data.siteKey) {
+                        // Все еще требуется капча
+                        showCaptcha(data.siteKey);
+                        showResponse(`❌ Неверная капча. Попробуйте еще раз.\n\nОтвет сервера:\n${JSON.stringify(data, null, 2)}`, 'error');
+                    } else {
+                        showResponse(`Ответ сервера:\n${JSON.stringify(data, null, 2)}`, 'info');
+                    }
+                } else {
+                    showResponse(`❌ Ошибка: ${response.status} ${response.statusText}\n\nОтвет сервера:\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                if (error.message.includes('Unexpected end of JSON input')) {
+                    showResponse(`❌ Ошибка: Сервер вернул пустой ответ или неверный JSON. Возможно, сервер недоступен или произошла внутренняя ошибка.`, 'error');
+                } else {
+                    showResponse(`❌ Ошибка сети: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function checkSyncStatus() {
+            const lessonId = document.getElementById('lessonId').value;
+            if (!lessonId) {
+                showResponse('Пожалуйста, введите ID урока', 'error');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/v1/stepik/lessons/sync-status/${lessonId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.captchaKey) {
+                        showResponse(`✅ Урок синхронизирован с Stepik!\n\nID урока в Stepik: ${data.captchaKey}\nID урока локально: ${data.lessonId}\n\nСтатус: ${data.message}`, 'success');
+                    } else {
+                        showResponse(`❌ Урок не синхронизирован с Stepik\n\nID урока локально: ${data.lessonId}\n\nСтатус: ${data.message}`, 'warning');
+                    }
+                } else {
+                    showResponse(`❌ Ошибка: ${response.status} ${response.statusText}\n\nОтвет сервера:\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                if (error.message.includes('Unexpected end of JSON input')) {
+                    showResponse(`❌ Ошибка: Сервер вернул пустой ответ или неверный JSON. Возможно, сервер недоступен или произошла внутренняя ошибка.`, 'error');
+                } else {
+                    showResponse(`❌ Ошибка сети: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Обработка Enter в поле ID урока
+        document.getElementById('lessonId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                syncLesson();
+            }
+        });
+    </script>
+</body>
+</html>

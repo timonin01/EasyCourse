@@ -41,4 +41,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     @Modifying
     @Query("UPDATE Lesson l SET l.stepikLessonId = :stepikLessonId WHERE l.id = :lessonId")
     void updateStepikLessonId(@Param("lessonId") Long lessonId, @Param("stepikLessonId") Long stepikLessonId);
+
+    @Modifying
+    @Query("UPDATE Lesson l SET l.stepikLessonId = NULL WHERE l.id = :lessonId")
+    void updateStepikLessonId(@Param("lessonId") Long lessonId);
 }

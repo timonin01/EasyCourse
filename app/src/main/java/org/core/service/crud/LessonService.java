@@ -116,12 +116,30 @@ public class LessonService {
         lessonRepository.decrementPositionsFromPosition(modelId, deletedPosition);
     }
 
+    public List<LessonResponseDTO> getUnsyncedLessonsByModelId(Long modelId) {
+        List<Lesson> lessons = lessonRepository.findByModelIdAndStepikLessonIdIsNullOrderByPositionAsc(modelId);
+        return lessons.stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public void updateLessonStepikLessonId(Long lessonId, Long stepikLessonId) {
+        lessonRepository.updateStepikLessonId(lessonId, stepikLessonId);
+        log.info("Updated lesson {} with stepikLessonId: {}", lessonId, stepikLessonId);
+    }
+
+    public void updateLessonStepikLessonIdSetNull(Long lessonId) {
+        lessonRepository.updateStepikLessonId(lessonId);
+        log.info("Updated lesson {} set NULL value", lessonId);
+    }
+
     private LessonResponseDTO mapToResponseDTO(Lesson lesson) {
         return LessonResponseDTO.builder()
                 .id(lesson.getId())
                 .title(lesson.getTitle())
                 .description(lesson.getDescription())
                 .position(lesson.getPosition())
+                .stepikLessonId(lesson.getStepikLessonId())
                 .modelId(lesson.getModel().getId())
                 .createdAt(lesson.getCreatedAt())
                 .updatedAt(lesson.getUpdatedAt())
