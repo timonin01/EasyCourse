@@ -133,6 +133,12 @@ public class LessonService {
         log.info("Updated lesson {} set NULL value", lessonId);
     }
 
+    public void clearStepikLessonIdsByModelId(Long modelId) {
+        log.info("Clearing stepikLessonId for all lessons in model {}", modelId);
+        int updatedCount = lessonRepository.clearStepikLessonIdsByModelId(modelId);
+        log.info("Cleared stepikLessonId for {} lessons in model {}", updatedCount, modelId);
+    }
+
     private LessonResponseDTO mapToResponseDTO(Lesson lesson) {
         return LessonResponseDTO.builder()
                 .id(lesson.getId())

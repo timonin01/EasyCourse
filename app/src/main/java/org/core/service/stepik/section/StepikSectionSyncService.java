@@ -12,6 +12,7 @@ import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.exception.StepikSectionIntegrationException;
 import org.core.service.crud.ModelService;
 import org.core.service.crud.CourseService;
+import org.core.service.crud.LessonService;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,6 +23,7 @@ public class StepikSectionSyncService {
     private final StepikSectionService stepikSectionService;
     private final ModelService modelService;
     private final CourseService courseService;
+    private final LessonService lessonService;
 
     public StepikSectionResponseData syncModelWithStepik(Long modelId) {
         log.info("Starting sync model ID: {} with Stepik", modelId);
@@ -70,6 +72,10 @@ public class StepikSectionSyncService {
         if (modelDTO.getStepikSectionId() == null) {
             throw new IllegalStateException("Model is not synced with Stepik. Model ID: " + modelId);
         }
+        
+        log.info("Clearing stepikLessonId for all lessons in model {}", modelId);
+        lessonService.clearStepikLessonIdsByModelId(modelId);
+        
         stepikSectionService.deleteSection(modelDTO.getStepikSectionId());
         modelService.updateModelStepikSectionId(modelId, null);
         
