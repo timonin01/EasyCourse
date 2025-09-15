@@ -1,17 +1,15 @@
-package org.core.service.stepik;
+package org.core.service.stepik.course;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
 import org.core.dto.CaptchaChallenge;
-import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseRequest;
 import org.core.dto.stepik.course.StepikCourseRequestData;
 import org.core.dto.stepik.course.StepikCourseResponse;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.exception.StepikCourseIntegrationException;
-import org.core.service.crud.CourseService;
 import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;

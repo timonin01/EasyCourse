@@ -6,7 +6,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CaptchaChallenge {
+public class CourseCaptchaChallenge {
 
     private String sessionToken;
     private String captchaImageUrl;
@@ -15,12 +15,12 @@ public class CaptchaChallenge {
     private Long courseId;
     private String message;
     
-    public static CaptchaChallenge noCaptchaNeeded(Long courseId) {
-        return new CaptchaChallenge(null, null, null, null, courseId, "Course created successfully without captcha");
+    public static CourseCaptchaChallenge noCaptchaNeeded(Long courseId) {
+        return new CourseCaptchaChallenge(null, null, null, null, courseId, "Course created successfully without captcha");
     }
     
-    public static CaptchaChallenge requiresCaptcha(Long courseId, String siteKey) {
-        CaptchaChallenge challenge = new CaptchaChallenge();
+    public static CourseCaptchaChallenge requiresCaptcha(Long courseId, String siteKey) {
+        CourseCaptchaChallenge challenge = new CourseCaptchaChallenge();
         challenge.setCourseId(courseId);
         challenge.setSiteKey(siteKey);
         challenge.setMessage("Captcha required. Use the provided site key to show reCAPTCHA on frontend.");

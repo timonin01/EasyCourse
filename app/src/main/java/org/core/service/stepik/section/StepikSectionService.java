@@ -1,4 +1,4 @@
-package org.core.service.stepik;
+package org.core.service.stepik.section;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

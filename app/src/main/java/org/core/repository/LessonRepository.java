@@ -33,4 +33,12 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     @Modifying
     @Query("UPDATE Lesson l SET l.position = l.position - 1 WHERE l.model.id = :modelId AND l.position >= :fromPosition AND l.position <= :toPosition")
     void decrementPositionsRange(@Param("modelId") Long modelId, @Param("fromPosition") Integer fromPosition, @Param("toPosition") Integer toPosition);
+    
+    List<Lesson> findByModelIdAndStepikLessonIdIsNullOrderByPositionAsc(Long modelId);
+    
+    Optional<Lesson> findByStepikLessonId(Long stepikLessonId);
+    
+    @Modifying
+    @Query("UPDATE Lesson l SET l.stepikLessonId = :stepikLessonId WHERE l.id = :lessonId")
+    void updateStepikLessonId(@Param("lessonId") Long lessonId, @Param("stepikLessonId") Long stepikLessonId);
 }
