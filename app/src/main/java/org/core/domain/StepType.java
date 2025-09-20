@@ -2,7 +2,8 @@ package org.core.domain;
 
 public enum StepType {
 
-    THEORY,
+    TEXT,
+    CHOICE,
     CODE,
     VIDEO,
     TEST,

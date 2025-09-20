@@ -2,6 +2,7 @@ package org.core.dto.step;
 
 import lombok.*;
 import org.core.domain.StepType;
+import org.core.dto.stepik.step.StepikBlockResponse;
 
 import java.time.LocalDateTime;
 
@@ -18,6 +19,8 @@ public class StepResponseDTO {
     private String content;
     private Integer position;
     private Long cost;
+    private StepikBlockResponse stepikBlock;
+    private Long stepikStepId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

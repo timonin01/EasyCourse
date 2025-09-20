@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="add-cost-to-steps" author="system">
+        <addColumn tableName="steps">
+            <column name="cost" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="steps" columnName="cost"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="add-stepik-block-data-to-steps" author="system">
+        <addColumn tableName="steps">
+            <column name="stepik_block_data" type="JSON">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="steps" columnName="stepik_block_data"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="add-stepik-step-id-to-steps" author="system">
+        <addColumn tableName="steps">
+            <column name="stepik_step_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="steps" columnName="stepik_step_id"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.core.domain.StepType;
+import org.core.dto.stepik.step.StepikBlockRequest;
 
 @Getter
 @Setter
@@ -19,4 +20,7 @@ public class UpdateStepDTO {
     private Integer position;
     private Long cost;
 
+    private StepikBlockRequest stepikBlock;
+
+    private Long stepikStepId;
 }
