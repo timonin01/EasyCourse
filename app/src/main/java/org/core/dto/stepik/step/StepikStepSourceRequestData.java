@@ -1,10 +1,14 @@
 package org.core.dto.stepik.step;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.core.dto.stepik.step.choise.request.StepikBlockChoiceRequest;
+import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 
 @Getter
 @Setter
@@ -15,6 +19,12 @@ public class StepikStepSourceRequestData {
     private String lesson;
     private Integer position;
     private Integer cost;
+    
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "name", include = JsonTypeInfo.As.PROPERTY)
+    @JsonSubTypes({
+        @JsonSubTypes.Type(value = StepikBlockTextRequest.class, name = "text"),
+        @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice")
+    })
     private StepikBlockRequest block;
 
     @JsonProperty("is_enabled")
