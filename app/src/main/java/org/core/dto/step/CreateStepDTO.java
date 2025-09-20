@@ -24,4 +24,5 @@ public class CreateStepDTO {
 
     private Integer position;
 
+    private Long cost;
 }
