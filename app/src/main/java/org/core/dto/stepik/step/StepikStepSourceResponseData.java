@@ -13,7 +13,7 @@ import lombok.Setter;
 public class StepikStepSourceResponseData {
 
     private Long id;
-    private String lesson;
+    private Long lesson;
     private Integer position;
     private StepikBlockResponse block;
 
