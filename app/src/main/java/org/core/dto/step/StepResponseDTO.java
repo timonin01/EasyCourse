@@ -17,6 +17,7 @@ public class StepResponseDTO {
     private StepType type;
     private String content;
     private Integer position;
+    private Long cost;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -17,5 +17,6 @@ public class UpdateStepDTO {
     private String content;
     private String title;
     private Integer position;
+    private Long cost;
 
 }

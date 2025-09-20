@@ -22,4 +22,5 @@ public class StepikStepSourceResponseData {
 
     private String status;
 
+    private Long cost;
 }

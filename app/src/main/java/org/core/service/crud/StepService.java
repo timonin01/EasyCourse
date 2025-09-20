@@ -43,6 +43,7 @@ public class StepService {
         step.setType(createStepDTO.getType());
         step.setContent(createStepDTO.getContent());
         step.setPosition(position);
+        step.setCost(createStepDTO.getCost());
 
         log.info("Step created with id: {} in lesson: {}", step.getId(), lesson.getId());
         return mapToResponseDto(stepRepository.save(step));
@@ -67,6 +68,9 @@ public class StepService {
         }
         if (updateDto.getContent() != null) {
             step.setContent(updateDto.getContent());
+        }
+        if (updateDto.getCost() != null) {
+            step.setCost(updateDto.getCost());
         }
         if (updateDto.getPosition() != null && !updateDto.getPosition().equals(step.getPosition())) {
             changeStepPosition(step, updateDto.getPosition());
@@ -122,6 +126,7 @@ public class StepService {
                 .type(step.getType())
                 .content(step.getContent())
                 .position(step.getPosition())
+                .cost(step.getCost())
                 .createdAt(step.getCreatedAt())
                 .updatedAt(step.getUpdatedAt())
                 .lessonId(step.getLesson().getId())

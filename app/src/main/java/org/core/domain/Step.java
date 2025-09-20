@@ -30,6 +30,9 @@ public class Step {
     @Column(name = "type", nullable = false)
     private StepType type;
 
+    @Column(name = "cost")
+    private Long cost;
+
     @Column(columnDefinition = "LONGTEXT")
     private String content;
 
