@@ -30,8 +30,17 @@ public class Step {
     @Column(name = "type", nullable = false)
     private StepType type;
 
+    @Column(name = "cost")
+    private Long cost;
+
     @Column(columnDefinition = "LONGTEXT")
     private String content;
+
+    @Column(name = "stepik_block_data", columnDefinition = "JSON")
+    private String stepikBlockData;
+
+    @Column(name = "stepik_step_id")
+    private Long stepikStepId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

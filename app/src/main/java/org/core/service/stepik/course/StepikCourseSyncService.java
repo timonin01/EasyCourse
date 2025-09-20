@@ -11,8 +11,8 @@ import org.core.service.crud.CourseService;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Slf4j
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class StepikCourseSyncService {
 
     private final StepikCourseService stepikCourseService;

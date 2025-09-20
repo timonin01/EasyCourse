@@ -8,6 +8,8 @@ import org.core.domain.Step;
 import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
+import org.core.dto.stepik.step.StepikBlockResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepNotFoundException;
 import org.core.repository.LessonRepository;
@@ -26,6 +28,7 @@ public class StepService {
 
     private final StepRepository stepRepository;
     private final LessonRepository lessonRepository;
+    private final ObjectMapper objectMapper;
 
     public StepResponseDTO createStep(CreateStepDTO createStepDTO){
         Lesson lesson = lessonRepository.findById(createStepDTO.getLessonId())
@@ -43,6 +46,18 @@ public class StepService {
         step.setType(createStepDTO.getType());
         step.setContent(createStepDTO.getContent());
         step.setPosition(position);
+        step.setCost(createStepDTO.getCost());
+        step.setStepikStepId(createStepDTO.getStepikStepId());
+        
+        // Сериализация StepikBlock в JSON
+        if (createStepDTO.getStepikBlock() != null) {
+            try {
+                step.setStepikBlockData(objectMapper.writeValueAsString(createStepDTO.getStepikBlock()));
+            } catch (Exception e) {
+                log.error("Error serializing stepik block data", e);
+                throw new RuntimeException("Error serializing stepik block data", e);
+            }
+        }
 
         log.info("Step created with id: {} in lesson: {}", step.getId(), lesson.getId());
         return mapToResponseDto(stepRepository.save(step));
@@ -67,6 +82,20 @@ public class StepService {
         }
         if (updateDto.getContent() != null) {
             step.setContent(updateDto.getContent());
+        }
+        if (updateDto.getCost() != null) {
+            step.setCost(updateDto.getCost());
+        }
+        if (updateDto.getStepikStepId() != null) {
+            step.setStepikStepId(updateDto.getStepikStepId());
+        }
+        if (updateDto.getStepikBlock() != null) {
+            try {
+                step.setStepikBlockData(objectMapper.writeValueAsString(updateDto.getStepikBlock()));
+            } catch (Exception e) {
+                log.error("Error serializing stepik block data", e);
+                throw new RuntimeException("Error serializing stepik block data", e);
+            }
         }
         if (updateDto.getPosition() != null && !updateDto.getPosition().equals(step.getPosition())) {
             changeStepPosition(step, updateDto.getPosition());
@@ -117,11 +146,23 @@ public class StepService {
     }
 
     private StepResponseDTO mapToResponseDto(Step step) {
+        StepikBlockResponse stepikBlock = null;
+        if (step.getStepikBlockData() != null) {
+            try {
+                stepikBlock = objectMapper.readValue(step.getStepikBlockData(), StepikBlockResponse.class);
+            } catch (Exception e) {
+                log.error("Error deserializing stepik block data", e);
+            }
+        }
+        
         return StepResponseDTO.builder()
                 .id(step.getId())
                 .type(step.getType())
                 .content(step.getContent())
                 .position(step.getPosition())
+                .cost(step.getCost())
+                .stepikBlock(stepikBlock)
+                .stepikStepId(step.getStepikStepId())
                 .createdAt(step.getCreatedAt())
                 .updatedAt(step.getUpdatedAt())
                 .lessonId(step.getLesson().getId())

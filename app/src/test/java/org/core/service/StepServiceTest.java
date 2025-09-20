@@ -102,10 +102,11 @@ class StepServiceTest {
     private Step createTestStep(Long id, Integer position) {
         return Step.builder()
                 .id(id)
-                .type(StepType.THEORY)
+                .type(StepType.TEXT)
                 .content("Test Content")
                 .lesson(testLesson)
                 .position(position)
+                .cost(1L)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -116,10 +117,10 @@ class StepServiceTest {
         when(lessonRepository.findById(1L)).thenReturn(Optional.of(testLesson));
         when(stepRepository.save(any(Step.class))).thenReturn(testStep);
 
-        CreateStepDTO createDTO = new CreateStepDTO(1L, StepType.THEORY,"Test Content", 1);
+        CreateStepDTO createDTO = new CreateStepDTO(1L, StepType.TEXT,"Test Content", 1, 1L);
         StepResponseDTO result = stepService.createStep(createDTO);
 
-        assertThat(result.getType()).isEqualTo(StepType.THEORY);
+        assertThat(result.getType()).isEqualTo(StepType.TEXT);
         assertThat(result.getContent()).isEqualTo("Test Content");
         assertThat(result.getLessonId()).isEqualTo(1L);
         assertThat(result.getPosition()).isEqualTo(1);
@@ -137,7 +138,7 @@ class StepServiceTest {
         Step stepWithAutoPosition = createTestStep(1L, 3);
         when(stepRepository.save(any(Step.class))).thenReturn(stepWithAutoPosition);
 
-        CreateStepDTO createDTO = new CreateStepDTO(1L, StepType.THEORY,"Test Content", null);
+        CreateStepDTO createDTO = new CreateStepDTO(1L, StepType.TEXT,"Test Content", null,1L);
         StepResponseDTO result = stepService.createStep(createDTO);
 
         assertThat(result.getPosition()).isEqualTo(3);
@@ -149,7 +150,7 @@ class StepServiceTest {
     void createStepLessonNotExists() {
         when(lessonRepository.findById(999L)).thenReturn(Optional.empty());
 
-        CreateStepDTO createDTO = new CreateStepDTO(999L, StepType.THEORY,"Test Content", 1);
+        CreateStepDTO createDTO = new CreateStepDTO(999L, StepType.TEXT,"Test Content", 1,1L);
 
         assertThatThrownBy(() -> stepService.createStep(createDTO))
                 .isInstanceOf(LessonNotFoundException.class)
@@ -167,7 +168,7 @@ class StepServiceTest {
         Step stepWithFirstPosition = createTestStep(1L, 1);
         when(stepRepository.save(any(Step.class))).thenReturn(stepWithFirstPosition);
 
-        CreateStepDTO createDTO = new CreateStepDTO(1L, StepType.THEORY,"Test Content", null);
+        CreateStepDTO createDTO = new CreateStepDTO(1L, StepType.TEXT,"Test Content", null,1L);
         StepResponseDTO result = stepService.createStep(createDTO);
 
         assertThat(result.getPosition()).isEqualTo(1);
@@ -182,7 +183,7 @@ class StepServiceTest {
         StepResponseDTO result = stepService.getStepById(1L);
 
         assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getType()).isEqualTo(StepType.THEORY);
+        assertThat(result.getType()).isEqualTo(StepType.TEXT);
         assertThat(result.getContent()).isEqualTo("Test Content");
         assertThat(result.getLessonId()).isEqualTo(1L);
 
@@ -208,7 +209,7 @@ class StepServiceTest {
         List<StepResponseDTO> result = stepService.getLessonStepsByLessonId(1L);
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getType()).isEqualTo(StepType.THEORY);
+        assertThat(result.get(0).getType()).isEqualTo(StepType.TEXT);
         assertThat(result.get(0).getLessonId()).isEqualTo(1L);
 
         verify(stepRepository).findByLessonIdOrderByPositionAsc(1L);
@@ -272,7 +273,7 @@ class StepServiceTest {
 
         StepResponseDTO result = stepService.updateStep(updateDTO);
 
-        assertThat(result.getType()).isEqualTo(StepType.THEORY);
+        assertThat(result.getType()).isEqualTo(StepType.TEXT);
         assertThat(result.getContent()).isEqualTo("Updated Content");
 
         verify(stepRepository).findById(1L);
