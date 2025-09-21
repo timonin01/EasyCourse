@@ -34,7 +34,6 @@ public class StepikLessonSyncService {
                     captchaToken.length(), 
                     captchaToken.substring(0, Math.min(captchaToken.length(), 30)) + "...");
         }
-        
         LessonResponseDTO lessonDTO = lessonService.getLessonByLessonID(lessonId);
         
         if (lessonDTO.getStepikLessonId() != null) {
