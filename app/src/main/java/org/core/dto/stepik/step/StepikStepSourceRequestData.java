@@ -1,5 +1,6 @@
 package org.core.dto.stepik.step;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -14,6 +15,7 @@ import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StepikStepSourceRequestData {
 
     private String lesson;
@@ -28,7 +30,7 @@ public class StepikStepSourceRequestData {
     private StepikBlockRequest block;
 
     @JsonProperty("is_enabled")
-    private boolean isEnabled = true;
+    private Boolean isEnabled = true;
 
     private String status = "ready";
 
