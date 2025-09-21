@@ -1,11 +1,15 @@
 package org.core.dto.step;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.core.domain.StepType;
 import org.core.dto.stepik.step.StepikBlockRequest;
+import org.core.dto.stepik.step.choise.request.StepikBlockChoiceRequest;
+import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 
 @Getter
 @Setter
@@ -20,6 +24,11 @@ public class UpdateStepDTO {
     private Integer position;
     private Long cost;
 
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "name", include = JsonTypeInfo.As.PROPERTY)
+    @JsonSubTypes({
+        @JsonSubTypes.Type(value = StepikBlockTextRequest.class, name = "text"),
+        @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice")
+    })
     private StepikBlockRequest stepikBlock;
 
     private Long stepikStepId;

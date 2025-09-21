@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.core.domain.StepType;
 import org.core.dto.stepik.step.StepikBlockRequest;
 
 @Getter
@@ -14,7 +13,6 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 @NoArgsConstructor
 public class StepikBlockChoiceRequest implements StepikBlockRequest {
 
-    private String name = StepType.CHOICE.name().toLowerCase();
     private String text;
     private Object video = null;
     private Object options = null;

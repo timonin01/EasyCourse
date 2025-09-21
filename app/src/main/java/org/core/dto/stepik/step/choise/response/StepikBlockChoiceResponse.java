@@ -1,18 +1,19 @@
 package org.core.dto.stepik.step.choise.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.util.List;
+import org.core.dto.stepik.step.StepikBlockResponse;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class StepikBlockChoiceResponse {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class StepikBlockChoiceResponse implements StepikBlockResponse {
 
     private String name;
     private String text;

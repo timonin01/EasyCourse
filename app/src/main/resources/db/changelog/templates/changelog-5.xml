@@ -16,7 +16,7 @@
             <column name="position" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="type" type="ENUM('THEORY','CODE','VIDEO','TEST','CORRESPONDENCE')">
+            <column name="type" type="ENUM('TEXT','CHOICE', 'CODE', 'VIDEO')">
                 <constraints nullable="false"/>
             </column>
             <column name="content" type="LONGTEXT"/>
