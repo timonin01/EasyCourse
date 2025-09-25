@@ -1,9 +1,6 @@
 package org.core.repository;
 
 import org.core.domain.Step;
-import org.core.domain.StepType;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +13,8 @@ import java.util.List;
 public interface StepRepository extends JpaRepository<Step, Long> {
 
     List<Step> findByLessonIdOrderByPositionAsc(Long lessonId);
+    
+    Step findByStepikStepId(Long stepikStepId);
 
     @Query("SELECT MAX(s.position) FROM Step s WHERE s.lesson.id = :lessonId")
     Integer findMaxPositionByLessonId(@Param("lessonId") Long lessonId);
