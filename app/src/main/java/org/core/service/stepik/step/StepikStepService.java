@@ -9,6 +9,7 @@ import org.core.domain.Step;
 import org.core.dto.stepik.step.*;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.exception.StepikStepIntegrationException;
+import org.core.repository.StepRepository;
 import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -26,6 +27,7 @@ public class StepikStepService {
     @Value("${stepik.api.base-url}")
     private String baseUrl;
 
+    private final StepRepository stepRepository;
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -55,10 +57,6 @@ public class StepikStepService {
             ObjectMapper objectMapper = new ObjectMapper();
             StepikStepSourceResponse response = objectMapper.readValue(rawResponse.getBody(), StepikStepSourceResponse.class);
             
-            log.info("Stepik response status: {}", rawResponse.getStatusCode());
-            log.info("Stepik response headers: {}", rawResponse.getHeaders());
-            log.info("Deserialized response: {}", response);
-            
             if (rawResponse.getStatusCode().is2xxSuccessful() && response != null) {
                 if (response.getStepSource() != null) {
                     log.info("Successfully created step in Stepik for step ID: {}", step.getId());
@@ -76,11 +74,12 @@ public class StepikStepService {
         }
     }
 
-    public StepikStepSourceResponse updateStep(Long stepikStepId, Step step) {
+    public StepikStepSourceResponse updateStep(Long stepikStepId) {
         log.info("Updating step in Stepik with stepikStepId: {}", stepikStepId);
-        
+
+        Step step = stepRepository.findByStepikStepId(stepikStepId);
+
         StepikStepSourceRequest request = new StepikStepSourceRequest(createRequestDataForUpdate(step));
-        
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
 
@@ -128,7 +127,26 @@ public class StepikStepService {
             throw new StepikStepIntegrationException("Failed to delete step in Stepik: " + e.getMessage());
         }
     }
-
+    
+    public boolean stepExistsInStepik(Long stepikStepId) {
+        try {
+            String url = baseUrl + "/step-sources/" + stepikStepId;
+            
+            HttpHeaders headers = headerBuilder.createHeaders();
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, entity, String.class);
+            
+            boolean exists = response.getStatusCode().is2xxSuccessful();
+            log.info("Step {} exists in Stepik: {}", stepikStepId, exists);
+            return exists;
+        } catch (Exception e) {
+            log.error("Error checking if step {} exists in Stepik: {}", stepikStepId, e.getMessage());
+            return false;
+        }
+    }
+    
     private StepikStepSourceRequestData createRequestDataForCreate(Step step) {
         StepikStepSourceRequestData requestData = new StepikStepSourceRequestData();
         requestData.setLesson(step.getLesson().getStepikLessonId().toString());

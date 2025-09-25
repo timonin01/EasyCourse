@@ -5,14 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
-import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
 import org.core.dto.stepik.step.StepikStepSourceResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.exception.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
-import org.core.service.crud.LessonService;
 import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +21,7 @@ import java.util.Optional;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class StepikStepSyncService {
 
+    private final UpdateStepikStepService updateStepikStepService;
     private final StepikStepService stepikStepService;
     private final StepService stepService;
     private final LessonRepository lessonRepository;
@@ -55,15 +54,7 @@ public class StepikStepSyncService {
                 stepDTO.getLessonId(), step.getType(), step.getPosition());
 
         try {
-            StepikStepSourceResponse response = stepikStepService.updateStep(stepDTO.getStepikStepId(), step);
-            StepikStepSourceResponseData stepData = response.getStepSource();
-            
-            if (stepData == null) {
-                log.error("Received null step data from Stepik update response");
-                throw new StepikStepIntegrationException("No step data received from Stepik update");
-            }
-            log.info("Step {} successfully updated in Stepik with step ID: {}", stepId, stepData.getId());
-            return stepData;
+            return updateStepikStepService.performStepikPositionShift(step, stepDTO.getLessonId());
         } catch (StepikStepIntegrationException e) {
             log.error("Error updating step in Stepik : {}", e.getMessage());
             throw new StepikStepIntegrationException("Failed to update step in Stepik: " + e.getMessage());
@@ -104,6 +95,10 @@ public class StepikStepSyncService {
         return step;
     }
 
+    public boolean stepExistsInStepik(Long stepikStepId) {
+        return stepikStepService.stepExistsInStepik(stepikStepId);
+    }
+    
     private UpdateStepDTO createUpdateDTO(Long stepId, Long stepikStepId) {
         UpdateStepDTO updateDTO = new UpdateStepDTO();
         updateDTO.setStepId(stepId);

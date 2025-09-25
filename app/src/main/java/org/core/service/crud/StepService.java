@@ -48,8 +48,7 @@ public class StepService {
         step.setPosition(position);
         step.setCost(createStepDTO.getCost());
         step.setStepikStepId(createStepDTO.getStepikStepId());
-        
-        // Сериализация StepikBlock в JSON
+
         if (createStepDTO.getStepikBlock() != null) {
             try {
                 step.setStepikBlockData(objectMapper.writeValueAsString(createStepDTO.getStepikBlock()));
@@ -154,7 +153,7 @@ public class StepService {
                 log.error("Error deserializing stepik block data", e);
             }
         }
-        
+
         return StepResponseDTO.builder()
                 .id(step.getId())
                 .type(step.getType())
@@ -168,5 +167,4 @@ public class StepService {
                 .lessonId(step.getLesson().getId())
                 .build();
     }
-
 }

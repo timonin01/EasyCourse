@@ -1,5 +1,6 @@
 package org.core.dto.stepik.step.choise.request;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,6 +12,7 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StepikBlockChoiceRequest implements StepikBlockRequest {
 
     private String text;
