@@ -3,10 +3,13 @@ package org.core.rest.stepik;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.service.stepik.step.StepikStepSyncService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/stepik/steps")
@@ -42,5 +45,12 @@ public class StepikStepController {
         log.info("Checking if step {} exists in Stepik", stepikStepId);
         boolean exists = stepikStepSyncService.stepExistsInStepik(stepikStepId);
         return ResponseEntity.ok(exists);
+    }
+
+    @PostMapping("/sync-lesson-steps")
+    public ResponseEntity<List<StepResponseDTO>> syncAllLessonStepsFromStepik(@RequestParam Long lessonId) {
+        log.info("Syncing all steps for lesson {} from Stepik", lessonId);
+        List<StepResponseDTO> syncedSteps = stepikStepSyncService.syncAllLessonStepsFromStepik(lessonId);
+        return ResponseEntity.ok(syncedSteps);
     }
 }
