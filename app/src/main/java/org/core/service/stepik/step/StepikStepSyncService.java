@@ -14,6 +14,7 @@ import org.core.repository.LessonRepository;
 import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -22,19 +23,20 @@ import java.util.Optional;
 public class StepikStepSyncService {
 
     private final UpdateStepikStepService updateStepikStepService;
+    private final SyncAllLessonStepsFromStepikService syncAllLessonStepsFromStepikService;
     private final StepikStepService stepikStepService;
     private final StepService stepService;
     private final LessonRepository lessonRepository;
 
     public StepikStepSourceResponseData syncStepWithStepik(Long stepId) {
         log.info("Starting sync step ID: {} with Stepik", stepId);
-        
+
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
         Step step = mapToStep(stepDTO);
 
         StepikStepSourceResponse response = stepikStepService.createStep(step);
         StepikStepSourceResponseData stepData = response.getStepSource();
-        
+
         if (stepData != null) {
             stepService.updateStep(createUpdateDTO(stepId, stepData.getId()));
             log.info("Step {} successfully synced with Stepik step ID: {}", stepId, stepData.getId());
@@ -44,13 +46,13 @@ public class StepikStepSyncService {
 
     public StepikStepSourceResponseData updateStepInStepik(Long stepId) {
         log.info("Starting manual update of step ID: {} in Stepik", stepId);
-        
+
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
         if (stepDTO.getStepikStepId() == null) {
             throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
         }
         Step step = mapToStep(stepDTO);
-        log.info("Mapped step for Stepik update: LessonId={}, Type='{}', Position={}", 
+        log.info("Mapped step for Stepik update: LessonId={}, Type='{}', Position={}",
                 stepDTO.getLessonId(), step.getType(), step.getPosition());
 
         try {
@@ -63,17 +65,32 @@ public class StepikStepSyncService {
 
     public void deleteStepFromStepik(Long stepId) {
         log.info("Starting deletion of step ID: {} from Stepik", stepId);
-        
+
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
-        log.info("Step data: ID={}, Type='{}', StepikStepId={}", 
+        log.info("Step data: ID={}, Type='{}', StepikStepId={}",
                 stepDTO.getId(), stepDTO.getType(), stepDTO.getStepikStepId());
         if (stepDTO.getStepikStepId() == null) {
             throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
         }
         stepikStepService.deleteStep(stepDTO.getStepikStepId());
         stepService.updateStep(createUpdateDTO(stepId, null));
-        
+
         log.info("Step {} successfully deleted from Stepik with step ID: {}", stepId, stepDTO.getStepikStepId());
+    }
+
+    public boolean stepExistsInStepik(Long stepikStepId) {
+        return stepikStepService.stepExistsInStepik(stepikStepId);
+    }
+
+    public List<StepResponseDTO> syncAllLessonStepsFromStepik(Long lessonId) {
+        return syncAllLessonStepsFromStepikService.syncAllLessonStepsFromStepik(lessonId);
+    }
+
+    private UpdateStepDTO createUpdateDTO(Long stepId, Long stepikStepId) {
+        UpdateStepDTO updateDTO = new UpdateStepDTO();
+        updateDTO.setStepId(stepId);
+        updateDTO.setStepikStepId(stepikStepId);
+        return updateDTO;
     }
 
     private Step mapToStep(StepResponseDTO stepDTO) {
@@ -93,16 +110,5 @@ public class StepikStepSyncService {
         step.setStepikBlockData(stepDTO.getStepikBlockJson());
 
         return step;
-    }
-
-    public boolean stepExistsInStepik(Long stepikStepId) {
-        return stepikStepService.stepExistsInStepik(stepikStepId);
-    }
-    
-    private UpdateStepDTO createUpdateDTO(Long stepId, Long stepikStepId) {
-        UpdateStepDTO updateDTO = new UpdateStepDTO();
-        updateDTO.setStepId(stepId);
-        updateDTO.setStepikStepId(stepikStepId);
-        return updateDTO;
     }
 }
