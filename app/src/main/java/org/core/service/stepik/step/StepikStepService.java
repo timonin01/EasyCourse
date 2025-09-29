@@ -1,6 +1,7 @@
 package org.core.service.stepik.step;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -144,6 +148,88 @@ public class StepikStepService {
         } catch (Exception e) {
             log.error("Error checking if step {} exists in Stepik: {}", stepikStepId, e.getMessage());
             return false;
+        }
+    }
+
+    public List<Long> getLessonStepIdsFromStepik(Long stepikLessonId) {
+        log.info("Getting step IDs for lesson {} from Stepik", stepikLessonId);
+        try {
+            String url = baseUrl + "/lessons/" + stepikLessonId;
+
+            HttpHeaders headers = headerBuilder.createHeaders();
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, String.class);
+
+            log.info("Raw Stepik response for lesson {}: {}", stepikLessonId, response.getBody());
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode jsonNode = objectMapper.readTree(response.getBody());
+                JsonNode lessonsNode = jsonNode.get("lessons");
+
+                if (lessonsNode != null && lessonsNode.isArray() && lessonsNode.size() > 0) {
+                    JsonNode lessonNode = lessonsNode.get(0);
+                    JsonNode stepsNode = lessonNode.get("steps");
+
+                    if (stepsNode != null && stepsNode.isArray()) {
+                        List<Long> stepIds = new ArrayList<>();
+                        for (JsonNode stepIdNode : stepsNode) {
+                            stepIds.add(stepIdNode.asLong());
+                        }
+                        log.info("Retrieved {} step IDs for lesson {} from Stepik", stepIds.size(), stepikLessonId);
+                        return stepIds;
+                    }
+                }
+                log.warn("No steps found for lesson {} in Stepik response", stepikLessonId);
+                return new ArrayList<>();
+            } else {
+                log.error("Failed to get lesson {}. Status: {}, Body: {}",
+                        stepikLessonId, response.getStatusCode(), response.getBody());
+                throw new StepikStepIntegrationException("Failed to get lesson " + stepikLessonId +
+                        ". Status: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting step IDs for lesson {} from Stepik: {}", stepikLessonId, e.getMessage());
+            throw new StepikStepIntegrationException("Failed to get step IDs for lesson " + stepikLessonId +
+                    " from Stepik: " + e.getMessage());
+        }
+    }
+
+    public StepikStepSourceResponseData getStepikStepById(Long stepikStepId) {
+        log.info("Getting step details from Stepik for step ID: {}", stepikStepId);
+
+        try {
+            String url = baseUrl + "/step-sources/" + stepikStepId;
+
+            HttpHeaders headers = headerBuilder.createHeaders();
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, String.class);
+
+            log.info("Raw Stepik response for step {}: {}", stepikStepId, response.getBody());
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                StepikStepSourceResponse stepikResponse = objectMapper.readValue(
+                        response.getBody(), StepikStepSourceResponse.class);
+
+                StepikStepSourceResponseData stepData = stepikResponse.getStepSource();
+                if (stepData != null) {
+                    log.info("Successfully retrieved step {} from Stepik", stepikStepId);
+                    return stepData;
+                } else {
+                    log.warn("Step data is null in response for stepikStepId: {}", stepikStepId);
+                    throw new StepikStepIntegrationException("No step data received from Stepik for step " + stepikStepId);
+                }
+            } else {
+                log.error("Failed to get step {}. Status: {}, Body: {}",
+                        stepikStepId, response.getStatusCode(), response.getBody());
+                throw new StepikStepIntegrationException("Failed to get step " + stepikStepId +
+                        ". Status: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting step {} from Stepik: {}", stepikStepId, e.getMessage());
+            throw new StepikStepIntegrationException("Failed to get step " + stepikStepId +
+                    " from Stepik: " + e.getMessage());
         }
     }
     
