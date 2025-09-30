@@ -92,9 +92,6 @@ public class StepikStepSyncService {
         log.info("Step {} successfully deleted from Stepik with step ID: {}", stepId, stepDTO.getStepikStepId());
     }
 
-    public boolean stepExistsInStepik(Long stepikStepId) {
-        return stepikStepService.stepExistsInStepik(stepikStepId);
-    }
 
     public List<StepResponseDTO> syncAllLessonStepsFromStepik(Long lessonId) {
         return syncAllLessonStepsFromStepikService.syncAllLessonStepsFromStepik(lessonId);
