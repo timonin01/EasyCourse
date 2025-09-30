@@ -87,4 +87,11 @@ public class StepikLessonController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @PostMapping("/sync-section-lessons")
+    public ResponseEntity<List<LessonResponseDTO>> syncAllSectionLessonsFromStepik(@RequestParam Long modelId) {
+        log.info("Syncing all lessons for model {} from Stepik", modelId);
+        List<LessonResponseDTO> lessons = stepikLessonSyncService.syncAllSectionLessonsFromStepik(modelId);
+        return ResponseEntity.ok(lessons);
+    }
 }
