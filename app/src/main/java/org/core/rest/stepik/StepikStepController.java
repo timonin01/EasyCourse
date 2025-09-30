@@ -39,13 +39,6 @@ public class StepikStepController {
         stepikStepSyncService.deleteStepFromStepik(stepId);
         return ResponseEntity.ok().build();
     }
-    
-    @GetMapping("/check-step-exists/{stepikStepId}")
-    public ResponseEntity<Boolean> checkStepExistsInStepik(@PathVariable Long stepikStepId) {
-        log.info("Checking if step {} exists in Stepik", stepikStepId);
-        boolean exists = stepikStepSyncService.stepExistsInStepik(stepikStepId);
-        return ResponseEntity.ok(exists);
-    }
 
     @PostMapping("/sync-lesson-steps")
     public ResponseEntity<List<StepResponseDTO>> syncAllLessonStepsFromStepik(@RequestParam Long lessonId) {

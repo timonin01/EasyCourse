@@ -5,15 +5,29 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
+import org.core.domain.StepType;
+import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
+import org.core.dto.stepik.step.StepikBlockRequest;
+import org.core.dto.stepik.step.StepikBlockResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
+import org.core.dto.stepik.step.choise.request.StepikBlockChoiceRequest;
+import org.core.dto.stepik.step.choise.request.StepikChoiceOptionRequest;
+import org.core.dto.stepik.step.choise.request.StepikChoiceSourceRequest;
+import org.core.dto.stepik.step.choise.response.StepikBlockChoiceResponse;
+import org.core.dto.stepik.step.choise.response.StepikChoiceOptionResponse;
+import org.core.dto.stepik.step.choise.response.StepikChoiceSourceResponse;
+import org.core.dto.stepik.step.text.StepikBlockTextRequest;
+import org.core.dto.stepik.step.text.StepikBlockTextResponse;
+import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,21 +36,21 @@ import java.util.Optional;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class StepikStepSyncService {
 
-    private final UpdateStepikStepService updateStepikStepService;
     private final SyncAllLessonStepsFromStepikService syncAllLessonStepsFromStepikService;
+    private final UpdateStepikStepService updateStepikStepService;
     private final StepikStepService stepikStepService;
     private final StepService stepService;
     private final LessonRepository lessonRepository;
 
     public StepikStepSourceResponseData syncStepWithStepik(Long stepId) {
         log.info("Starting sync step ID: {} with Stepik", stepId);
-
+        
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
         Step step = mapToStep(stepDTO);
 
         StepikStepSourceResponse response = stepikStepService.createStep(step);
         StepikStepSourceResponseData stepData = response.getStepSource();
-
+        
         if (stepData != null) {
             stepService.updateStep(createUpdateDTO(stepId, stepData.getId()));
             log.info("Step {} successfully synced with Stepik step ID: {}", stepId, stepData.getId());
@@ -46,13 +60,13 @@ public class StepikStepSyncService {
 
     public StepikStepSourceResponseData updateStepInStepik(Long stepId) {
         log.info("Starting manual update of step ID: {} in Stepik", stepId);
-
+        
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
         if (stepDTO.getStepikStepId() == null) {
             throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
         }
         Step step = mapToStep(stepDTO);
-        log.info("Mapped step for Stepik update: LessonId={}, Type='{}', Position={}",
+        log.info("Mapped step for Stepik update: LessonId={}, Type='{}', Position={}", 
                 stepDTO.getLessonId(), step.getType(), step.getPosition());
 
         try {
@@ -65,27 +79,23 @@ public class StepikStepSyncService {
 
     public void deleteStepFromStepik(Long stepId) {
         log.info("Starting deletion of step ID: {} from Stepik", stepId);
-
+        
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
-        log.info("Step data: ID={}, Type='{}', StepikStepId={}",
+        log.info("Step data: ID={}, Type='{}', StepikStepId={}", 
                 stepDTO.getId(), stepDTO.getType(), stepDTO.getStepikStepId());
         if (stepDTO.getStepikStepId() == null) {
             throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
         }
         stepikStepService.deleteStep(stepDTO.getStepikStepId());
         stepService.updateStep(createUpdateDTO(stepId, null));
-
+        
         log.info("Step {} successfully deleted from Stepik with step ID: {}", stepId, stepDTO.getStepikStepId());
     }
 
-    public boolean stepExistsInStepik(Long stepikStepId) {
-        return stepikStepService.stepExistsInStepik(stepikStepId);
-    }
 
     public List<StepResponseDTO> syncAllLessonStepsFromStepik(Long lessonId) {
         return syncAllLessonStepsFromStepikService.syncAllLessonStepsFromStepik(lessonId);
     }
-
     private UpdateStepDTO createUpdateDTO(Long stepId, Long stepikStepId) {
         UpdateStepDTO updateDTO = new UpdateStepDTO();
         updateDTO.setStepId(stepId);

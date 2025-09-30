@@ -1,6 +1,5 @@
 package org.core.service.stepik.step;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
@@ -8,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Step;
 import org.core.dto.stepik.step.*;
-import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.exception.StepikStepIntegrationException;
 import org.core.repository.StepRepository;
 import org.core.util.HeaderBuilder;
@@ -31,6 +29,7 @@ public class StepikStepService {
     @Value("${stepik.api.base-url}")
     private String baseUrl;
 
+    private final StepikStepSourceDataRequestBuilder stepikStepSourceDataRequestBuilder;
     private final StepRepository stepRepository;
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
@@ -39,7 +38,7 @@ public class StepikStepService {
     public StepikStepSourceResponse createStep(Step step) {
         log.info("Creating step in Stepik for step ID: {}", step.getId());
         
-        StepikStepSourceRequestData requestData = createRequestDataForCreate(step);
+        StepikStepSourceRequestData requestData = stepikStepSourceDataRequestBuilder.createRequestDataForCreate(step);
         StepikStepSourceRequest request = new StepikStepSourceRequest(requestData);
         
         try {
@@ -83,7 +82,7 @@ public class StepikStepService {
 
         Step step = stepRepository.findByStepikStepId(stepikStepId);
 
-        StepikStepSourceRequest request = new StepikStepSourceRequest(createRequestDataForUpdate(step));
+        StepikStepSourceRequest request = new StepikStepSourceRequest(stepikStepSourceDataRequestBuilder.createRequestDataForUpdate(step));
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
 
@@ -129,25 +128,6 @@ public class StepikStepService {
         } catch (Exception e) {
             log.error("Error deleting step in Stepik with stepikStepId: {}: {}", stepikStepId, e.getMessage());
             throw new StepikStepIntegrationException("Failed to delete step in Stepik: " + e.getMessage());
-        }
-    }
-    
-    public boolean stepExistsInStepik(Long stepikStepId) {
-        try {
-            String url = baseUrl + "/step-sources/" + stepikStepId;
-            
-            HttpHeaders headers = headerBuilder.createHeaders();
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            
-            ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity, String.class);
-            
-            boolean exists = response.getStatusCode().is2xxSuccessful();
-            log.info("Step {} exists in Stepik: {}", stepikStepId, exists);
-            return exists;
-        } catch (Exception e) {
-            log.error("Error checking if step {} exists in Stepik: {}", stepikStepId, e.getMessage());
-            return false;
         }
     }
 
@@ -231,57 +211,5 @@ public class StepikStepService {
             throw new StepikStepIntegrationException("Failed to get step " + stepikStepId +
                     " from Stepik: " + e.getMessage());
         }
-    }
-    
-    private StepikStepSourceRequestData createRequestDataForCreate(Step step) {
-        StepikStepSourceRequestData requestData = new StepikStepSourceRequestData();
-        requestData.setLesson(step.getLesson().getStepikLessonId().toString());
-        requestData.setPosition(step.getPosition());
-        requestData.setCost(step.getCost() != null ? step.getCost().intValue() : 0);
-        requestData.setStatus("ready");
-        requestData.setIsEnabled(true);
-
-        try {
-            if (step.getStepikBlockData() != null && !step.getStepikBlockData().trim().isEmpty()) {
-                StepikBlockRequest stepikBlockRequest = objectMapper.readValue(step.getStepikBlockData(), StepikBlockRequest.class);
-                requestData.setBlock(stepikBlockRequest);
-            } else {
-                log.warn("No stepikBlockData found for step ID: {}, creating default text block", step.getId());
-                StepikBlockTextRequest defaultBlock = new StepikBlockTextRequest();
-                defaultBlock.setText(step.getContent());
-                requestData.setBlock(defaultBlock);
-            }
-        } catch (JsonProcessingException e) {
-            log.error("Error parsing stepikBlockData for step ID: {}: {}", step.getId(), e.getMessage());
-            throw new StepikStepIntegrationException("Failed to parse stepikBlockData: " + e.getMessage());
-        }
-        
-        return requestData;
-    }
-
-    private StepikStepSourceRequestData createRequestDataForUpdate(Step step) {
-        StepikStepSourceRequestData requestData = new StepikStepSourceRequestData();
-        requestData.setLesson(step.getLesson().getStepikLessonId().toString());
-        requestData.setPosition(step.getPosition());
-        requestData.setCost(step.getCost() != null ? step.getCost().intValue() : 0);
-        requestData.setStatus("ready");
-        requestData.setIsEnabled(true);
-
-        try {
-            if (step.getStepikBlockData() != null && !step.getStepikBlockData().trim().isEmpty()) {
-                StepikBlockRequest stepikBlockRequest = objectMapper.readValue(step.getStepikBlockData(), StepikBlockRequest.class);
-                requestData.setBlock(stepikBlockRequest);
-            } else {
-                log.warn("No stepikBlockData found for step ID: {}, creating default text block", step.getId());
-                StepikBlockTextRequest defaultBlock = new StepikBlockTextRequest();
-                defaultBlock.setText(step.getContent());
-                requestData.setBlock(defaultBlock);
-            }
-        } catch (JsonProcessingException e) {
-            log.error("Error parsing stepikBlockData for step ID: {}: {}", step.getId(), e.getMessage());
-            throw new StepikStepIntegrationException("Failed to parse stepikBlockData: " + e.getMessage());
-        }
-        
-        return requestData;
     }
 }

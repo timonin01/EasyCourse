@@ -93,7 +93,7 @@ public class SyncAllLessonStepsFromStepikService {
             updateDTO.setStepikBlock(converter.convertResponseToRequest(stepikStep.getBlock()));
 
             if (stepikStep.getBlock() instanceof StepikBlockTextResponse textBlock) {
-                updateDTO.setContent(textBlock.getText());
+                updateDTO.setContent(converter.cleanHtmlTags(textBlock.getText()));
             }
         }
 
@@ -112,7 +112,7 @@ public class SyncAllLessonStepsFromStepikService {
             createDTO.setStepikBlock(converter.convertResponseToRequest(stepikStep.getBlock()));
 
             if (stepikStep.getBlock() instanceof StepikBlockTextResponse textBlock) {
-                createDTO.setContent(textBlock.getText());
+                createDTO.setContent(converter.cleanHtmlTags(textBlock.getText()));
             }
         } else {
             createDTO.setType(StepType.TEXT);
