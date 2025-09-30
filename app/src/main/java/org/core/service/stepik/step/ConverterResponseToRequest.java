@@ -30,7 +30,7 @@ public class ConverterResponseToRequest {
 
     private StepikBlockTextRequest convertTextResponseToRequest(StepikBlockTextResponse response) {
         StepikBlockTextRequest request = new StepikBlockTextRequest();
-        request.setText(response.getText());
+        request.setText(cleanHtmlTags(response.getText()));
         request.setVideo(response.getVideo());
         request.setOptions(response.getOptions());
         return request;
@@ -38,15 +38,15 @@ public class ConverterResponseToRequest {
 
     private StepikBlockChoiceRequest convertChoiceResponseToRequest(StepikBlockChoiceResponse response) {
         StepikBlockChoiceRequest request = new StepikBlockChoiceRequest();
-        request.setText(response.getText());
+        request.setText(cleanHtmlTags(response.getText()));
         request.setVideo(response.getVideo());
         request.setOptions(response.getOptions());
         request.setIsDeprecated(response.getIsDeprecated());
         request.setSubtitleFiles(response.getSubtitleFiles());
         request.setSubtitles(response.getSubtitles());
         request.setTestsArchive(response.getTestsArchive());
-        request.setFeedbackCorrect(response.getFeedbackCorrect());
-        request.setFeedbackWrong(response.getFeedbackWrong());
+        request.setFeedbackCorrect(cleanHtmlTags(response.getFeedbackCorrect()));
+        request.setFeedbackWrong(cleanHtmlTags(response.getFeedbackWrong()));
 
         if (response.getSource() != null) {
             request.setSource(convertChoiceSourceResponseToRequest(response.getSource()));
@@ -76,9 +76,25 @@ public class ConverterResponseToRequest {
     private StepikChoiceOptionRequest convertChoiceOptionResponseToRequest(StepikChoiceOptionResponse response) {
         StepikChoiceOptionRequest request = new StepikChoiceOptionRequest();
         request.setIsCorrect(response.getIsCorrect());
-        request.setText(response.getText());
-        request.setFeedback(response.getFeedback());
+        request.setText(cleanHtmlTags(response.getText())); 
+        request.setFeedback(cleanHtmlTags(response.getFeedback())); 
         return request;
+    }
+
+    public String cleanHtmlTags(String htmlText) {
+        if (htmlText == null || htmlText.trim().isEmpty()) {
+            return htmlText;
+        }
+        String cleanText = htmlText.replaceAll("<[^>]+>", "");
+        cleanText = cleanText.replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace("&nbsp;", " ");
+
+        cleanText = cleanText.replaceAll("\\s+", " ").trim();
+        return cleanText;
     }
 
 }
