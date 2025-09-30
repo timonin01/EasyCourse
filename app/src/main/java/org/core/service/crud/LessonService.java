@@ -40,7 +40,6 @@ public class LessonService {
         Lesson lesson = new Lesson();
         lesson.setModel(model);
         lesson.setTitle(createDTO.getTitle());
-        lesson.setDescription(createDTO.getDescription());
         lesson.setPosition(position);
 
         log.info("Created new lesson with ID: {} in model: {}", lesson.getId(), model.getId());

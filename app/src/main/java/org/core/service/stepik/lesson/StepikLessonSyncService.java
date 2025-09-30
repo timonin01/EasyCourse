@@ -13,8 +13,11 @@ import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.exception.StepikLessonIntegrationException;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.ModelService;
+import org.core.service.stepik.section.SyncAllSectionLessonsFromStepikService;
 import org.core.service.stepik.unit.StepikUnitService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @Slf4j
@@ -25,6 +28,7 @@ public class StepikLessonSyncService {
     private final LessonService lessonService;
     private final ModelService modelService;
     private final StepikUnitService stepikUnitService;
+    private final SyncAllSectionLessonsFromStepikService syncAllSectionLessonsFromStepikService;
 
     public LessonCaptchaChallenge syncLessonWithStepik(Long lessonId, String captchaToken) {
         log.info("Starting sync lesson ID: {} with Stepik (captcha provided: {})", lessonId, captchaToken != null);
@@ -206,5 +210,9 @@ public class StepikLessonSyncService {
             log.info("Updated local lesson {} with Stepik ID: {}", lessonId, stepikLessonId);
         }
         return result;
+    }
+
+    public List<LessonResponseDTO> syncAllSectionLessonsFromStepik(Long modelId) {
+        return syncAllSectionLessonsFromStepikService.syncAllSectionLessonsFromStepik(modelId);
     }
 }
