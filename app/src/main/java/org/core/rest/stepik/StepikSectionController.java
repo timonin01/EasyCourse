@@ -3,10 +3,12 @@ package org.core.rest.stepik;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.service.crud.ModelService;
 import org.core.service.stepik.section.StepikSectionSyncService;
+import org.core.service.stepik.section.SyncAllCourseSectionsFromStepikService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -71,5 +73,12 @@ public class StepikSectionController {
             log.error("Failed to delete model {} from Stepik: {}", modelId, e.getMessage());
             return ResponseEntity.internalServerError().body("Failed to delete model from Stepik: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/sync-course-sections")
+    public ResponseEntity<List<ModelResponseDTO>> syncAllCourseSectionFromStepik(@RequestParam Long courseId){
+        log.info("Syncing all sections for course {} from Stepik", courseId);
+        List<ModelResponseDTO> sections = stepikSectionSyncService.syncAllCourseSectionFromStepik(courseId);
+        return ResponseEntity.ok(sections);
     }
 }

@@ -13,7 +13,6 @@ import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.exception.StepikLessonIntegrationException;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.ModelService;
-import org.core.service.stepik.section.SyncAllSectionLessonsFromStepikService;
 import org.core.service.stepik.unit.StepikUnitService;
 import org.springframework.stereotype.Service;
 
