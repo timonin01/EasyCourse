@@ -99,6 +99,102 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
+    @ExceptionHandler(DeepSeekException.class)
+    public ResponseEntity<ErrorResponse> handleDeepSeekException(DeepSeekException ex) {
+        log.error("DeepSeek API error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "DeepSeek API Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    @ExceptionHandler(YandexGptException.class)
+    public ResponseEntity<ErrorResponse> handleYandexGptException(YandexGptException ex) {
+        log.error("Yandex GPT API error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "Yandex GPT API Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    @ExceptionHandler(EmailSendException.class)
+    public ResponseEntity<ErrorResponse> handleEmailSendException(EmailSendException ex) {
+        log.error("Email send error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Email Send Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(StepikCourseIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleStepikCourseIntegrationException(StepikCourseIntegrationException ex) {
+        log.error("Stepik course integration error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "Stepik Course Integration Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    @ExceptionHandler(StepikLessonIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleStepikLessonIntegrationException(StepikLessonIntegrationException ex) {
+        log.error("Stepik lesson integration error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "Stepik Lesson Integration Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    @ExceptionHandler(StepikSectionIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleStepikSectionIntegrationException(StepikSectionIntegrationException ex) {
+        log.error("Stepik section integration error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "Stepik Section Integration Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    @ExceptionHandler(StepikStepIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleStepikStepIntegrationException(StepikStepIntegrationException ex) {
+        log.error("Stepik step integration error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "Stepik Step Integration Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    @ExceptionHandler(StepikUnitIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleStepikUnitIntegrationException(StepikUnitIntegrationException ex) {
+        log.error("Stepik unit integration error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "Stepik Unit Integration Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
         log.error("Validation error: {}", ex.getMessage());
