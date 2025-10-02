@@ -1,4 +1,4 @@
-package org.core.service.stepik.section;
+package org.core.service.stepik.lesson;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
