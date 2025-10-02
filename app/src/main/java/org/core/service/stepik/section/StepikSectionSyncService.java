@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Model;
 import org.core.domain.Course;
+import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponse;
@@ -15,6 +16,8 @@ import org.core.service.crud.CourseService;
 import org.core.service.crud.LessonService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
@@ -24,6 +27,7 @@ public class StepikSectionSyncService {
     private final ModelService modelService;
     private final CourseService courseService;
     private final LessonService lessonService;
+    private final SyncAllCourseSectionsFromStepikService syncAllSectionLessonsFromStepik;
 
     public StepikSectionResponseData syncModelWithStepik(Long modelId) {
         log.info("Starting sync model ID: {} with Stepik", modelId);
@@ -103,5 +107,9 @@ public class StepikSectionSyncService {
         model.setCourse(course);
         
         return model;
+    }
+
+    public List<ModelResponseDTO> syncAllCourseSectionFromStepik(Long courseId) {
+        return syncAllSectionLessonsFromStepik.syncAllCourseSectionFromStepik(courseId);
     }
 }
