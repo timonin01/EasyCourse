@@ -36,8 +36,6 @@ public class StepikStepService {
     private final ObjectMapper objectMapper;
 
     public StepikStepSourceResponse createStep(Step step) {
-        log.info("Creating step in Stepik for step ID: {}", step.getId());
-        
         StepikStepSourceRequestData requestData = stepikStepSourceDataRequestBuilder.createRequestDataForCreate(step);
         StepikStepSourceRequest request = new StepikStepSourceRequest(requestData);
         
@@ -46,20 +44,12 @@ public class StepikStepService {
 
             HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<StepikStepSourceRequest> entity = new HttpEntity<>(request, headers);
-            try {
-                String requestJson = objectMapper.writeValueAsString(request);
-                log.info("Sending request to Stepik: URL={}, Headers={}, Body={}", url, headers, requestJson);
-            } catch (Exception e) {
-                log.info("Sending request to Stepik: URL={}, Headers={}, Body={}", url, headers, request);
-            }
+
             ResponseEntity<String> rawResponse = restTemplate.exchange(
                 url, HttpMethod.POST, entity, String.class);
-            
-            log.info("Raw Stepik response: {}", rawResponse.getBody());
-            
+
             ObjectMapper objectMapper = new ObjectMapper();
             StepikStepSourceResponse response = objectMapper.readValue(rawResponse.getBody(), StepikStepSourceResponse.class);
-            
             if (rawResponse.getStatusCode().is2xxSuccessful() && response != null) {
                 if (response.getStepSource() != null) {
                     log.info("Successfully created step in Stepik for step ID: {}", step.getId());
@@ -78,8 +68,6 @@ public class StepikStepService {
     }
 
     public StepikStepSourceResponse updateStep(Long stepikStepId) {
-        log.info("Updating step in Stepik with stepikStepId: {}", stepikStepId);
-
         Step step = stepRepository.findByStepikStepId(stepikStepId);
 
         StepikStepSourceRequest request = new StepikStepSourceRequest(stepikStepSourceDataRequestBuilder.createRequestDataForUpdate(step));
@@ -91,10 +79,6 @@ public class StepikStepService {
 
             ResponseEntity<StepikStepSourceResponse> response = restTemplate.exchange(
                 url, HttpMethod.PUT, entity, StepikStepSourceResponse.class);
-            
-            log.info("Response status: {}", response.getStatusCode());
-            log.info("Response body: {}", response.getBody());
-            
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 StepikStepSourceResponseData stepData = response.getBody().getStepSource();
                 if (stepData != null) {
@@ -115,7 +99,6 @@ public class StepikStepService {
     }
 
     public void deleteStep(Long stepikStepId) {
-        log.info("Deleting step in Stepik with stepikStepId: {}", stepikStepId);
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
 
@@ -132,7 +115,6 @@ public class StepikStepService {
     }
 
     public List<Long> getLessonStepIdsFromStepik(Long stepikLessonId) {
-        log.info("Getting step IDs for lesson {} from Stepik", stepikLessonId);
         try {
             String url = baseUrl + "/lessons/" + stepikLessonId;
 
@@ -141,8 +123,6 @@ public class StepikStepService {
 
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.GET, entity, String.class);
-
-            log.info("Raw Stepik response for lesson {}: {}", stepikLessonId, response.getBody());
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode jsonNode = objectMapper.readTree(response.getBody());
                 JsonNode lessonsNode = jsonNode.get("lessons");
@@ -176,8 +156,6 @@ public class StepikStepService {
     }
 
     public StepikStepSourceResponseData getStepikStepById(Long stepikStepId) {
-        log.info("Getting step details from Stepik for step ID: {}", stepikStepId);
-
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
 
@@ -186,8 +164,6 @@ public class StepikStepService {
 
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.GET, entity, String.class);
-
-            log.info("Raw Stepik response for step {}: {}", stepikStepId, response.getBody());
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 StepikStepSourceResponse stepikResponse = objectMapper.readValue(
                         response.getBody(), StepikStepSourceResponse.class);
