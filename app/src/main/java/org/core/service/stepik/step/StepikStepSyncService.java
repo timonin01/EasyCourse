@@ -5,29 +5,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
-import org.core.domain.StepType;
-import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
-import org.core.dto.stepik.step.StepikBlockRequest;
-import org.core.dto.stepik.step.StepikBlockResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
-import org.core.dto.stepik.step.choise.request.StepikBlockChoiceRequest;
-import org.core.dto.stepik.step.choise.request.StepikChoiceOptionRequest;
-import org.core.dto.stepik.step.choise.request.StepikChoiceSourceRequest;
-import org.core.dto.stepik.step.choise.response.StepikBlockChoiceResponse;
-import org.core.dto.stepik.step.choise.response.StepikChoiceOptionResponse;
-import org.core.dto.stepik.step.choise.response.StepikChoiceSourceResponse;
-import org.core.dto.stepik.step.text.StepikBlockTextRequest;
-import org.core.dto.stepik.step.text.StepikBlockTextResponse;
-import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,12 +51,24 @@ public class StepikStepSyncService {
         if (stepDTO.getStepikStepId() == null) {
             throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
         }
+
+        StepikStepSourceResponseData stepikData = stepikStepService.getStepikStepById(stepDTO.getStepikStepId());
+        Integer currentStepikPosition = stepikData.getPosition();
+        Integer currentDbPosition = stepDTO.getPosition();
+        
+        log.info("Position comparison: Stepik={}, Database={}", currentStepikPosition, currentDbPosition);
+        
+        if (currentStepikPosition.equals(currentDbPosition)) {
+            log.info("Positions match, performing simple update");
+            Step step = mapToStep(stepDTO);
+            stepikStepService.updateStep(step.getStepikStepId());
+            return stepikStepService.getStepikStepById(step.getStepikStepId());
+        }
         Step step = mapToStep(stepDTO);
-        log.info("Mapped step for Stepik update: LessonId={}, Type='{}', Position={}", 
-                stepDTO.getLessonId(), step.getType(), step.getPosition());
+        step.setPosition(currentStepikPosition);
 
         try {
-            return updateStepikStepService.performStepikPositionShift(step, stepDTO.getLessonId());
+            return updateStepikStepService.performStepikPositionShift(step, stepDTO.getLessonId(), currentDbPosition);
         } catch (StepikStepIntegrationException e) {
             log.error("Error updating step in Stepik : {}", e.getMessage());
             throw new StepikStepIntegrationException("Failed to update step in Stepik: " + e.getMessage());
