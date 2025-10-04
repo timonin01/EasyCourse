@@ -76,16 +76,20 @@ public class StepikStepSyncService {
     }
 
     public void deleteStepFromStepik(Long stepId) {
-        log.info("Starting deletion of step ID: {} from Stepik", stepId);
-        
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
-        log.info("Step data: ID={}, Type='{}', StepikStepId={}", 
-                stepDTO.getId(), stepDTO.getType(), stepDTO.getStepikStepId());
+        log.info("Step data: ID={}, Type='{}', StepikStepId={}, Position={}", 
+                stepDTO.getId(), stepDTO.getType(), stepDTO.getStepikStepId(), stepDTO.getPosition());
+        
         if (stepDTO.getStepikStepId() == null) {
-            throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
+            throw new StepikStepIntegrationException("Step is not synced with Stepik. Step ID: " + stepId);
         }
+        Long lessonId = stepDTO.getLessonId();
+        Integer deletedPosition = stepDTO.getPosition();
+
+        updateStepikStepService.performStepikPositionShiftAfterDeletion(lessonId, deletedPosition);
         stepikStepService.deleteStep(stepDTO.getStepikStepId());
-        stepService.updateStep(createUpdateDTO(stepId, null));
+
+        stepService.deleteStep(stepId);
         
         log.info("Step {} successfully deleted from Stepik with step ID: {}", stepId, stepDTO.getStepikStepId());
     }
