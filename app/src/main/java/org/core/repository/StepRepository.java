@@ -34,10 +34,4 @@ public interface StepRepository extends JpaRepository<Step, Long> {
     @Modifying
     @Query("UPDATE Step s SET s.position = s.position - 1 WHERE s.lesson.id = :lessonId AND s.position >= :fromPosition")
     void decrementPositionsFrom(@Param("lessonId") Long lessonId, @Param("fromPosition") Integer fromPosition);
-
-    @Query("SELECT s FROM Step s JOIN s.lesson l JOIN l.model m WHERE m.id = :modelId ORDER BY l.position ASC, s.position ASC")
-    List<Step> findByModelIdOrderByLessonAndStepPosition(@Param("modelId") Long modelId);
-
-    @Query("SELECT s FROM Step s JOIN s.lesson l JOIN l.model m WHERE m.course.id = :courseId ORDER BY m.position ASC, l.position ASC, s.position ASC")
-    List<Step> findByCourseIdOrderByModelLessonAndStepPosition(@Param("courseId") Long courseId);
 }

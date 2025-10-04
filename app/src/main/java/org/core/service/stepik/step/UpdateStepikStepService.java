@@ -113,6 +113,29 @@ public class UpdateStepikStepService {
         }
     }
 
+    @Transactional
+    public void performStepikPositionShiftAfterDeletion(Long lessonId, Integer deletedPosition) {
+        log.info("Performing Stepik position shift after deletion from position {}", deletedPosition);
+
+        List<StepResponseDTO> stepsByLesson = stepService.getLessonStepsByLessonId(lessonId).stream()
+                .filter(s -> s.getStepikStepId() != null)
+                .filter(s -> s.getPosition() > deletedPosition)
+                .toList();
+
+        for (StepResponseDTO stepDTO : stepsByLesson) {
+            StepikStepSourceResponseData stepikData = stepikStepService.getStepikStepById(stepDTO.getStepikStepId());
+            Integer currentPosition = stepikData.getPosition();
+            Integer newPosition = currentPosition - 1;
+
+            log.info("Shifting step {} in Stepik from position {} to {}",
+                    stepDTO.getId(), currentPosition, newPosition);
+
+            stepService.updateStep(createUpdateDTO(stepDTO.getId(), newPosition));
+            stepikStepService.updateStep(stepDTO.getStepikStepId());
+        }
+        log.info("Stepik position shift after deletion completed");
+    }
+
     private UpdateStepDTO createUpdateDTO(Long stepId, Integer position) {
         UpdateStepDTO updateDTO = new UpdateStepDTO();
         updateDTO.setStepId(stepId);
