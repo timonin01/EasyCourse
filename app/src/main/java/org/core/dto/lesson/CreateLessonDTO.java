@@ -19,5 +19,7 @@ public class CreateLessonDTO {
     @NotBlank(message = "Title is required")
     private String title;
 
+    private String description;
+
     private Integer position;
 }

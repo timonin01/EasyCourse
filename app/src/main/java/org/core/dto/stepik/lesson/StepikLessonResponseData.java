@@ -14,6 +14,7 @@ public class StepikLessonResponseData {
 
     private Long id;
     private String title;
+    private String description;
     private String language;
     private Integer position;
 

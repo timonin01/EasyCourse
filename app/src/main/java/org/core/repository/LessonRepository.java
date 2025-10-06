@@ -12,7 +12,8 @@ import java.util.Optional;
 
 @Repository
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
-    
+    Lesson findByStepikLessonId(Long stepikLessonId);
+
     List<Lesson> findByModelIdOrderByPositionAsc(Long modelId);
     
     @Query("SELECT MAX(l.position) FROM Lesson l WHERE l.model.id = :modelId")
@@ -26,17 +27,15 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     @Query("UPDATE Lesson l SET l.position = l.position - 1 WHERE l.model.id = :modelId AND l.position >= :position")
     void decrementPositionsFromPosition(@Param("modelId") Long modelId, @Param("position") Integer position);
     
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Lesson l SET l.position = l.position + 1 WHERE l.model.id = :modelId AND l.position >= :fromPosition AND l.position <= :toPosition")
     void incrementPositionsRange(@Param("modelId") Long modelId, @Param("fromPosition") Integer fromPosition, @Param("toPosition") Integer toPosition);
     
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Lesson l SET l.position = l.position - 1 WHERE l.model.id = :modelId AND l.position >= :fromPosition AND l.position <= :toPosition")
     void decrementPositionsRange(@Param("modelId") Long modelId, @Param("fromPosition") Integer fromPosition, @Param("toPosition") Integer toPosition);
     
     List<Lesson> findByModelIdAndStepikLessonIdIsNullOrderByPositionAsc(Long modelId);
-    
-    Optional<Lesson> findByStepikLessonId(Long stepikLessonId);
     
     @Modifying
     @Query("UPDATE Lesson l SET l.stepikLessonId = :stepikLessonId WHERE l.id = :lessonId")

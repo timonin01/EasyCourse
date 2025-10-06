@@ -29,8 +29,6 @@ public class StepikStepSyncService {
     private final LessonRepository lessonRepository;
 
     public StepikStepSourceResponseData syncStepWithStepik(Long stepId) {
-        log.info("Starting sync step ID: {} with Stepik", stepId);
-        
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
         Step step = mapToStep(stepDTO);
 
@@ -45,8 +43,6 @@ public class StepikStepSyncService {
     }
 
     public StepikStepSourceResponseData updateStepInStepik(Long stepId) {
-        log.info("Starting manual update of step ID: {} in Stepik", stepId);
-        
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
         if (stepDTO.getStepikStepId() == null) {
             throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
@@ -55,9 +51,7 @@ public class StepikStepSyncService {
         StepikStepSourceResponseData stepikData = stepikStepService.getStepikStepById(stepDTO.getStepikStepId());
         Integer currentStepikPosition = stepikData.getPosition();
         Integer currentDbPosition = stepDTO.getPosition();
-        
-        log.info("Position comparison: Stepik={}, Database={}", currentStepikPosition, currentDbPosition);
-        
+
         if (currentStepikPosition.equals(currentDbPosition)) {
             log.info("Positions match, performing simple update");
             Step step = mapToStep(stepDTO);
