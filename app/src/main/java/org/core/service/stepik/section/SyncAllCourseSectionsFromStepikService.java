@@ -35,9 +35,7 @@ public class SyncAllCourseSectionsFromStepikService {
     @Value("${stepik.api.base-url}")
     private String baseUrl;
 
-    private final HeaderBuilder headerBuilder;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    private final StepikSectionService stepikSectionService;
     private final ModelService modelService;
     private final CourseService courseService;
 
@@ -49,14 +47,14 @@ public class SyncAllCourseSectionsFromStepikService {
 
         Long stepikCourseId = course.getStepikCourseId();
         try {
-            List<Long> sectionIds = getCourseSectionIds(stepikCourseId);
+            List<Long> sectionIds = stepikSectionService.getCourseSectionIds(stepikCourseId);
 
             List<ModelResponseDTO> syncedModels = new ArrayList<>();
             List<ModelResponseDTO> localModels = modelService.getCourseModelsByCourseId(courseId);
             for (Long sectionId : sectionIds) {
                 try {
                     log.info("Processing section {} from course {}", sectionId, stepikCourseId);
-                    StepikSectionResponseData stepikSection = getSectionById(sectionId);
+                    StepikSectionResponseData stepikSection = stepikSectionService.getSectionByStepikId(sectionId);
                     ModelResponseDTO syncedModel = syncSingleSectionFromStepik(courseId, stepikSection, localModels);
                     syncedModels.add(syncedModel);
                 } catch (Exception e) {
@@ -73,71 +71,6 @@ public class SyncAllCourseSectionsFromStepikService {
         }
     }
 
-    private List<Long> getCourseSectionIds(Long stepikCourseId) {
-        try {
-            String url = baseUrl + "/courses/" + stepikCourseId;
-            HttpHeaders headers = headerBuilder.createHeaders();
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode coursesArray = root.path("courses");
-
-                if (coursesArray.isArray() && !coursesArray.isEmpty()) {
-                    JsonNode courseNode = coursesArray.get(0);
-                    JsonNode sectionsArray = courseNode.path("sections");
-
-                    if (sectionsArray.isArray()) {
-                        List<Long> sectionIds = new ArrayList<>();
-                        for (JsonNode sectionIdNode : sectionsArray) {
-                            sectionIds.add(sectionIdNode.asLong());
-                        }
-                        return sectionIds;
-                    }
-                }
-                throw new StepikSectionIntegrationException("No sections found in course " + stepikCourseId);
-            } else {
-                throw new StepikSectionIntegrationException("Failed to get course " + stepikCourseId +
-                        ". Status: " + response.getStatusCode());
-            }
-        } catch (Exception e) {
-            log.error("Error getting section IDs for course {} from Stepik: {}", stepikCourseId, e.getMessage());
-            throw new StepikSectionIntegrationException("Failed to get section IDs for course " + stepikCourseId +
-                    " from Stepik: " + e.getMessage());
-        }
-    }
-
-    private StepikSectionResponseData getSectionById(Long sectionId) {
-        try {
-            String url = baseUrl + "/sections/" + sectionId;
-            HttpHeaders headers = headerBuilder.createHeaders();
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity, String.class);
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                StepikSectionResponse stepikResponse = objectMapper.readValue(
-                        response.getBody(), StepikSectionResponse.class);
-
-                if (stepikResponse.getSections() != null && !stepikResponse.getSections().isEmpty()) {
-                    log.info("Successfully retrieved section {} from Stepik", sectionId);
-                    return stepikResponse.getSections().get(0);
-                } else {
-                    throw new StepikSectionIntegrationException("No section data received from Stepik for section " + sectionId);
-                }
-            } else {
-                throw new StepikSectionIntegrationException("Failed to get section " + sectionId +
-                        ". Status: " + response.getStatusCode());
-            }
-        } catch (Exception e) {
-            log.error("Error getting section {} from Stepik: {}", sectionId, e.getMessage());
-            throw new StepikSectionIntegrationException("Failed to get section " + sectionId +
-                    " from Stepik: " + e.getMessage());
-        }
-    }
 
     private ModelResponseDTO syncSingleSectionFromStepik(Long courseId, StepikSectionResponseData stepikSection, List<ModelResponseDTO> localModels) {
         Optional<ModelResponseDTO> localModel = localModels.stream()

@@ -13,6 +13,8 @@ import java.util.Optional;
 @Repository
 public interface ModelRepository extends JpaRepository<Model, Long> {
 
+    Model findByStepikSectionId(Long stepikSectionId);
+
     List<Model> findByCourseIdOrderByPositionAsc(Long courseId);
     
     List<Model> findByCourseIdAndStepikSectionIdIsNullOrderByPositionAsc(Long courseId);
@@ -20,19 +22,19 @@ public interface ModelRepository extends JpaRepository<Model, Long> {
     @Query("SELECT MAX(m.position) FROM Model m WHERE m.course.id = :courseId")
     Optional<Integer> findMaxPositionByCourseId(@Param("courseId") Long courseId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Model m SET m.position = m.position + 1 WHERE m.course.id = :courseId AND m.position >= :position")
     void incrementPositionsFromPosition(@Param("courseId") Long courseId, @Param("position") Integer position);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Model m SET m.position = m.position - 1 WHERE m.course.id = :courseId AND m.position >= :position")
     void decrementPositionsFromPosition(@Param("courseId") Long courseId, @Param("position") Integer position);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Model m SET m.position = m.position + 1 WHERE m.course.id = :courseId AND m.position >= :fromPosition AND m.position <= :toPosition")
     void incrementPositionsRange(@Param("courseId") Long courseId, @Param("fromPosition") Integer fromPosition, @Param("toPosition") Integer toPosition);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Model m SET m.position = m.position - 1 WHERE m.course.id = :courseId AND m.position >= :fromPosition AND m.position <= :toPosition")
     void decrementPositionsRange(@Param("courseId") Long courseId, @Param("fromPosition") Integer fromPosition, @Param("toPosition") Integer toPosition);
 }
