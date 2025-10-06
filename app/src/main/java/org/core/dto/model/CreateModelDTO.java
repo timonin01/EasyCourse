@@ -19,6 +19,4 @@ public class CreateModelDTO {
     @NotBlank(message = "Description is required")
     private String description;
 
-    private Integer position;
-
 }

@@ -103,10 +103,16 @@ public class SyncAllCourseSectionsFromStepikService {
         
         createDTO.setDescription(stepikSection.getDescription() != null && !stepikSection.getDescription().trim().isEmpty()
                 ? stepikSection.getDescription() : stepikSection.getTitle());
-        createDTO.setPosition(stepikSection.getPosition());
 
         ModelResponseDTO model = modelService.createModule(createDTO);
         modelService.updateModelStepikSectionId(model.getId(), stepikSection.getId());
+
+        if (!stepikSection.getPosition().equals(model.getPosition())) {
+            UpdateModelDTO updateDTO = new UpdateModelDTO();
+            updateDTO.setModelId(model.getId());
+            updateDTO.setPosition(stepikSection.getPosition());
+            model = modelService.updateModel(updateDTO);
+        }
 
         return modelService.getModelBuModelId(model.getId());
     }
