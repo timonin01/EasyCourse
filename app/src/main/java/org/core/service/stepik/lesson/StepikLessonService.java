@@ -10,6 +10,7 @@ import org.core.dto.stepik.lesson.StepikLessonRequestData;
 import org.core.dto.stepik.lesson.StepikLessonResponse;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.exception.StepikLessonIntegrationException;
+import org.core.repository.LessonRepository;
 import org.core.util.HeaderBuilder;
 import org.core.util.StepikLessonRequestDataBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,7 @@ public class StepikLessonService {
     @Value("${recaptcha.site-key}")
     private String recaptchaSiteKey;
 
+    private final LessonRepository lessonRepository;
     private final StepikLessonRequestDataBuilder stepikLessonRequestDataBuilder;
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
@@ -43,8 +45,6 @@ public class StepikLessonService {
     }
 
     public StepikLessonResponse createLesson(Lesson lesson, String captchaToken) {
-        log.info("Creating lesson in Stepik for lesson ID: {}", lesson.getId());
-        
         StepikLessonRequestData requestData = stepikLessonRequestDataBuilder.createRequestDataForCreate(lesson, captchaToken);
         
         StepikLessonRequest request = new StepikLessonRequest(requestData);
@@ -56,9 +56,7 @@ public class StepikLessonService {
 
             ResponseEntity<StepikLessonResponse> response = restTemplate.exchange(
                 url, HttpMethod.POST, entity, StepikLessonResponse.class);
-            
-            log.info("Stepik response status: {}", response.getStatusCode());
-            log.info("Stepik response body: {}", response.getBody());
+
             if (response.getBody() != null) {
                 log.info("Stepik response lessons: {}", response.getBody().getLessons());
             }
@@ -72,18 +70,16 @@ public class StepikLessonService {
                     log.error("Lesson data is null in Stepik response. Full response: {}", responseBody);
                     throw new StepikLessonIntegrationException("No lesson data in Stepik response");
                 }
-            } else {
-                throw new StepikLessonIntegrationException("Failed to create lesson in Stepik");
-            }
+            } else throw new StepikLessonIntegrationException("Failed to create lesson in Stepik");
         } catch (Exception e) {
             log.error("Error creating lesson in Stepik for lesson ID: {}: {}", lesson.getId(), e.getMessage());
             throw new StepikLessonIntegrationException("Failed to create lesson in Stepik: " + e.getMessage());
         }
     }
 
-    public StepikLessonResponse updateLesson(Long stepikLessonId, Lesson lesson) {
-        log.info("Updating lesson in Stepik with stepikLessonId: {}", stepikLessonId);
-        
+    public StepikLessonResponse updateLesson(Long stepikLessonId) {
+        Lesson lesson = lessonRepository.findByStepikLessonId(stepikLessonId);
+
         StepikLessonRequest request = new StepikLessonRequest(stepikLessonRequestDataBuilder
                 .createRequestDataForUpdate(lesson));
         try {
@@ -94,9 +90,7 @@ public class StepikLessonService {
 
             ResponseEntity<StepikLessonResponse> response = restTemplate.exchange(
                 url, HttpMethod.PUT, entity, StepikLessonResponse.class);
-            
-            log.info("Response status: {}", response.getStatusCode());
-            log.info("Response body: {}", response.getBody());
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 StepikLessonResponseData lessonData = response.getBody().getLesson();
                 if (lessonData != null) {
@@ -112,18 +106,11 @@ public class StepikLessonService {
             }
         } catch (Exception e) {
             log.error("Error updating lesson in Stepik with stepikLessonId: {}: {}", stepikLessonId, e.getMessage());
-            if (e.getMessage().contains("404")) {
-                throw new StepikLessonIntegrationException("Lesson with ID " + stepikLessonId + " not found in Stepik API (404). The lesson may have been deleted or is not accessible via API.");
-            }
-            if (e.getMessage().contains("500")) {
-                throw new StepikLessonIntegrationException("Stepik server error (500) when updating lesson. The lesson may have been deleted or is inaccessible.");
-            }
             throw new StepikLessonIntegrationException("Failed to update lesson in Stepik: " + e.getMessage());
         }
     }
 
     public void deleteLesson(Long stepikLessonId) {
-        log.info("Deleting lesson in Stepik with stepikLessonId: {}", stepikLessonId);
         try {
             String url = baseUrl + "/lessons/" + stepikLessonId;
 
@@ -136,6 +123,36 @@ public class StepikLessonService {
         } catch (Exception e) {
             log.error("Error deleting lesson in Stepik with stepikLessonId: {}: {}", stepikLessonId, e.getMessage());
             throw new StepikLessonIntegrationException("Failed to delete lesson in Stepik: " + e.getMessage());
+        }
+    }
+
+    public StepikLessonResponseData getLessonByStepikId(Long stepikLessonId) {
+        try {
+            String url = baseUrl + "/lessons/" + stepikLessonId;
+
+            HttpHeaders headers = headerBuilder.createHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<StepikLessonResponse> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, StepikLessonResponse.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                StepikLessonResponseData lessonData = response.getBody().getLesson();
+                if (lessonData != null) {
+                    log.info("Successfully retrieved lesson from Stepik. ID: {}, Title: '{}', Units: {}",
+                            lessonData.getId(), lessonData.getTitle(), lessonData.getUnits());
+                    return lessonData;
+                } else {
+                    log.warn("Lesson data is null in GET response for stepikLessonId: {}", stepikLessonId);
+                    throw new StepikLessonIntegrationException("No lesson data received from Stepik for ID: " + stepikLessonId);
+                }
+            } else {
+                log.error("Failed to get lesson. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
+                throw new StepikLessonIntegrationException("Failed to get lesson from Stepik. Status: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting lesson from Stepik with stepikLessonId: {}: {}", stepikLessonId, e.getMessage());
+            throw new StepikLessonIntegrationException("Failed to get lesson from Stepik: " + e.getMessage());
         }
     }
 

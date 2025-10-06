@@ -46,18 +46,6 @@ public class StepikLessonController {
         }
     }
 
-    @GetMapping("/sync-status/{lessonId}")
-    public ResponseEntity<LessonCaptchaChallenge> getSyncStatus(@PathVariable Long lessonId) {
-        try {
-            log.info("Getting sync status for lesson: {}", lessonId);
-            LessonCaptchaChallenge result = stepikLessonSyncService.getLessonSyncStatus(lessonId);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            log.error("Failed to get sync status for lesson {}: {}", lessonId, e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
     @PutMapping("/update-lesson/{lessonId}")
     public ResponseEntity<StepikLessonResponseData> updateLesson(@PathVariable Long lessonId) {
         try {

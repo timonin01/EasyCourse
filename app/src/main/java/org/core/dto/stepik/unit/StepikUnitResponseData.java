@@ -1,10 +1,11 @@
 package org.core.dto.stepik.unit;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -13,12 +14,24 @@ import lombok.Setter;
 public class StepikUnitResponseData {
 
     private Long id;
-
-    @JsonProperty("lesson_id")
-    private String lessonId;
-
-    private String lesson;
-    private String section;
+    private Long section;
+    private Long lesson;
+    private List<Long> assignments;
     private Integer position;
+    private Object actions;
+    private Object progress;
+    private String beginDate;
+    private String endDate;
+    private String softDeadline;
+    private String hardDeadline;
+    private String gradingPolicy;
+    private String beginDateSource;
+    private String endDateSource;
+    private String softDeadlineSource;
+    private String hardDeadlineSource;
+    private String gradingPolicySource;
+    private Boolean isActive;
+    private String createDate;
+    private String updateDate;
 
 }
