@@ -20,6 +20,4 @@ public class CreateLessonDTO {
     private String title;
 
     private String description;
-
-    private Integer position;
 }
