@@ -34,7 +34,7 @@ public class UpdateStepikStepService {
                 .filter(s -> s.getStepikStepId() != null && !s.getId().equals(step.getId()))
                 .toList();
 
-        StepikStepSourceResponseData currentStepikData = stepikStepService.getStepikStepById(step.getStepikStepId());;
+        StepikStepSourceResponseData currentStepikData = stepikStepService.getStepikStepById(step.getStepikStepId());
 
         Integer oldPosition = currentStepikData.getPosition();
         if (newPosition < oldPosition) {
