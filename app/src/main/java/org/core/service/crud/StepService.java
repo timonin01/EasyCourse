@@ -34,12 +34,7 @@ public class StepService {
         Lesson lesson = lessonRepository.findById(createStepDTO.getLessonId())
                 .orElseThrow(() -> new LessonNotFoundException("Lesson not found"));
 
-        Integer position = createStepDTO.getPosition();
-        if (position == null) {
-            position = getNextPosition(lesson.getId());
-        } else {
-            shiftStepsPositions(lesson.getId(), position);
-        }
+        Integer position = getNextPosition(lesson.getId());
 
         Step step = new Step();
         step.setLesson(lesson);
@@ -58,7 +53,7 @@ public class StepService {
             }
         }
 
-        log.info("Step created with id: {} in lesson: {}", step.getId(), lesson.getId());
+        log.info("Step created with id: {} in lesson: {} at position {}", step.getId(), lesson.getId(), position);
         return mapToResponseDto(stepRepository.save(step));
     }
 

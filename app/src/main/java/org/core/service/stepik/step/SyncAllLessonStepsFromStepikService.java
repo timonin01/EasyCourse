@@ -103,7 +103,6 @@ public class SyncAllLessonStepsFromStepikService {
     private StepResponseDTO createNewStepFromStepik(Long lessonId, StepikStepSourceResponseData stepikStep) {
         CreateStepDTO createDTO = new CreateStepDTO();
         createDTO.setLessonId(lessonId);
-        createDTO.setPosition(stepikStep.getPosition());
         createDTO.setCost(stepikStep.getCost() != null ? stepikStep.getCost().longValue() : 0L);
         createDTO.setStepikStepId(stepikStep.getId());
 
@@ -118,7 +117,16 @@ public class SyncAllLessonStepsFromStepikService {
             createDTO.setType(StepType.TEXT);
         }
 
-        return stepService.createStep(createDTO);
+        StepResponseDTO step = stepService.createStep(createDTO);
+
+        if (!stepikStep.getPosition().equals(step.getPosition())) {
+            UpdateStepDTO updateDTO = new UpdateStepDTO();
+            updateDTO.setStepId(step.getId());
+            updateDTO.setPosition(stepikStep.getPosition());
+            step = stepService.updateStep(updateDTO);
+        }
+
+        return step;
     }
 
     private StepType qualifiedStepTypeFromBlock(StepikBlockResponse block) {
