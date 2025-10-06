@@ -34,17 +34,9 @@ public class UpdateStepikStepService {
                 .filter(s -> s.getStepikStepId() != null)
                 .toList();
 
-        StepikStepSourceResponseData currentStepikData;
-        try {
-            currentStepikData = stepikStepService.getStepikStepById(step.getStepikStepId());
-        } catch (Exception e) {
-            log.error("Current step {} not found in Stepik (stepikStepId: {}): {}", 
-                    step.getId(), step.getStepikStepId(), e.getMessage());
-            throw new StepikStepIntegrationException("Current step not found in Stepik: " + e.getMessage());
-        }
-        Integer oldPosition = currentStepikData.getPosition();
-        log.info("Original position from Stepik: {}", oldPosition);
+        StepikStepSourceResponseData currentStepikData = stepikStepService.getStepikStepById(step.getStepikStepId());;
 
+        Integer oldPosition = currentStepikData.getPosition();
         if (newPosition < oldPosition) {
             stepRepository.incrementPositionsFromTo(lessonId, newPosition, oldPosition - 1);
             shiftStepsDownInStepik(stepsByLesson, newPosition, oldPosition - 1, step.getId());
@@ -59,15 +51,12 @@ public class UpdateStepikStepService {
             stepService.updateStep(createUpdateDTO(step.getId(), newPosition));
             stepikStepService.updateStep(step.getStepikStepId());
         }
-        log.info("Stepik position shift completed for step {} to position {}", step.getId(), newPosition);
 
         return stepikStepService.getStepikStepById(step.getStepikStepId());
     }
 
 
     private void shiftStepsDownInStepik(List<StepResponseDTO> steps, Integer fromPosition, Integer toPosition, Long excludeStepId) {
-        log.info("Shifting steps down in Stepik from position {} to {}", fromPosition, toPosition);
-
         for (StepResponseDTO stepDTO : steps) {
             try {
                 StepikStepSourceResponseData stepikData = stepikStepService.getStepikStepById(stepDTO.getStepikStepId());
@@ -90,8 +79,6 @@ public class UpdateStepikStepService {
     }
 
     private void shiftStepsUpInStepik(List<StepResponseDTO> steps, Integer fromPosition, Integer toPosition, Long excludeStepId) {
-        log.info("Shifting steps up in Stepik from position {} to {}", fromPosition, toPosition);
-
         for (StepResponseDTO stepDTO : steps) {
             try {
                 StepikStepSourceResponseData stepikData = stepikStepService.getStepikStepById(stepDTO.getStepikStepId());
@@ -115,8 +102,6 @@ public class UpdateStepikStepService {
 
     @Transactional
     public void performStepikPositionShiftAfterDeletion(Long lessonId, Integer deletedPosition) {
-        log.info("Performing Stepik position shift after deletion from position {}", deletedPosition);
-
         List<StepResponseDTO> stepsByLesson = stepService.getLessonStepsByLessonId(lessonId).stream()
                 .filter(s -> s.getStepikStepId() != null)
                 .filter(s -> s.getPosition() > deletedPosition)
@@ -133,7 +118,6 @@ public class UpdateStepikStepService {
             stepService.updateStep(createUpdateDTO(stepDTO.getId(), newPosition));
             stepikStepService.updateStep(stepDTO.getStepikStepId());
         }
-        log.info("Stepik position shift after deletion completed");
     }
 
     private UpdateStepDTO createUpdateDTO(Long stepId, Integer position) {
