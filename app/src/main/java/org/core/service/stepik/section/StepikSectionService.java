@@ -1,5 +1,7 @@
 package org.core.service.stepik.section;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,12 +10,16 @@ import org.core.dto.stepik.section.StepikSectionRequest;
 import org.core.dto.stepik.section.StepikSectionResponse;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.exception.StepikSectionIntegrationException;
+import org.core.repository.ModelRepository;
 import org.core.util.HeaderBuilder;
 import org.core.util.StepikSectionRequestDataBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -23,16 +29,16 @@ public class StepikSectionService {
     @Value("${stepik.api.base-url}")
     private String baseUrl;
 
+    private final ModelRepository modelRepository;
     private final StepikSectionRequestDataBuilder stepikSectionRequestDataBuilder;
+    private final ObjectMapper objectMapper;
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
 
     public StepikSectionResponse createSection(Model model) {
         try {
             String url = baseUrl + "/sections";
-
-            StepikSectionRequest request = new StepikSectionRequest(stepikSectionRequestDataBuilder
-                    .createRequestDataForCreation(model));
+            StepikSectionRequest request = new StepikSectionRequest(stepikSectionRequestDataBuilder.createRequestDataForCreation(model));
 
             HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<StepikSectionRequest> entity = new HttpEntity<>(request, headers);
@@ -52,24 +58,18 @@ public class StepikSectionService {
         }
     }
 
-    public StepikSectionResponse updateSection(Long sectionId, Model model) {
+    public StepikSectionResponse updateSection(Long sectionId) {
         try {
-            String url = baseUrl + "/sections/" + sectionId;
-            log.info("Updating section {} in Stepik with URL: {}", sectionId, url);
+            Model model = modelRepository.findByStepikSectionId(sectionId);
 
-            StepikSectionRequest request = new StepikSectionRequest(stepikSectionRequestDataBuilder
-                    .createRequestDataForUpdate(model));
-            log.info("Request data for section update: {}", request);
+            String url = baseUrl + "/sections/" + sectionId;
+            StepikSectionRequest request = new StepikSectionRequest(stepikSectionRequestDataBuilder.createRequestDataForUpdate(model));
 
             HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<StepikSectionRequest> entity = new HttpEntity<>(request, headers);
             
-            log.info("Sending PUT request to Stepik API...");
             ResponseEntity<StepikSectionResponse> response = restTemplate.exchange(
                     url, HttpMethod.PUT, entity, StepikSectionResponse.class);
-
-            log.info("Stepik response status: {}", response.getStatusCode());
-            log.info("Stepik response body: {}", response.getBody());
 
             if ((response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) && response.getBody() != null) {
                 StepikSectionResponseData responseData = response.getBody().getSection();
@@ -107,6 +107,72 @@ public class StepikSectionService {
         } catch (Exception e) {
             log.error("Error deleting section in Stepik: {}", e.getMessage());
             throw new StepikSectionIntegrationException("Failed to delete section in Stepik: " + e.getMessage());
+        }
+    }
+
+    public StepikSectionResponseData getSectionByStepikId(Long sectionId) {
+        try {
+            String url = baseUrl + "/sections/" + sectionId;
+            HttpHeaders headers = headerBuilder.createHeaders();
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                StepikSectionResponse stepikResponse = objectMapper.readValue(
+                        response.getBody(), StepikSectionResponse.class);
+
+                if (stepikResponse.getSections() != null && !stepikResponse.getSections().isEmpty()) {
+                    log.info("Successfully retrieved section {} from Stepik", sectionId);
+                    return stepikResponse.getSections().get(0);
+                } else {
+                    throw new StepikSectionIntegrationException("No section data received from Stepik for section " + sectionId);
+                }
+            } else {
+                throw new StepikSectionIntegrationException("Failed to get section " + sectionId +
+                        ". Status: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting section {} from Stepik: {}", sectionId, e.getMessage());
+            throw new StepikSectionIntegrationException("Failed to get section " + sectionId +
+                    " from Stepik: " + e.getMessage());
+        }
+    }
+
+    public List<Long> getCourseSectionIds(Long stepikCourseId) {
+        try {
+            String url = baseUrl + "/courses/" + stepikCourseId;
+            HttpHeaders headers = headerBuilder.createHeaders();
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode coursesArray = root.path("courses");
+
+                if (coursesArray.isArray() && !coursesArray.isEmpty()) {
+                    JsonNode courseNode = coursesArray.get(0);
+                    JsonNode sectionsArray = courseNode.path("sections");
+
+                    if (sectionsArray.isArray()) {
+                        List<Long> sectionIds = new ArrayList<>();
+                        for (JsonNode sectionIdNode : sectionsArray) {
+                            sectionIds.add(sectionIdNode.asLong());
+                        }
+                        return sectionIds;
+                    }
+                }
+                throw new StepikSectionIntegrationException("No sections found in course " + stepikCourseId);
+            } else {
+                throw new StepikSectionIntegrationException("Failed to get course " + stepikCourseId +
+                        ". Status: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting section IDs for course {} from Stepik: {}", stepikCourseId, e.getMessage());
+            throw new StepikSectionIntegrationException("Failed to get section IDs for course " + stepikCourseId +
+                    " from Stepik: " + e.getMessage());
         }
     }
 

@@ -34,7 +34,7 @@ public class UpdateStepikLessonService {
         }
 
         List<LessonResponseDTO> lessonsByModel = lessonService.getModelLessonsByModelId(modelId).stream()
-                .filter(l -> l.getStepikLessonId() != null)
+                .filter(l -> l.getStepikLessonId() != null && !l.getId().equals(lesson.getId()))
                 .toList();
 
         StepikUnitResponseData currentUnitData = stepikUnitService.getUnitByLessonId(lesson.getStepikLessonId());
@@ -43,13 +43,13 @@ public class UpdateStepikLessonService {
         if (newPosition < oldPosition) {
             lessonRepository.incrementPositionsRange(modelId, newPosition, oldPosition - 1);
             lessonRepository.flush();
-            shiftLessonsDownInStepik(lessonsByModel, newPosition, oldPosition - 1, lesson.getId());
+            shiftLessonsDownInStepik(lessonsByModel, newPosition, oldPosition - 1);
             lessonService.updateLesson(createUpdateDTO(lesson.getId(), newPosition));
             stepikUnitService.updateUnitPosition(currentUnitData.getId(), newPosition, currentUnitData);
         } else if (newPosition > oldPosition) {
             lessonRepository.decrementPositionsRange(modelId, oldPosition + 1, newPosition);
             lessonRepository.flush();
-            shiftLessonsUpInStepik(lessonsByModel, oldPosition + 1, newPosition, lesson.getId());
+            shiftLessonsUpInStepik(lessonsByModel, oldPosition + 1, newPosition);
             lessonService.updateLesson(createUpdateDTO(lesson.getId(), newPosition));
             stepikUnitService.updateUnitPosition(currentUnitData.getId(), newPosition, currentUnitData);
         } else {
@@ -60,14 +60,13 @@ public class UpdateStepikLessonService {
         return stepikLessonService.getLessonByStepikId(lesson.getStepikLessonId());
     }
 
-    private void shiftLessonsDownInStepik(List<LessonResponseDTO> lessons, Integer fromPosition, Integer toPosition, Long excludeLessonId) {
+    private void shiftLessonsDownInStepik(List<LessonResponseDTO> lessons, Integer fromPosition, Integer toPosition) {
         for (LessonResponseDTO lessonDTO : lessons) {
             try {
                 StepikUnitResponseData unitData = stepikUnitService.getUnitByLessonId(lessonDTO.getStepikLessonId());
                 Integer originalPosition = unitData.getPosition();
                 
-                if (originalPosition >= fromPosition && originalPosition <= toPosition
-                        && !lessonDTO.getId().equals(excludeLessonId)) {
+                if (originalPosition >= fromPosition && originalPosition <= toPosition) {
 
                     Integer newPosition = originalPosition + 1;
                     log.info("Updating lesson {} position in Stepik from {} to {}",
@@ -82,14 +81,13 @@ public class UpdateStepikLessonService {
         }
     }
 
-    private void shiftLessonsUpInStepik(List<LessonResponseDTO> lessons, Integer fromPosition, Integer toPosition, Long excludeLessonId) {
+    private void shiftLessonsUpInStepik(List<LessonResponseDTO> lessons, Integer fromPosition, Integer toPosition) {
         for (LessonResponseDTO lessonDTO : lessons) {
             try {
                 StepikUnitResponseData unitData = stepikUnitService.getUnitByLessonId(lessonDTO.getStepikLessonId());
                 Integer originalPosition = unitData.getPosition();
                 
-                if (originalPosition >= fromPosition && originalPosition <= toPosition
-                        && !lessonDTO.getId().equals(excludeLessonId)) {
+                if (originalPosition >= fromPosition && originalPosition <= toPosition) {
 
                     Integer newPosition = originalPosition - 1;
                     log.info("Updating lesson {} position in Stepik from {} to {}",
