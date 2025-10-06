@@ -30,12 +30,8 @@ public class ModelService {
     public ModelResponseDTO createModule(CreateModelDTO createDTO){
         Course course = courseRepository.findById(createDTO.getCourseId())
                 .orElseThrow(() -> new CourseNotFoundException("Course not found"));
-        Integer position = createDTO.getPosition();
-        if (position == null) {
-            position = getNextPosition(course.getId());
-        } else {
-            shiftLessonsPositions(course.getId(), position);
-        }
+        
+        Integer position = getNextPosition(course.getId());
 
         Model model = new Model();
         model.setCourse(course);
@@ -43,7 +39,7 @@ public class ModelService {
         model.setTitle(createDTO.getTitle());
         model.setDescription(createDTO.getDescription());
 
-        log.info("Created new model with ID: {} in course: {}", model.getId(), course.getId());
+        log.info("Created new model with ID: {} in course: {} at position {}", model.getId(), course.getId(), position);
         return mapToResponseDTO(modelRepository.save(model));
     }
 
