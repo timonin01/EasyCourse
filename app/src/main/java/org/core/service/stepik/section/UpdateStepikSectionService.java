@@ -100,6 +100,26 @@ public class UpdateStepikSectionService {
         }
     }
 
+    @Transactional
+    public void performStepikPositionShiftAfterDeletion(Long courseId, Integer deletedPosition) {
+        List<ModelResponseDTO> models = modelService.getCourseModelsByCourseId(courseId).stream()
+                .filter(m -> m.getStepikSectionId() != null)
+                .filter(m -> m.getPosition() > deletedPosition)
+                .toList();
+
+        for(ModelResponseDTO modelDTO : models){
+            StepikSectionResponseData sectionData = stepikSectionService.getSectionByStepikId(modelDTO.getStepikSectionId());
+            Integer currentPosition = modelDTO.getPosition();
+            Integer newPosition = currentPosition - 1;
+
+            log.info("Shifting section {} in Stepik from position {} to {}",
+                    modelDTO.getId(), currentPosition, newPosition);
+
+            modelService.updateModel(createUpdateDTO(modelDTO.getId(),newPosition));
+            stepikSectionService.updateSection(modelDTO.getStepikSectionId());
+        }
+    }
+
     private UpdateModelDTO createUpdateDTO(Long modelId, Integer newPosition) {
         UpdateModelDTO updateModelDTO = new UpdateModelDTO();
         updateModelDTO.setModelId(modelId);
