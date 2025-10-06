@@ -199,6 +199,7 @@ public class SyncAllSectionLessonsFromStepikService {
         UpdateLessonDTO updateDTO = new UpdateLessonDTO();
         updateDTO.setLessonId(existingLesson.getId());
         updateDTO.setTitle(stepikLesson.getTitle());
+        updateDTO.setDescription(stepikLesson.getDescription());
         updateDTO.setPosition(stepikLesson.getPosition());
 
         return lessonService.updateLesson(updateDTO);
@@ -208,6 +209,7 @@ public class SyncAllSectionLessonsFromStepikService {
         CreateLessonDTO createDTO = new CreateLessonDTO();
         createDTO.setModelId(modelId);
         createDTO.setTitle(stepikLesson.getTitle());
+        createDTO.setDescription(stepikLesson.getDescription());
         createDTO.setPosition(stepikLesson.getPosition());
 
         LessonResponseDTO lesson = lessonService.createLesson(createDTO);
