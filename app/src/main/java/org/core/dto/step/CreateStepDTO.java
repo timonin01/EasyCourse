@@ -27,8 +27,6 @@ public class CreateStepDTO {
 
     private String content;
 
-    private Integer position;
-
     private Long cost;
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "name", include = JsonTypeInfo.As.PROPERTY)
