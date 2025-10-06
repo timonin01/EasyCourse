@@ -30,12 +30,8 @@ public class LessonService {
     public LessonResponseDTO createLesson(CreateLessonDTO createDTO) {
         Model model = modelRepository.findById(createDTO.getModelId())
             .orElseThrow(() -> new ModelNotFoundException("Model not found"));
-        Integer position = createDTO.getPosition();
-        if (position == null) {
-            position = getNextPosition(model.getId());
-        } else {
-            shiftLessonsPositions(model.getId(), position);
-        }
+        
+        Integer position = getNextPosition(model.getId());
 
         Lesson lesson = new Lesson();
         lesson.setModel(model);
@@ -43,7 +39,7 @@ public class LessonService {
         lesson.setDescription(createDTO.getDescription() != null ? createDTO.getDescription() : "");
         lesson.setPosition(position);
 
-        log.info("Created new lesson with ID: {} in model: {}", lesson.getId(), model.getId());
+        log.info("Created new lesson with ID: {} in model: {} at position {}", lesson.getId(), model.getId(), position);
         return mapToResponseDTO(lessonRepository.save(lesson));
     }
 
