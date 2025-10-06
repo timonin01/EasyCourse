@@ -81,6 +81,8 @@ public class StepikSectionSyncService {
             throw new IllegalStateException("Model is not synced with Stepik. Model ID: " + modelId);
         }
         lessonService.clearStepikLessonIdsByModelId(modelId);
+
+        updateStepikSectionService.performStepikPositionShiftAfterDeletion(modelDTO.getCourseId(),modelDTO.getPosition());
         
         stepikSectionService.deleteSection(modelDTO.getStepikSectionId());
         modelService.updateModelStepikSectionId(modelId, null);
