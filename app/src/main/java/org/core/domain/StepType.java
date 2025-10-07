@@ -5,6 +5,7 @@ public enum StepType {
     TEXT,
     CHOICE,
     SORTING,
+    MATCHING,
     CODE,
     VIDEO,
     TEST,
