@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.choise.response;
+package org.core.dto.stepik.step.test.choise.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
