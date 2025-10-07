@@ -36,6 +36,9 @@ public class StepikBlockSortingResponse implements StepikBlockResponse {
     @JsonProperty("feedback_correct")
     private String feedbackCorrect;
 
+    @JsonProperty("is_html_enabled")
+    private Boolean isHtmlEnabled;
+
     @JsonProperty("feedback_wrong")
     private String feedbackWrong;
 

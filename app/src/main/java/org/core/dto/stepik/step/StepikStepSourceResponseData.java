@@ -8,8 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
 import org.core.dto.stepik.step.test.choise.response.StepikBlockChoiceResponse;
+import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 
 @Getter
@@ -27,7 +27,7 @@ public class StepikStepSourceResponseData {
     @JsonSubTypes({
             @JsonSubTypes.Type(value = StepikBlockTextResponse.class, name = "text"),
             @JsonSubTypes.Type(value = StepikBlockChoiceResponse.class, name = "choice"),
-            @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "sorting")
+            @JsonSubTypes.Type(value = StepikBlockSortingResponse.class, name = "sorting")
     })
     private StepikBlockResponse block;
 

@@ -11,11 +11,14 @@ import org.core.dto.step.UpdateStepDTO;
 import org.core.dto.stepik.step.StepikBlockResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.dto.stepik.step.test.choise.response.StepikBlockChoiceResponse;
+import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.service.crud.StepService;
+import org.core.service.stepik.step.convereter.ConverterStepikStepBlockResponseToRequest;
+import org.core.util.CleanerHtmlTags;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -27,7 +30,8 @@ import java.util.Optional;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class SyncAllLessonStepsFromStepikService {
 
-    private final ConverterResponseToRequest converter;
+    private final ConverterStepikStepBlockResponseToRequest converter;
+    private final CleanerHtmlTags cleanerTags;
     private final StepikStepService stepikStepService;
     private final StepService stepService;
     private final LessonRepository lessonRepository;
@@ -86,14 +90,14 @@ public class SyncAllLessonStepsFromStepikService {
         UpdateStepDTO updateDTO = new UpdateStepDTO();
         updateDTO.setStepId(existingStep.getId());
         updateDTO.setPosition(stepikStep.getPosition());
-        updateDTO.setCost(stepikStep.getCost() != null ? stepikStep.getCost().longValue() : 0L);
+        updateDTO.setCost(stepikStep.getCost() != null ? stepikStep.getCost() : 0L);
 
         if (stepikStep.getBlock() != null) {
             updateDTO.setType(qualifiedStepTypeFromBlock(stepikStep.getBlock()));
             updateDTO.setStepikBlock(converter.convertResponseToRequest(stepikStep.getBlock()));
 
             if (stepikStep.getBlock() instanceof StepikBlockTextResponse textBlock) {
-                updateDTO.setContent(converter.cleanHtmlTags(textBlock.getText()));
+                updateDTO.setContent(cleanerTags.cleanHtmlTags(textBlock.getText()));
             }
         }
 
@@ -103,7 +107,7 @@ public class SyncAllLessonStepsFromStepikService {
     private StepResponseDTO createNewStepFromStepik(Long lessonId, StepikStepSourceResponseData stepikStep) {
         CreateStepDTO createDTO = new CreateStepDTO();
         createDTO.setLessonId(lessonId);
-        createDTO.setCost(stepikStep.getCost() != null ? stepikStep.getCost().longValue() : 0L);
+        createDTO.setCost(stepikStep.getCost() != null ? stepikStep.getCost() : 0L);
         createDTO.setStepikStepId(stepikStep.getId());
 
         if (stepikStep.getBlock() != null) {
@@ -111,7 +115,7 @@ public class SyncAllLessonStepsFromStepikService {
             createDTO.setStepikBlock(converter.convertResponseToRequest(stepikStep.getBlock()));
 
             if (stepikStep.getBlock() instanceof StepikBlockTextResponse textBlock) {
-                createDTO.setContent(converter.cleanHtmlTags(textBlock.getText()));
+                createDTO.setContent(cleanerTags.cleanHtmlTags(textBlock.getText()));
             }
         } else {
             createDTO.setType(StepType.TEXT);
@@ -134,6 +138,8 @@ public class SyncAllLessonStepsFromStepikService {
             return StepType.TEXT;
         } else if (block instanceof StepikBlockChoiceResponse) {
             return StepType.CHOICE;
+        } else if (block instanceof StepikBlockSortingResponse) {
+            return StepType.SORTING;
         } else {
             throw new StepikStepIntegrationException("Unknown StepType in step");
         }

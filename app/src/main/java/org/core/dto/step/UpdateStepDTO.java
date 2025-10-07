@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.core.domain.StepType;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
+import org.core.dto.stepik.step.test.sorting.request.StepikBlockSortingRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 
 @Getter
@@ -27,7 +28,8 @@ public class UpdateStepDTO {
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "name", include = JsonTypeInfo.As.PROPERTY)
     @JsonSubTypes({
         @JsonSubTypes.Type(value = StepikBlockTextRequest.class, name = "text"),
-        @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice")
+        @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice"),
+        @JsonSubTypes.Type(value = StepikBlockSortingRequest.class, name = "sorting")
     })
     private StepikBlockRequest stepikBlock;
 
