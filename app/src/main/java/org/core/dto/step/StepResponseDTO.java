@@ -8,6 +8,7 @@ import lombok.*;
 import org.core.domain.StepType;
 import org.core.dto.stepik.step.StepikBlockResponse;
 import org.core.dto.stepik.step.test.choise.response.StepikBlockChoiceResponse;
+import org.core.dto.stepik.step.test.matching.response.StepikBlockMatchingResponse;
 import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 
@@ -30,7 +31,8 @@ public class StepResponseDTO {
     @JsonSubTypes({
         @JsonSubTypes.Type(value = StepikBlockTextResponse.class, name = "text"),
         @JsonSubTypes.Type(value = StepikBlockChoiceResponse.class, name = "choice"),
-        @JsonSubTypes.Type(value = StepikBlockSortingResponse.class, name = "sorting")
+        @JsonSubTypes.Type(value = StepikBlockSortingResponse.class, name = "sorting"),
+        @JsonSubTypes.Type(value = StepikBlockMatchingResponse.class, name = "matching")
     })
     private StepikBlockResponse stepikBlock;
     private Long stepikStepId;
