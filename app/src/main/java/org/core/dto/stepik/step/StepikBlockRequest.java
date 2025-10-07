@@ -11,8 +11,9 @@ import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
     property = "name"
 )
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = StepikBlockTextRequest.class, name = "text"),
-    @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice")
+        @JsonSubTypes.Type(value = StepikBlockTextRequest.class, name = "text"),
+        @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice"),
+        @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "sorting")
 })
 public interface StepikBlockRequest {
 }

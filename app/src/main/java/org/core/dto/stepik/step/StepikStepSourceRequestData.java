@@ -24,8 +24,9 @@ public class StepikStepSourceRequestData {
     
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "name", include = JsonTypeInfo.As.PROPERTY)
     @JsonSubTypes({
-        @JsonSubTypes.Type(value = StepikBlockTextRequest.class, name = "text"),
-        @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice")
+            @JsonSubTypes.Type(value = StepikBlockTextRequest.class, name = "text"),
+            @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "choice"),
+            @JsonSubTypes.Type(value = StepikBlockChoiceRequest.class, name = "sorting")
     })
     private StepikBlockRequest block;
 

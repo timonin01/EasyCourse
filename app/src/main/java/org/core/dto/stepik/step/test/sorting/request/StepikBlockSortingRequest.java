@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.test.choise.request;
+package org.core.dto.stepik.step.test.sorting.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -12,12 +12,13 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikBlockChoiceRequest implements StepikBlockRequest {
+public class StepikBlockSortingRequest implements StepikBlockRequest {
 
     private String text;
     private Object video = null;
     private Object options = null;
 
-    private StepikChoiceSourceRequest source;
+    private StepikSortingSourceRequest source;
 
 }
+

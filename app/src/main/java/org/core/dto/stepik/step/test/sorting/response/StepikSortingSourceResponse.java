@@ -1,6 +1,5 @@
-package org.core.dto.stepik.step.test.choise.request;
+package org.core.dto.stepik.step.test.sorting.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,12 +12,12 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikChoiceSourceRequest {
+public class StepikSortingSourceResponse {
 
     @JsonProperty("is_html_enabled")
-    private Boolean isHtmlEnabled = true;
+    private Boolean isHtmlEnabled;
 
-    private List<StepikChoiceOptionRequest> options;
+    private List<StepikSortingOptionResponse> options;
 
 }
+
