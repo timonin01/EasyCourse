@@ -10,7 +10,7 @@ import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
 import org.core.dto.stepik.step.StepikBlockResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
-import org.core.dto.stepik.step.choise.response.StepikBlockChoiceResponse;
+import org.core.dto.stepik.step.test.choise.response.StepikBlockChoiceResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepikStepIntegrationException;

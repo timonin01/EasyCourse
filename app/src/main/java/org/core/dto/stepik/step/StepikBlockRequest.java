@@ -3,7 +3,7 @@ package org.core.dto.stepik.step;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
-import org.core.dto.stepik.step.choise.request.StepikBlockChoiceRequest;
+import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,

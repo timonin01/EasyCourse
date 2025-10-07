@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import org.core.domain.StepType;
 import org.core.dto.stepik.step.StepikBlockResponse;
-import org.core.dto.stepik.step.choise.response.StepikBlockChoiceResponse;
+import org.core.dto.stepik.step.test.choise.response.StepikBlockChoiceResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 
 import java.time.LocalDateTime;

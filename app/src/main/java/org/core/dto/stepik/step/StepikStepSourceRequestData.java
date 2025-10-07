@@ -8,7 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.core.dto.stepik.step.choise.request.StepikBlockChoiceRequest;
+import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 
 @Getter

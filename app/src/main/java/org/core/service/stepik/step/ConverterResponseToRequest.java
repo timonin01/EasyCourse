@@ -2,12 +2,12 @@ package org.core.service.stepik.step;
 
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.StepikBlockResponse;
-import org.core.dto.stepik.step.choise.request.StepikBlockChoiceRequest;
-import org.core.dto.stepik.step.choise.request.StepikChoiceOptionRequest;
-import org.core.dto.stepik.step.choise.request.StepikChoiceSourceRequest;
-import org.core.dto.stepik.step.choise.response.StepikBlockChoiceResponse;
-import org.core.dto.stepik.step.choise.response.StepikChoiceOptionResponse;
-import org.core.dto.stepik.step.choise.response.StepikChoiceSourceResponse;
+import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
+import org.core.dto.stepik.step.test.choise.request.StepikChoiceOptionRequest;
+import org.core.dto.stepik.step.test.choise.request.StepikChoiceSourceRequest;
+import org.core.dto.stepik.step.test.choise.response.StepikBlockChoiceResponse;
+import org.core.dto.stepik.step.test.choise.response.StepikChoiceOptionResponse;
+import org.core.dto.stepik.step.test.choise.response.StepikChoiceSourceResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 import org.core.exception.StepikStepIntegrationException;

@@ -1,6 +1,5 @@
-package org.core.dto.stepik.step.choise.request;
+package org.core.dto.stepik.step.test.choise.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,13 +10,12 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikChoiceOptionRequest {
+public class StepikChoiceOptionResponse {
 
     @JsonProperty("is_correct")
-    private Boolean isCorrect = false;
+    private Boolean isCorrect;
 
     private String text;
-    private String feedback = "";
+    private String feedback;
 
 }
