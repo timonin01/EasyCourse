@@ -6,6 +6,7 @@ public enum StepType {
     CHOICE,
     SORTING,
     MATCHING,
+    TABLE,
     CODE,
     VIDEO,
     TEST,
