@@ -19,5 +19,7 @@
     <include file="db/changelog/templates/changelog-12.xml"/>
     <include file="db/changelog/templates/changelog-13.xml"/>
     <include file="db/changelog/templates/changelog-14.xml"/>
+    <include file="db/changelog/templates/changelog-15.xml"/>
+
 
 </databaseChangeLog>

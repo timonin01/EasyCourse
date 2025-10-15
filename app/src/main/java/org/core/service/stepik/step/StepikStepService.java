@@ -42,9 +42,6 @@ public class StepikStepService {
         try {
             String url = baseUrl + "/step-sources";
 
-            String requestJson = objectMapper.writeValueAsString(request);
-            log.info("Sending request to Stepik API: {}", requestJson);
-
             HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<StepikStepSourceRequest> entity = new HttpEntity<>(request, headers);
 
