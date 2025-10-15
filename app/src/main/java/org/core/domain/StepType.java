@@ -10,6 +10,12 @@ public enum StepType {
     CODE,
     VIDEO,
     TEST,
-    CORRESPONDENCE
+    CORRESPONDENCE,
+    FILL_BLANK,
+    STRING,
+    NUMBER,
+    RANDOM_TASKS,
+    MATH,
+    FREE_ANSWER
 
 }

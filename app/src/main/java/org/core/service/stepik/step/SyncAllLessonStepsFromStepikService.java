@@ -15,6 +15,7 @@ import org.core.dto.stepik.step.test.matching.response.StepikBlockMatchingRespon
 import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
+import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksResponse;
 import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
@@ -146,6 +147,8 @@ public class SyncAllLessonStepsFromStepikService {
             return StepType.MATCHING;
         } else if (block instanceof StepikBlockTableResponse) {
             return StepType.TABLE;
+        } else if (block instanceof StepikBlockFillBlanksResponse) {
+            return StepType.FILL_BLANK;
         } else {
             throw new StepikStepIntegrationException("Unknown StepType in step");
         }

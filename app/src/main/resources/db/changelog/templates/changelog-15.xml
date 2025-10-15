@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="15" author="tim">
+        <comment>Add FILL_BLANK, STRING, NUMBER, RANDOM_TASKS, MATH, FREE_ANSWER to steps.type ENUM</comment>
+        
+        <modifyDataType
+                tableName="steps"
+                columnName="type"
+                newDataType="ENUM('TEXT', 'CHOICE', 'SORTING', 'MATCHING', 'TABLE', 'CODE', 'VIDEO', 'TEST', 'CORRESPONDENCE', 'FILL_BLANK', 'STRING', 'NUMBER', 'RANDOM_TASKS', 'MATH', 'FREE_ANSWER')"/>
+
+        <rollback>
+            <modifyDataType
+                    tableName="steps"
+                    columnName="type"
+                    newDataType="ENUM('TEXT', 'CHOICE', 'SORTING', 'MATCHING', 'TABLE', 'CODE', 'VIDEO', 'TEST', 'CORRESPONDENCE')"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
