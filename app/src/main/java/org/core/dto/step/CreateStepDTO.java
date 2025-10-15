@@ -16,6 +16,7 @@ import org.core.dto.stepik.step.test.sorting.request.StepikBlockSortingRequest;
 import org.core.dto.stepik.step.test.table.request.StepikBlockTableRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksRequest;
+import org.core.dto.stepik.step.enterWord.string.StepikBlockStringRequest;
 
 @Getter
 @Setter
@@ -40,7 +41,8 @@ public class CreateStepDTO {
         @JsonSubTypes.Type(value = StepikBlockSortingRequest.class, name = "sorting"),
         @JsonSubTypes.Type(value = StepikBlockMatchingRequest.class, name = "matching"),
         @JsonSubTypes.Type(value = StepikBlockTableRequest.class, name = "table"),
-        @JsonSubTypes.Type(value = StepikBlockFillBlanksRequest.class, name = "fill-blanks")
+        @JsonSubTypes.Type(value = StepikBlockFillBlanksRequest.class, name = "fill-blanks"),
+        @JsonSubTypes.Type(value = StepikBlockStringRequest.class, name = "string")
     })
     private StepikBlockRequest stepikBlock;
 
