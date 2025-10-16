@@ -10,6 +10,7 @@ import org.core.dto.stepik.step.test.table.request.StepikBlockTableRequest;
 import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksRequest;
 import org.core.dto.stepik.step.enterWord.string.StepikBlockStringRequest;
 import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberRequest;
+import org.core.dto.stepik.step.enterWord.math.StepikBlockMathRequest;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -24,7 +25,8 @@ import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberRequest;
         @JsonSubTypes.Type(value = StepikBlockTableRequest.class, name = "table"),
         @JsonSubTypes.Type(value = StepikBlockFillBlanksRequest.class, name = "fill-blanks"),
         @JsonSubTypes.Type(value = StepikBlockStringRequest.class, name = "string"),
-        @JsonSubTypes.Type(value = StepikBlockNumberRequest.class, name = "number")
+        @JsonSubTypes.Type(value = StepikBlockNumberRequest.class, name = "number"),
+        @JsonSubTypes.Type(value = StepikBlockMathRequest.class, name = "math")
 })
 public interface StepikBlockRequest {
 }
