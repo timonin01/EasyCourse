@@ -20,6 +20,7 @@ import org.core.dto.stepik.step.enterWord.string.StepikBlockStringResponse;
 import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberResponse;
 import org.core.dto.stepik.step.enterWord.math.StepikBlockMathResponse;
 import org.core.dto.stepik.step.enterWord.freeAnswer.StepikBlockFreeAnswerResponse;
+import org.core.dto.stepik.step.enterWord.randomTasks.StepikBlockRandomTasksResponse;
 import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
@@ -161,6 +162,8 @@ public class SyncAllLessonStepsFromStepikService {
             return StepType.MATH;
         } else if (block instanceof StepikBlockFreeAnswerResponse) {
             return StepType.FREE_ANSWER;
+        } else if (block instanceof StepikBlockRandomTasksResponse) {
+            return StepType.RANDOM_TASKS;
         } else {
             throw new StepikStepIntegrationException("Unknown StepType in step");
         }
