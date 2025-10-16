@@ -19,6 +19,7 @@ import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksReques
 import org.core.dto.stepik.step.enterWord.string.StepikBlockStringRequest;
 import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberRequest;
 import org.core.dto.stepik.step.enterWord.math.StepikBlockMathRequest;
+import org.core.dto.stepik.step.enterWord.freeAnswer.StepikBlockFreeAnswerRequest;
 
 @Getter
 @Setter
@@ -46,7 +47,8 @@ public class CreateStepDTO {
         @JsonSubTypes.Type(value = StepikBlockFillBlanksRequest.class, name = "fill-blanks"),
         @JsonSubTypes.Type(value = StepikBlockStringRequest.class, name = "string"),
         @JsonSubTypes.Type(value = StepikBlockNumberRequest.class, name = "number"),
-        @JsonSubTypes.Type(value = StepikBlockMathRequest.class, name = "math")
+        @JsonSubTypes.Type(value = StepikBlockMathRequest.class, name = "math"),
+        @JsonSubTypes.Type(value = StepikBlockFreeAnswerRequest.class, name = "free-answer")
     })
     private StepikBlockRequest stepikBlock;
 
