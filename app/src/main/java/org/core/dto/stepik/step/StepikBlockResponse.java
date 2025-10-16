@@ -11,6 +11,7 @@ import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksRespon
 import org.core.dto.stepik.step.enterWord.string.StepikBlockStringResponse;
 import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberResponse;
 import org.core.dto.stepik.step.enterWord.math.StepikBlockMathResponse;
+import org.core.dto.stepik.step.enterWord.freeAnswer.StepikBlockFreeAnswerResponse;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -26,7 +27,8 @@ import org.core.dto.stepik.step.enterWord.math.StepikBlockMathResponse;
         @JsonSubTypes.Type(value = StepikBlockFillBlanksResponse.class, name = "fill-blanks"),
         @JsonSubTypes.Type(value = StepikBlockStringResponse.class, name = "string"),
         @JsonSubTypes.Type(value = StepikBlockNumberResponse.class, name = "number"),
-        @JsonSubTypes.Type(value = StepikBlockMathResponse.class, name = "math")
+        @JsonSubTypes.Type(value = StepikBlockMathResponse.class, name = "math"),
+        @JsonSubTypes.Type(value = StepikBlockFreeAnswerResponse.class, name = "free-answer")
 })
 public interface StepikBlockResponse {
 }
