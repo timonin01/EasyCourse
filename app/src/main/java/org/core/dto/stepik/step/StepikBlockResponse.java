@@ -9,6 +9,7 @@ import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksResponse;
 import org.core.dto.stepik.step.enterWord.string.StepikBlockStringResponse;
+import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberResponse;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -22,7 +23,8 @@ import org.core.dto.stepik.step.enterWord.string.StepikBlockStringResponse;
         @JsonSubTypes.Type(value = StepikBlockMatchingResponse.class, name = "matching"),
         @JsonSubTypes.Type(value = StepikBlockTableResponse.class, name = "table"),
         @JsonSubTypes.Type(value = StepikBlockFillBlanksResponse.class, name = "fill-blanks"),
-        @JsonSubTypes.Type(value = StepikBlockStringResponse.class, name = "string")
+        @JsonSubTypes.Type(value = StepikBlockStringResponse.class, name = "string"),
+        @JsonSubTypes.Type(value = StepikBlockNumberResponse.class, name = "number")
 })
 public interface StepikBlockResponse {
 }
