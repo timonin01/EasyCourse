@@ -16,6 +16,9 @@ public enum StepType {
     NUMBER,
     RANDOM_TASKS,
     MATH,
-    FREE_ANSWER
+    FREE_ANSWER,
+    DATASET,
+    SQL,
+    HTML
 
 }
