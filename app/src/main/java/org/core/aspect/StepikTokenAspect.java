@@ -9,6 +9,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.core.annotation.RequiresStepikToken;
 import org.core.service.StepikTokenService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
@@ -20,10 +21,18 @@ import java.lang.reflect.Parameter;
 @Slf4j
 public class StepikTokenAspect {
 
+    @Value("${stepik.token.aop.enabled}")
+    private boolean aopEnabled;
+
     private final StepikTokenService stepikTokenService;
 
     @Around("@annotation(org.core.annotation.RequiresStepikToken)")
     public Object checkStepikToken(ProceedingJoinPoint joinPoint) throws Throwable {
+        if (!aopEnabled) {
+            log.debug("Stepik token AOP is disabled, proceeding with method execution");
+            return joinPoint.proceed();
+        }
+    
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         RequiresStepikToken annotation = method.getAnnotation(RequiresStepikToken.class);
@@ -31,7 +40,7 @@ public class StepikTokenAspect {
         Long userId = extractUserId(joinPoint, annotation);
         if (userId == null) {
             throw new IllegalArgumentException("Could not extract userId from method parameters for method: " + method.getName());
-        }
+        }        
         try {
             String accessToken = stepikTokenService.getAccessToken(userId);
             if (accessToken == null) {
