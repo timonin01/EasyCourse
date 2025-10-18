@@ -32,6 +32,16 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // Stepik OAuth2
+    @Column(name = "stepik_client_id", length = 100)
+    private String stepikClientId;
+
+    @Column(name = "stepik_client_secret", length = 100)
+    private String stepikClientSecret;
+
+    @Column(name = "stepik_access_token", columnDefinition = "TEXT")
+    private String stepikAccessToken;
+
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt DESC")
     @Builder.Default
