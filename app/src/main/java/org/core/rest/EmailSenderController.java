@@ -3,8 +3,9 @@ package org.core.rest;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import org.core.dto.EmailRequest;
+import org.core.dto.email.EmailRequest;
 import org.core.exception.EmailSendException;
+import org.core.dto.email.EmailCodeResponse;
 import org.core.service.email.EmailService;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +17,10 @@ public class EmailSenderController {
     private final EmailService emailService;
 
     @PostMapping
-    public String sendEmail(@Valid @RequestBody EmailRequest emailRequest){
-        if (emailService.sendAlert(emailRequest)) {
-            return "Email sent successfully to: " + emailRequest.getEmail();
+    public EmailCodeResponse sendEmail(@Valid @RequestBody EmailRequest emailRequest){
+        String code = emailService.sendAlert(emailRequest);
+        if (code != null) {
+            return new EmailCodeResponse(code);
         } else {
             throw new EmailSendException("Failed to send email");
         }

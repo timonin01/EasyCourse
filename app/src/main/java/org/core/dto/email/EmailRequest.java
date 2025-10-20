@@ -1,4 +1,4 @@
-package org.core.dto;
+package org.core.dto.email;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -14,8 +14,5 @@ public class EmailRequest {
 
     @NotBlank(message = "Email is required")
     String email;
-
-    @NotBlank(message = "Code is required")
-    String code;
 
 }
