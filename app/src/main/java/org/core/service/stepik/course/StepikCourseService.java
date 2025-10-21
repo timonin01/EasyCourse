@@ -3,6 +3,7 @@ package org.core.service.stepik.course;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.annotation.RequiresStepikToken;
 import org.core.domain.Course;
 import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.stepik.course.StepikCourseRequest;
@@ -43,6 +44,7 @@ public class StepikCourseService {
         return createCourse(course, null);
     }
 
+    @RequiresStepikToken
     public StepikCourseResponseData createCourse(Course course, String captchaToken){
         try {
             String url = baseUrl + "/courses";
@@ -85,6 +87,7 @@ public class StepikCourseService {
         }
     }
 
+    @RequiresStepikToken
     public StepikCourseResponseData updateCourse(Long courseId, Course course) {
         try {
             String url = baseUrl + "/courses/" + courseId;
@@ -109,6 +112,7 @@ public class StepikCourseService {
         }
     }
 
+    @RequiresStepikToken
     public void deleteCourse(Long courseId) {
         try {
             String url = baseUrl + "/courses/" + courseId;

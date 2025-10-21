@@ -16,6 +16,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.core.annotation.RequiresStepikToken;
 
 import java.util.List;
 
@@ -33,6 +34,7 @@ public class StepikUnitService {
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
 
+    @RequiresStepikToken
     public StepikUnitResponse createUnit(Long stepikLessonId, Long stepikSectionId, Integer position) {
         StepikUnitRequestData requestData = new StepikUnitRequestData();
         requestData.setLesson(stepikLessonId.toString());
@@ -66,6 +68,7 @@ public class StepikUnitService {
         }
     }
 
+    @RequiresStepikToken
     public StepikUnitResponseData getUnitByLessonId(Long stepikLessonId) {
         try {
             String url = baseUrl + "/units?lesson=" + stepikLessonId;
@@ -96,6 +99,7 @@ public class StepikUnitService {
         }
     }
 
+    @RequiresStepikToken
     public StepikUnitResponseData updateUnitPosition(Long unitId, Integer newPosition, StepikUnitResponseData currentUnit) {
         try {
             String putUrl = baseUrl + "/units/" + unitId;

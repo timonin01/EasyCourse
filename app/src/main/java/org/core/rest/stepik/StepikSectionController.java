@@ -3,6 +3,7 @@ package org.core.rest.stepik;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
@@ -23,17 +24,24 @@ public class StepikSectionController {
 
     private final StepikSectionSyncService stepikSectionSyncService;
     private final ModelService modelService;
+    private final UserContextBean userContextBean;
 
     @GetMapping("/unsynced-models/{courseId}")
-    public List<ModelResponseDTO> getUnsyncedModelsByCourseId(@PathVariable Long courseId) {
+    public List<ModelResponseDTO> getUnsyncedModelsByCourseId(
+            @PathVariable Long courseId,
+            @RequestHeader("User-Id") Long userId) {
         log.info("Getting unsynced models for course: {}", courseId);
+        userContextBean.setUserId(userId);
         return modelService.getUnsyncedModelsByCourseId(courseId);
     }
 
     @PostMapping("/sync-model")
-    public ResponseEntity<StepikSectionResponseData> syncModel(@RequestParam Long modelId) {
+    public ResponseEntity<StepikSectionResponseData> syncModel(
+            @RequestParam Long modelId,
+            @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting sync for model: {}", modelId);
+            userContextBean.setUserId(userId);
             StepikSectionResponseData responseData = stepikSectionSyncService.syncModelWithStepik(modelId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
@@ -46,9 +54,12 @@ public class StepikSectionController {
     }
 
     @PutMapping("/update-model/{modelId}")
-    public ResponseEntity<StepikSectionResponseData> updateModelInStepik(@PathVariable Long modelId) {
+    public ResponseEntity<StepikSectionResponseData> updateModelInStepik(
+            @PathVariable Long modelId,
+            @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting update for model: {}", modelId);
+            userContextBean.setUserId(userId);
             StepikSectionResponseData responseData = stepikSectionSyncService.updateModelInStepik(modelId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
@@ -61,9 +72,12 @@ public class StepikSectionController {
     }
 
     @DeleteMapping("/delete-model/{modelId}")
-    public ResponseEntity<String> deleteModelFromStepik(@PathVariable Long modelId) {
+    public ResponseEntity<String> deleteModelFromStepik(
+            @PathVariable Long modelId,
+            @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting deletion for model: {}", modelId);
+            userContextBean.setUserId(userId);
             stepikSectionSyncService.deleteModelFromStepik(modelId);
             return ResponseEntity.ok("Model section successfully deleted from Stepik");
         } catch (IllegalStateException e) {
@@ -76,8 +90,11 @@ public class StepikSectionController {
     }
 
     @PostMapping("/sync-course-sections")
-    public ResponseEntity<List<ModelResponseDTO>> syncAllCourseSectionFromStepik(@RequestParam Long courseId){
+    public ResponseEntity<List<ModelResponseDTO>> syncAllCourseSectionFromStepik(
+            @RequestParam Long courseId,
+            @RequestHeader("User-Id") Long userId){
         log.info("Syncing all sections for course {} from Stepik", courseId);
+        userContextBean.setUserId(userId);
         List<ModelResponseDTO> sections = stepikSectionSyncService.syncAllCourseSectionFromStepik(courseId);
         return ResponseEntity.ok(sections);
     }

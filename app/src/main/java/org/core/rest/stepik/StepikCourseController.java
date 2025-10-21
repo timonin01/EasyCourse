@@ -2,6 +2,7 @@ package org.core.rest.stepik;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
@@ -21,19 +22,23 @@ public class StepikCourseController {
 
     private final StepikCourseSyncService stepikCourseSyncService;
     private final CourseService courseService;
+    private final UserContextBean userContextBean;
 
     @GetMapping("/unsynced-courses/{userId}")
     public List<CourseResponseDTO> getUnsyncedCoursesByUserId(@PathVariable Long userId) {
         log.info("Getting unsynced courses for user: {}", userId);
+        userContextBean.setUserId(userId);
         return courseService.getUnsyncedCoursesByUserId(userId);
     }
 
     @PostMapping("/sync-course")
     public ResponseEntity<CourseCaptchaChallenge> syncCourse(
             @RequestParam Long courseId,
-            @RequestParam(required = false) String captchaToken) {
+            @RequestParam(required = false) String captchaToken,
+            @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting sync for course: {} with captcha: {}", courseId, captchaToken != null);
+            userContextBean.setUserId(userId);
             CourseCaptchaChallenge result = stepikCourseSyncService.syncCourseWithStepik(courseId, captchaToken);
             return ResponseEntity.ok(result);
         } catch (IllegalStateException e) {
@@ -46,9 +51,12 @@ public class StepikCourseController {
     }
 
     @PutMapping("/update-course/{courseId}")
-    public ResponseEntity<StepikCourseResponseData> updateCourseInStepik(@PathVariable Long courseId) {
+    public ResponseEntity<StepikCourseResponseData> updateCourseInStepik(
+            @PathVariable Long courseId,
+            @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting update for course: {}", courseId);
+            userContextBean.setUserId(userId);
             StepikCourseResponseData responseData = stepikCourseSyncService.updateCourseInStepik(courseId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
@@ -61,9 +69,12 @@ public class StepikCourseController {
     }
 
     @DeleteMapping("/delete-course/{courseId}")
-    public ResponseEntity<String> deleteCourseFromStepik(@PathVariable Long courseId) {
+    public ResponseEntity<String> deleteCourseFromStepik(
+            @PathVariable Long courseId,
+            @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting deletion for course: {}", courseId);
+            userContextBean.setUserId(userId);
             stepikCourseSyncService.deleteCourseFromStepik(courseId);
             return ResponseEntity.ok("Course successfully deleted from Stepik");
         } catch (IllegalStateException e) {
