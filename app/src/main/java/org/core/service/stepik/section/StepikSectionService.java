@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.annotation.RequiresStepikToken;
 import org.core.domain.Model;
 import org.core.dto.stepik.section.StepikSectionRequest;
 import org.core.dto.stepik.section.StepikSectionResponse;
@@ -35,6 +36,7 @@ public class StepikSectionService {
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
 
+    @RequiresStepikToken
     public StepikSectionResponse createSection(Model model) {
         try {
             String url = baseUrl + "/sections";
@@ -58,6 +60,7 @@ public class StepikSectionService {
         }
     }
 
+    @RequiresStepikToken
     public StepikSectionResponse updateSection(Long sectionId) {
         try {
             Model model = modelRepository.findByStepikSectionId(sectionId);
@@ -91,6 +94,7 @@ public class StepikSectionService {
         }
     }
 
+    @RequiresStepikToken
     public void deleteSection(Long sectionId) {
         try {
             String url = baseUrl + "/sections/" + sectionId;
@@ -110,6 +114,7 @@ public class StepikSectionService {
         }
     }
 
+    @RequiresStepikToken
     public StepikSectionResponseData getSectionByStepikId(Long sectionId) {
         try {
             String url = baseUrl + "/sections/" + sectionId;
@@ -139,6 +144,7 @@ public class StepikSectionService {
         }
     }
 
+    @RequiresStepikToken
     public List<Long> getCourseSectionIds(Long stepikCourseId) {
         try {
             String url = baseUrl + "/courses/" + stepikCourseId;
