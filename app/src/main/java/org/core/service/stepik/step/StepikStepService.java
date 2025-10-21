@@ -17,6 +17,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.core.annotation.RequiresStepikToken;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,7 @@ public class StepikStepService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
+    @RequiresStepikToken
     public StepikStepSourceResponse createStep(Step step) {
         StepikStepSourceRequestData requestData = stepikStepSourceDataRequestBuilder.createRequestDataForCreate(step);
         StepikStepSourceRequest request = new StepikStepSourceRequest(requestData);
@@ -67,6 +69,7 @@ public class StepikStepService {
         }
     }
 
+    @RequiresStepikToken
     public StepikStepSourceResponse updateStep(Long stepikStepId) {
         Step step = stepRepository.findByStepikStepId(stepikStepId);
 
@@ -98,6 +101,7 @@ public class StepikStepService {
         }
     }
 
+    @RequiresStepikToken
     public void deleteStep(Long stepikStepId) {
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
@@ -114,6 +118,7 @@ public class StepikStepService {
         }
     }
 
+    @RequiresStepikToken
     public List<Long> getLessonStepIdsFromStepik(Long stepikLessonId) {
         try {
             String url = baseUrl + "/lessons/" + stepikLessonId;
@@ -155,6 +160,7 @@ public class StepikStepService {
         }
     }
 
+    @RequiresStepikToken
     public StepikStepSourceResponseData getStepikStepById(Long stepikStepId) {
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
