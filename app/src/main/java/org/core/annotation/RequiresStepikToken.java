@@ -7,9 +7,4 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequiresStepikToken {
-
-    String userIdParam() default "userId";
-
-    int userIdParamIndex() default -1;
-}
+public @interface RequiresStepikToken {}
