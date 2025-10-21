@@ -3,6 +3,7 @@ package org.core.service.stepik.lesson;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.annotation.RequiresStepikToken;
 import org.core.domain.Lesson;
 import org.core.dto.LessonCaptchaChallenge;
 import org.core.dto.stepik.lesson.StepikLessonRequest;
@@ -44,6 +45,7 @@ public class StepikLessonService {
         return createLesson(lesson, null);
     }
 
+    @RequiresStepikToken
     public StepikLessonResponse createLesson(Lesson lesson, String captchaToken) {
         StepikLessonRequestData requestData = stepikLessonRequestDataBuilder.createRequestDataForCreate(lesson, captchaToken);
         
@@ -77,6 +79,7 @@ public class StepikLessonService {
         }
     }
 
+    @RequiresStepikToken
     public StepikLessonResponse updateLesson(Long stepikLessonId) {
         Lesson lesson = lessonRepository.findByStepikLessonId(stepikLessonId);
 
@@ -110,6 +113,7 @@ public class StepikLessonService {
         }
     }
 
+    @RequiresStepikToken
     public void deleteLesson(Long stepikLessonId) {
         try {
             String url = baseUrl + "/lessons/" + stepikLessonId;
@@ -126,6 +130,7 @@ public class StepikLessonService {
         }
     }
 
+    @RequiresStepikToken
     public StepikLessonResponseData getLessonByStepikId(Long stepikLessonId) {
         try {
             String url = baseUrl + "/lessons/" + stepikLessonId;

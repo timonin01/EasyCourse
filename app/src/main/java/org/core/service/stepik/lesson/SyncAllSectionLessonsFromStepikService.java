@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.annotation.RequiresStepikToken;
 import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.lesson.UpdateLessonDTO;
@@ -76,6 +77,7 @@ public class SyncAllSectionLessonsFromStepikService {
         }
     }
 
+    @RequiresStepikToken
     private List<Long> getSectionUnitIds(Long sectionId) {
         try {
             String url = baseUrl + "/sections/" + sectionId;
@@ -115,6 +117,7 @@ public class SyncAllSectionLessonsFromStepikService {
         }
     }
 
+    @RequiresStepikToken
     private Long getUnitLessonId(Long unitId) {
         try {
             String url = baseUrl + "/units/" + unitId;
@@ -151,6 +154,7 @@ public class SyncAllSectionLessonsFromStepikService {
         }
     }
 
+    @RequiresStepikToken
     private StepikLessonResponseData getLessonById(Long lessonId) {
         try {
             String url = baseUrl + "/lessons/" + lessonId;
