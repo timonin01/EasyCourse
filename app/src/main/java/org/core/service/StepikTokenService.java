@@ -1,5 +1,6 @@
 package org.core.service;
 
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.User;
@@ -11,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 @Service
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Slf4j
 public class StepikTokenService {
 
@@ -59,8 +60,6 @@ public class StepikTokenService {
                 throw new RuntimeException("Failed to obtain access token: " + e.getMessage());
             }
         }
-
-        log.warn("No access token available for user: {}", userId);
         return null;
     }
 
