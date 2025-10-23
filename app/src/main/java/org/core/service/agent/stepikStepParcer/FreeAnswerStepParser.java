@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.stepik.step.StepikBlockRequest;
-import org.core.dto.stepik.step.enterWord.freeAnswer.StepikBlockFreeAnswerRequest;
+import org.core.dto.stepik.step.enterWord.freeAnswer.request.StepikBlockFreeAnswerRequest;
 import org.springframework.stereotype.Component;
 
 @Component

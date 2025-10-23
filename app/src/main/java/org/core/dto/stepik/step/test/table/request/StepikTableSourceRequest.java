@@ -26,14 +26,5 @@ public class StepikTableSourceRequest {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     private StepikTableOptionsRequest options = new StepikTableOptionsRequest();
 
-    public StepikTableSourceRequest(List<StepikTableRowRequest> rows, List<StepikTableColumnRequest> columns, 
-                                    String description, Boolean isAlwaysCorrect, StepikTableOptionsRequest options) {
-        this.rows = rows;
-        this.columns = columns;
-        this.description = description;
-        this.isAlwaysCorrect = isAlwaysCorrect;
-        this.options = options != null ? options : new StepikTableOptionsRequest();
-    }
-
 }
 

@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.freeAnswer;
+package org.core.dto.stepik.step.enterWord.fillBlanks.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -6,15 +6,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikFreeAnswerSourceRequest {
+public class StepikFillBlanksComponentResponse {
 
-    private Boolean is_attachments_enabled;
-    private Boolean is_html_enabled;
-    private Boolean manual_scoring;
+    private String type;
+    private String text;
+    private List<StepikFillBlanksOptionResponse> options;
 
 }

@@ -15,5 +15,10 @@ import lombok.Setter;
 public class StepikChoiceOptionRequest {
 
     private String text;
+    
+    @JsonProperty("is_correct")
+    private Boolean isCorrect;
+    
+    private String feedback;
 
 }
