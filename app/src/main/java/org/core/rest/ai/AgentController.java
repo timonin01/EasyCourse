@@ -7,8 +7,11 @@ import org.core.service.agent.AgentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.core.dto.stepik.step.StepikBlockRequest;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -57,6 +60,46 @@ public class AgentController {
             return ResponseEntity.ok(history);
         } catch (Exception e) {
             log.error("Error getting history for session {}: {}", sessionId, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    @PostMapping("/start-step")
+    public ResponseEntity<String> startSessionForStepType(
+            @RequestParam(required = false) String sessionId,
+            @RequestParam String stepType,
+            @RequestParam(required = false) String topic,
+            @RequestParam(required = false) String difficulty) {
+        
+        try {
+            if (sessionId == null || sessionId.trim().isEmpty()) {
+                sessionId = "session_" + UUID.randomUUID().toString().substring(0, 8);
+            }
+            
+            Map<String, String> variables = new HashMap<>();
+            if (topic != null) variables.put("topic", topic);
+            if (difficulty != null) variables.put("difficulty", difficulty);
+            
+            String response = agentService.startSessionForStepType(sessionId, stepType, variables);
+            return ResponseEntity.ok("Session ID: " + sessionId + "\nStep Type: " + stepType + "\n\nAI Response: " + response);
+        } catch (Exception e) {
+            log.error("Error starting session for step type: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body("Ошибка при создании сессии для типа шага");
+        }
+    }
+
+    @PostMapping("/generate-step")
+    public ResponseEntity<StepikBlockRequest> generateStep(
+            @RequestParam String sessionId,
+            @RequestParam String stepType,
+            @RequestBody String userInput) {
+
+        try {
+            StepikBlockRequest stepikRequest = agentService.generateStep(sessionId, userInput, stepType);
+            log.info("Generated step of type {} for session {}", stepType, sessionId);
+            return ResponseEntity.ok(stepikRequest);
+        } catch (Exception e) {
+            log.error("Error generating step: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
