@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.string;
+package org.core.dto.stepik.step.enterWord.math.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -12,13 +12,11 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikBlockStringRequest implements StepikBlockRequest {
+public class StepikBlockMathRequest implements StepikBlockRequest {
 
     private String text;
     private Object video = null;
     private Object options = null;
-    private StepikStringSourceRequest source;
+    private StepikMathSourceRequest source;
 
 }
-
-

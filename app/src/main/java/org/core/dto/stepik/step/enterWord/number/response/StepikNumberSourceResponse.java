@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.number;
+package org.core.dto.stepik.step.enterWord.number.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

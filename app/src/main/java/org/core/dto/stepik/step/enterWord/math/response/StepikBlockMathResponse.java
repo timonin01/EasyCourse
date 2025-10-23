@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.math;
+package org.core.dto.stepik.step.enterWord.math.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;

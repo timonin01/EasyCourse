@@ -8,11 +8,11 @@ import org.core.dto.stepik.step.test.matching.response.StepikBlockMatchingRespon
 import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.enterWord.fillBlanks.response.StepikBlockFillBlanksResponse;
-import org.core.dto.stepik.step.enterWord.string.StepikBlockStringResponse;
-import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberResponse;
-import org.core.dto.stepik.step.enterWord.math.StepikBlockMathResponse;
+import org.core.dto.stepik.step.enterWord.string.response.StepikBlockStringResponse;
+import org.core.dto.stepik.step.enterWord.number.response.StepikBlockNumberResponse;
+import org.core.dto.stepik.step.enterWord.math.response.StepikBlockMathResponse;
 import org.core.dto.stepik.step.enterWord.freeAnswer.response.StepikBlockFreeAnswerResponse;
-import org.core.dto.stepik.step.enterWord.randomTasks.StepikBlockRandomTasksResponse;
+import org.core.dto.stepik.step.enterWord.randomTasks.response.StepikBlockRandomTasksResponse;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,

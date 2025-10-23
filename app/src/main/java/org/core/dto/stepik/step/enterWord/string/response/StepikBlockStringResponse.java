@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.randomTasks;
+package org.core.dto.stepik.step.enterWord.string.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -14,12 +14,14 @@ import org.core.dto.stepik.step.StepikBlockResponse;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class StepikBlockRandomTasksResponse implements StepikBlockResponse {
+public class StepikBlockStringResponse implements StepikBlockResponse {
 
     private String name;
     private String text;
     private Object video;
     private Object options;
-    private StepikRandomTasksSourceResponse source;
+    private StepikStringSourceResponse source;
 
 }
+
+
