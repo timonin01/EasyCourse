@@ -1,4 +1,4 @@
-package org.core.rest;
+package org.core.rest.ai;
 
 import jakarta.validation.Valid;
 import lombok.AccessLevel;

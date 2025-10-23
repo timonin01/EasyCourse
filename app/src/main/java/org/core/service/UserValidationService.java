@@ -18,10 +18,7 @@ public class UserValidationService {
 
     public boolean checkUserInDBByEmail(String email){
         Optional<User> user = userRepository.findByEmail(email);
-        if(user.isPresent()){
-            return true;
-        }
-        return false;
+        return user.isPresent();
     }
 
 }

@@ -1,0 +1,8 @@
+package org.core.service.agent;
+
+import org.core.dto.agent.ChatMessage;
+import java.util.List;
+
+public interface LlmProvider {
+    String chat(List<ChatMessage> messages);
+}
