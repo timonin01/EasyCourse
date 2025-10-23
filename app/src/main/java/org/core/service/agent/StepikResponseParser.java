@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
 @Slf4j
 public class StepikResponseParser {
 
-    private final ObjectMapper objectMapper;
     private static final Pattern JSON_PATTERN = Pattern.compile("```json\\s*(.*?)\\s*```", Pattern.DOTALL);
 
     private final ChoiceStepParser choiceStepParser;
