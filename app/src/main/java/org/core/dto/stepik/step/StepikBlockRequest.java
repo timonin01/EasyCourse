@@ -7,11 +7,11 @@ import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
 import org.core.dto.stepik.step.test.matching.request.StepikBlockMatchingRequest;
 import org.core.dto.stepik.step.test.sorting.request.StepikBlockSortingRequest;
 import org.core.dto.stepik.step.test.table.request.StepikBlockTableRequest;
-import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksRequest;
+import org.core.dto.stepik.step.enterWord.fillBlanks.request.StepikBlockFillBlanksRequest;
 import org.core.dto.stepik.step.enterWord.string.StepikBlockStringRequest;
 import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberRequest;
 import org.core.dto.stepik.step.enterWord.math.StepikBlockMathRequest;
-import org.core.dto.stepik.step.enterWord.freeAnswer.StepikBlockFreeAnswerRequest;
+import org.core.dto.stepik.step.enterWord.freeAnswer.request.StepikBlockFreeAnswerRequest;
 import org.core.dto.stepik.step.enterWord.randomTasks.StepikBlockRandomTasksRequest;
 
 @JsonTypeInfo(

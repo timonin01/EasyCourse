@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.fillBlanks;
+package org.core.dto.stepik.step.enterWord.freeAnswer.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -12,11 +12,11 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikBlockFillBlanksRequest implements StepikBlockRequest {
+public class StepikBlockFreeAnswerRequest implements StepikBlockRequest {
 
     private String text;
     private Object video = null;
     private Object options = null;
-    private StepikFillBlanksSourceRequest source;
+    private StepikFreeAnswerSourceRequest source;
 
 }

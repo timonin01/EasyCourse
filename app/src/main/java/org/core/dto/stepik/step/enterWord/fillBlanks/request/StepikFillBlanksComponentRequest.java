@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.fillBlanks;
+package org.core.dto.stepik.step.enterWord.fillBlanks.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

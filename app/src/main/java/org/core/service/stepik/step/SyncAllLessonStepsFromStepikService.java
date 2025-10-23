@@ -15,11 +15,11 @@ import org.core.dto.stepik.step.test.matching.response.StepikBlockMatchingRespon
 import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
-import org.core.dto.stepik.step.enterWord.fillBlanks.StepikBlockFillBlanksResponse;
+import org.core.dto.stepik.step.enterWord.fillBlanks.response.StepikBlockFillBlanksResponse;
 import org.core.dto.stepik.step.enterWord.string.StepikBlockStringResponse;
 import org.core.dto.stepik.step.enterWord.number.StepikBlockNumberResponse;
 import org.core.dto.stepik.step.enterWord.math.StepikBlockMathResponse;
-import org.core.dto.stepik.step.enterWord.freeAnswer.StepikBlockFreeAnswerResponse;
+import org.core.dto.stepik.step.enterWord.freeAnswer.response.StepikBlockFreeAnswerResponse;
 import org.core.dto.stepik.step.enterWord.randomTasks.StepikBlockRandomTasksResponse;
 import org.core.exception.LessonNotFoundException;
 import org.core.exception.StepikStepIntegrationException;

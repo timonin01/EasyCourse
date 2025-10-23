@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.freeAnswer;
+package org.core.dto.stepik.step.enterWord.freeAnswer.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,7 +1,7 @@
-package org.core.dto.stepik.step.enterWord.fillBlanks;
+package org.core.dto.stepik.step.enterWord.freeAnswer.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,11 +14,12 @@ import org.core.dto.stepik.step.StepikBlockResponse;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class StepikBlockFillBlanksResponse implements StepikBlockResponse {
+public class StepikBlockFreeAnswerResponse implements StepikBlockResponse {
 
+    private String name;
     private String text;
-    private Object video = null;
-    private Object options = null;
-    private StepikFillBlanksSourceResponse source;
+    private Object video;
+    private Object options;
+    private StepikFreeAnswerSourceResponse source;
 
 }

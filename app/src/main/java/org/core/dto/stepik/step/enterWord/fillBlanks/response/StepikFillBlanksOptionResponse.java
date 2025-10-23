@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.fillBlanks;
+package org.core.dto.stepik.step.enterWord.fillBlanks.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -6,17 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikFillBlanksComponentResponse {
+public class StepikFillBlanksOptionResponse {
 
-    private String type;
     private String text;
-    private List<StepikFillBlanksOptionResponse> options;
+    private Boolean is_correct;
 
 }
