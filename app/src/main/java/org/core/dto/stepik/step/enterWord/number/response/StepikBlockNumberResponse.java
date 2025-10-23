@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.string;
+package org.core.dto.stepik.step.enterWord.number.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -14,14 +14,12 @@ import org.core.dto.stepik.step.StepikBlockResponse;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class StepikBlockStringResponse implements StepikBlockResponse {
+public class StepikBlockNumberResponse implements StepikBlockResponse {
 
     private String name;
     private String text;
     private Object video;
     private Object options;
-    private StepikStringSourceResponse source;
+    private StepikNumberSourceResponse source;
 
 }
-
-

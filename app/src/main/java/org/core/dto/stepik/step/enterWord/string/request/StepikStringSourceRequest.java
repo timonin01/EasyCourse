@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.string;
+package org.core.dto.stepik.step.enterWord.string.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -12,7 +12,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikStringSourceResponse {
+public class StepikStringSourceRequest {
 
     private String pattern;
     @JsonProperty("use_re")

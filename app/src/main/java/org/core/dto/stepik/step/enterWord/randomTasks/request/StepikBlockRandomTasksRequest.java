@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.number;
+package org.core.dto.stepik.step.enterWord.randomTasks.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -12,11 +12,11 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StepikBlockNumberRequest implements StepikBlockRequest {
+public class StepikBlockRandomTasksRequest implements StepikBlockRequest {
 
     private String text;
     private Object video = null;
     private Object options = null;
-    private StepikNumberSourceRequest source;
+    private StepikRandomTasksSourceRequest source;
 
 }

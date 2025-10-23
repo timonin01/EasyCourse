@@ -1,4 +1,4 @@
-package org.core.dto.stepik.step.enterWord.randomTasks;
+package org.core.dto.stepik.step.enterWord.randomTasks.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
