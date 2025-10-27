@@ -1,7 +1,5 @@
 package org.core.service.agent;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.stepik.step.StepikBlockRequest;
@@ -91,57 +89,15 @@ public class AgentService {
     }
     
     public String startSessionForStepType(String sessionId, String stepType, Map<String, String> variables) {
-        try {
-            String systemPrompt = systemPromptService.getPromptWithVariables(stepType, variables);
-            
-            ChatMessage systemMessage = ChatMessage.builder()
-                    .role("system")
-                    .content(systemPrompt)
-                    .build();
-            contextStore.addMessage(sessionId, systemMessage);
-
-            List<ChatMessage> history = contextStore.getHistory(sessionId);
-
-            String initialResponse = llmProvider.chat(history);
-            ChatMessage assistantMessage = ChatMessage.builder()
-                    .role("assistant")
-                    .content(initialResponse)
-                    .build();
-            contextStore.addMessage(sessionId, assistantMessage);
-            
-            log.info("Started new session: {} for step type: {}", sessionId, stepType);
-            return initialResponse;
-        } catch (Exception e) {
-            log.error("Error starting session {} for step type {}: {}", sessionId, stepType, e.getMessage());
-            return "Error starting session for step type: " + stepType;
-        }
+        String systemPrompt = systemPromptService.getPromptWithVariables(stepType, variables);
+        return startSession(sessionId, systemPrompt);
     }
     
     public StepikBlockRequest generateStep(String sessionId, String userInput, String stepType) {
-        try {
-            ChatMessage userMessage = ChatMessage.builder()
-                    .role("user")
-                    .content(userInput)
-                    .build();
-            contextStore.addMessage(sessionId, userMessage);
-            
-            List<ChatMessage> history = contextStore.getHistory(sessionId);
-            String aiResponse = llmProvider.chat(history);
-            
-            StepikBlockRequest stepikRequest = responseParser.parseResponse(aiResponse, stepType);
-            
-            ChatMessage assistantMessage = ChatMessage.builder()
-                    .role("assistant")
-                    .content("Создал шаг: " + stepType)
-                    .build();
-            contextStore.addMessage(sessionId, assistantMessage);
-            
-            log.info("Generated step for session {}: {}", sessionId, stepType);
-            return stepikRequest;
-        } catch (Exception e) {
-            log.error("Error generating step for session {}: {}", sessionId, e.getMessage());
-            throw new RuntimeException("Failed to generate step: " + e.getMessage());
-        }
+        String aiResponse = handleUserMessage(sessionId, userInput);
+        StepikBlockRequest stepikRequest = responseParser.parseResponse(aiResponse, stepType);
+        log.info("Generated step for session {}: {}", sessionId, stepType);
+        return stepikRequest;
     }
     
     public void clearSession(String sessionId) {

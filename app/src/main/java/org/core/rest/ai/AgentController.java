@@ -35,24 +35,6 @@ public class AgentController {
         }
     }
     
-    @PostMapping("/start")
-    public ResponseEntity<String> startSession(
-            @RequestParam(required = false) String sessionId,
-            @RequestParam(required = false) String systemPrompt) {
-        
-        try {
-            if (sessionId == null || sessionId.trim().isEmpty()) {
-                sessionId = "session_" + UUID.randomUUID().toString().substring(0, 8);
-            }
-            
-            String response = agentService.startSession(sessionId, systemPrompt);
-            return ResponseEntity.ok(response + " Session ID: " + sessionId);
-        } catch (Exception e) {
-            log.error("Error starting session: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body("Ошибка при создании сессии");
-        }
-    }
-    
     @GetMapping("/history/{sessionId}")
     public ResponseEntity<List<ChatMessage>> getHistory(@PathVariable String sessionId) {
         try {
@@ -66,20 +48,16 @@ public class AgentController {
     
     @PostMapping("/start-step")
     public ResponseEntity<String> startSessionForStepType(
-            @RequestParam(required = false) String sessionId,
+            @RequestParam String sessionId,
             @RequestParam String stepType,
             @RequestParam(required = false) String topic,
             @RequestParam(required = false) String difficulty) {
         
         try {
-            if (sessionId == null || sessionId.trim().isEmpty()) {
-                sessionId = "session_" + UUID.randomUUID().toString().substring(0, 8);
-            }
-            
             Map<String, String> variables = new HashMap<>();
             if (topic != null) variables.put("topic", topic);
             if (difficulty != null) variables.put("difficulty", difficulty);
-            
+
             String response = agentService.startSessionForStepType(sessionId, stepType, variables);
             return ResponseEntity.ok("Session ID: " + sessionId + "\nStep Type: " + stepType + "\n\nAI Response: " + response);
         } catch (Exception e) {
