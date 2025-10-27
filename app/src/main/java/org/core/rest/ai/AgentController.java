@@ -38,7 +38,7 @@ public class AgentController {
     @PostMapping("/start")
     public ResponseEntity<String> startSession(
             @RequestParam(required = false) String sessionId,
-            @RequestParam(defaultValue = "Ты - полезный ассистент для создания учебных материалов.") String systemPrompt) {
+            @RequestParam(required = false) String systemPrompt) {
         
         try {
             if (sessionId == null || sessionId.trim().isEmpty()) {
