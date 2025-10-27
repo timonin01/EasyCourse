@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Slf4j
 public class AgentService {
     
