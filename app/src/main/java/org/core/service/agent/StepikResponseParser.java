@@ -1,15 +1,13 @@
 package org.core.service.agent;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.stepik.step.StepikBlockRequest;
-import org.core.dto.stepik.step.text.StepikBlockTextRequest;
-import org.core.dto.stepik.step.enterWord.freeAnswer.StepikBlockFreeAnswerRequest;
 import org.core.service.agent.stepikStepParcer.ChoiceStepParser;
 import org.core.service.agent.stepikStepParcer.FreeAnswerStepParser;
 import org.core.service.agent.stepikStepParcer.TextStepParser;
+import org.core.service.agent.stepikStepParcer.SortingStepParser;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Pattern;
@@ -24,6 +22,7 @@ public class StepikResponseParser {
     private final ChoiceStepParser choiceStepParser;
     private final TextStepParser textStepParser;
     private final FreeAnswerStepParser freeAnswerStepParser;
+    private final SortingStepParser sortingStepParser;
 
     public StepikBlockRequest parseResponse(String aiResponse, String stepType) {
         try {
@@ -33,6 +32,7 @@ public class StepikResponseParser {
                 case "choice" -> choiceStepParser.parseChoiceRequest(cleanJson);
                 case "text" -> textStepParser.parseTextRequest(cleanJson);
                 case "free-answer" -> freeAnswerStepParser.parseFreeAnswerRequest(cleanJson);
+                case "sorting" -> sortingStepParser.parseSortingRequest(cleanJson);
                 default -> throw new IllegalArgumentException("Unsupported step type: " + stepType);
             };
             
