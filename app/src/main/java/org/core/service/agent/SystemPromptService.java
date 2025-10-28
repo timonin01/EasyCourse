@@ -29,22 +29,5 @@ public class SystemPromptService {
             }
         });
     }
-    
-    public String getPromptWithVariables(String stepType, Map<String, String> variables) {
-        String template = getPromptForStepType(stepType);
-        return substituteVariables(template, variables);
-    }
-    
-    private String substituteVariables(String template, Map<String, String> variables) {
-        if (variables == null || variables.isEmpty()) {
-            return template;
-        }
-
-        for (Map.Entry<String, String> entry : variables.entrySet()) {
-            String placeholder = "{" + entry.getKey() + "}";
-            template = template.replace(placeholder, entry.getValue());
-        }
-        return template;
-    }
 
 }

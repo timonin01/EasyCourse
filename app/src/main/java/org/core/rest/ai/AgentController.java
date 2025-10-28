@@ -3,6 +3,7 @@ package org.core.rest.ai;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
+import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.service.agent.AgentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,26 +46,6 @@ public class AgentController {
             return ResponseEntity.internalServerError().build();
         }
     }
-    
-    @PostMapping("/start-step")
-    public ResponseEntity<String> startSessionForStepType(
-            @RequestParam String sessionId,
-            @RequestParam String stepType,
-            @RequestParam(required = false) String topic,
-            @RequestParam(required = false) String difficulty) {
-        
-        try {
-            Map<String, String> variables = new HashMap<>();
-            if (topic != null) variables.put("topic", topic);
-            if (difficulty != null) variables.put("difficulty", difficulty);
-
-            String response = agentService.startSessionForStepType(sessionId, stepType, variables);
-            return ResponseEntity.ok("Session ID: " + sessionId + "\nStep Type: " + stepType + "\n\nAI Response: " + response);
-        } catch (Exception e) {
-            log.error("Error starting session for step type: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body("Ошибка при создании сессии для типа шага");
-        }
-    }
 
     @PostMapping("/generate-step")
     public ResponseEntity<StepikBlockRequest> generateStep(
@@ -77,7 +58,7 @@ public class AgentController {
             log.info("Generated step of type {} for session {}", stepType, sessionId);
             return ResponseEntity.ok(stepikRequest);
         } catch (Exception e) {
-            log.error("Error generating step: {}", e.getMessage());
+            log.error("Error in generateStep endpoint: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }

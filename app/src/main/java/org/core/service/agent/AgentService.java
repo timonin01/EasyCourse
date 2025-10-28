@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -58,46 +58,94 @@ public class AgentService {
             return "Error handling user message for session. Try again.";
         }
     }
-    
-    public String startSession(String sessionId, String systemPrompt) {
+
+    public StepikBlockRequest generateStep(String sessionId, String userInput, String stepType) {
         try {
-            ChatMessage systemMessage = ChatMessage.builder()
-                    .role("system")
-                    .content(systemPrompt)
-                    .build();
-            contextStore.addMessage(sessionId, systemMessage);
-
             List<ChatMessage> history = contextStore.getHistory(sessionId);
+            Optional<String> existingStepType = extractStepTypeFromHistory(history);
+            if (existingStepType.isPresent()) {
+                if (!existingStepType.get().equals(stepType)) {
+                    String errorMsg = String.format(
+                        "Session '%s' is already configured for step type '%s', but received request for '%s'. " +
+                        "Please use a new session ID or clear the current session using DELETE /api/agent/session/%s",
+                        sessionId, existingStepType.get(), stepType, sessionId
+                    );
+                    throw new RuntimeException(errorMsg);
+                }
+            } else {
+                String systemPrompt = systemPromptService.getPromptForStepType(stepType);
+                ChatMessage systemMessage = ChatMessage.builder()
+                        .role("system")
+                        .content(systemPrompt)
+                        .build();
+                contextStore.addMessage(sessionId, systemMessage);
+                log.info("Initialized session {} with system prompt for step type {}", sessionId, stepType);
+            }
 
-            String initialResponse = llmProvider.chat(history);
+            ChatMessage userMessage = ChatMessage.builder()
+                    .role("user")
+                    .content(userInput)
+                    .build();
+            contextStore.addMessage(sessionId, userMessage);
+            history = contextStore.getHistory(sessionId);
+            String aiResponse = llmProvider.chat(history);
             ChatMessage assistantMessage = ChatMessage.builder()
                     .role("assistant")
-                    .content(initialResponse)
+                    .content(aiResponse)
                     .build();
             contextStore.addMessage(sessionId, assistantMessage);
             
-            log.info("Started new session: {} with system prompt", sessionId);
-            return initialResponse;
+            StepikBlockRequest stepikRequest = responseParser.parseResponse(aiResponse, stepType);
+            log.info("Successfully generated step for session {}, step type: {}", sessionId, stepType);
+            return stepikRequest;
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Error starting session {}: {}", sessionId, e.getMessage());
-            return "Error starting session";
+            log.error("Error generating step for session {}: {}", sessionId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate step. Please try again.", e);
         }
+    }
+
+    private Optional<String> extractStepTypeFromHistory(List<ChatMessage> history) {
+        return history.stream()
+                .filter(msg -> "system".equals(msg.getRole()))
+                .findFirst()
+                .map(msg -> detectStepTypeFromPrompt(msg.getContent()));
+    }
+
+    private String detectStepTypeFromPrompt(String promptContent) {
+        if (promptContent == null) {
+            return null;
+        }
+        
+        String lowerContent = promptContent.toLowerCase();
+        
+        if (lowerContent.contains("тестов с множественным выбором") || 
+            lowerContent.contains("multiple choice")) {
+            return "choice";
+        }
+        
+        if (lowerContent.contains("текстового контента") || 
+            lowerContent.contains("обучающего контента") ||
+            lowerContent.contains("text")) {
+            return "text";
+        }
+        
+        if (lowerContent.contains("свободного ответа") || 
+            lowerContent.contains("free answer")) {
+            return "free-answer";
+        }
+        
+        if (lowerContent.contains("сортировк") || 
+            lowerContent.contains("sorting")) {
+            return "sorting";
+        }
+        
+        return null;
     }
     
     public List<ChatMessage> getSessionHistory(String sessionId) {
         return contextStore.getHistory(sessionId);
-    }
-    
-    public String startSessionForStepType(String sessionId, String stepType, Map<String, String> variables) {
-        String systemPrompt = systemPromptService.getPromptWithVariables(stepType, variables);
-        return startSession(sessionId, systemPrompt);
-    }
-    
-    public StepikBlockRequest generateStep(String sessionId, String userInput, String stepType) {
-        String aiResponse = handleUserMessage(sessionId, userInput);
-        StepikBlockRequest stepikRequest = responseParser.parseResponse(aiResponse, stepType);
-        log.info("Generated step for session {}: {}", sessionId, stepType);
-        return stepikRequest;
     }
     
     public void clearSession(String sessionId) {

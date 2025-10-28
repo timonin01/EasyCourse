@@ -30,4 +30,8 @@ public class ContextStore {
         log.debug("Cleared session: {}", sessionId);
     }
     
+    public boolean hasSession(String sessionId) {
+        return sessions.containsKey(sessionId) && !sessions.get(sessionId).isEmpty();
+    }
+    
 }
