@@ -1,5 +1,6 @@
 package org.core.dto.agent;
 
+import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,4 +15,7 @@ import lombok.Setter;
 public class ChatMessage {
     private String role;    // "system", "user", "assistant"
     private String content; // текст сообщения
+
+    @Nullable
+    private String stepType;
 }
