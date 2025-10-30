@@ -18,20 +18,17 @@ public class AgentService {
     private final LlmProvider llmProvider;
     private final SystemPromptService systemPromptService;
     private final StepikResponseParser responseParser;
-    
-    @Value("${default.llm.provider}")
-    private String defaultProvider;
 
     public AgentService(ContextStore contextStore,
                         SystemPromptService systemPromptService,
                         StepikResponseParser responseParser,
+                        @Value("${default.llm.provider}") String defaultProvider,
                         @Qualifier("yandexProvider") LlmProvider yandexProvider,
                         @Qualifier("deepseekProvider") LlmProvider deepseekProvider){
         this.systemPromptService = systemPromptService;
         this.responseParser = responseParser;
         this.contextStore = contextStore;
-        if(deepseekProvider.equals("yandexProvider"))  this.llmProvider = yandexProvider;
-        else this.llmProvider = deepseekProvider;
+        this.llmProvider = "yandex".equalsIgnoreCase(defaultProvider) ? yandexProvider : deepseekProvider;
     }
     
     public String handleUserMessage(String sessionId, String userInput) {
@@ -77,6 +74,7 @@ public class AgentService {
                 ChatMessage systemMessage = ChatMessage.builder()
                         .role("system")
                         .content(systemPrompt)
+                        .stepType(stepType)
                         .build();
                 contextStore.addMessage(sessionId, systemMessage);
                 log.info("Initialized session {} with system prompt for step type {}", sessionId, stepType);
@@ -110,40 +108,9 @@ public class AgentService {
         return history.stream()
                 .filter(msg -> "system".equals(msg.getRole()))
                 .findFirst()
-                .map(msg -> detectStepTypeFromPrompt(msg.getContent()));
+                .map(ChatMessage::getContent);
     }
 
-    private String detectStepTypeFromPrompt(String promptContent) {
-        if (promptContent == null) {
-            return null;
-        }
-        
-        String lowerContent = promptContent.toLowerCase();
-        
-        if (lowerContent.contains("тестов с множественным выбором") || 
-            lowerContent.contains("multiple choice")) {
-            return "choice";
-        }
-        
-        if (lowerContent.contains("текстового контента") || 
-            lowerContent.contains("обучающего контента") ||
-            lowerContent.contains("text")) {
-            return "text";
-        }
-        
-        if (lowerContent.contains("свободного ответа") || 
-            lowerContent.contains("free answer")) {
-            return "free-answer";
-        }
-        
-        if (lowerContent.contains("сортировк") || 
-            lowerContent.contains("sorting")) {
-            return "sorting";
-        }
-        
-        return null;
-    }
-    
     public List<ChatMessage> getSessionHistory(String sessionId) {
         return contextStore.getHistory(sessionId);
     }

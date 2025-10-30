@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.service.ai.YandexGptService;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.List;
 @Component("yandexProvider")
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Slf4j
-public class YandexGptAdapter implements LlmProvider {
+public class YandexGptStrategy implements LlmProvider {
     
     private final YandexGptService yandexGptService;
     
