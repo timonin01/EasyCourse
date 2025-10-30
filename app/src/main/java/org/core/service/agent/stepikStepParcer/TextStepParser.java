@@ -1,6 +1,8 @@
 package org.core.service.agent.stepikStepParcer;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +19,11 @@ public class TextStepParser {
 
     public StepikBlockRequest parseTextRequest(String json) {
         try {
-            StepikBlockTextRequest request = objectMapper.readValue(json, StepikBlockTextRequest.class);
+            JsonNode node = objectMapper.readTree(json);
+            if (node.isObject() && !node.has("name")) {
+                ((ObjectNode) node).put("name", "text");
+            }
+            StepikBlockTextRequest request = objectMapper.treeToValue(node, StepikBlockTextRequest.class);
 
             if (!validateTextRequest(request)) {
                 throw new IllegalArgumentException("Invalid text request structure");

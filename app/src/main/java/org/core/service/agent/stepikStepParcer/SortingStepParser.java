@@ -1,6 +1,8 @@
 package org.core.service.agent.stepikStepParcer;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +22,11 @@ public class SortingStepParser {
 
     public StepikBlockRequest parseSortingRequest(String json) {
         try {
-            StepikBlockSortingRequest request = objectMapper.readValue(json, StepikBlockSortingRequest.class);
+            JsonNode node = objectMapper.readTree(json);
+            if (node.isObject() && !node.has("name")) {
+                ((ObjectNode) node).put("name", "sorting");
+            }
+            StepikBlockSortingRequest request = objectMapper.treeToValue(node, StepikBlockSortingRequest.class);
             if (!validateSortingRequest(request)) {
                 throw new IllegalArgumentException("Invalid sorting request structure");
             }
