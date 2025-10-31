@@ -11,6 +11,10 @@ import org.core.service.agent.stepikStepParcer.SortingStepParser;
 import org.core.service.agent.stepikStepParcer.MatchingStepParser;
 import org.core.service.agent.stepikStepParcer.TableStepParser;
 import org.core.service.agent.stepikStepParcer.FillBlanksStepParser;
+import org.core.service.agent.stepikStepParcer.MathStepParser;
+import org.core.service.agent.stepikStepParcer.StringStepParser;
+import org.core.service.agent.stepikStepParcer.RandomTasksStepParser;
+import org.core.service.agent.stepikStepParcer.NumberStepParser;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Pattern;
@@ -29,6 +33,10 @@ public class StepikResponseParser {
     private final MatchingStepParser matchingStepParser;
     private final TableStepParser tableStepParser;
     private final FillBlanksStepParser fillBlanksStepParser;
+    private final MathStepParser mathStepParser;
+    private final StringStepParser stringStepParser;
+    private final RandomTasksStepParser randomTasksStepParser;
+    private final NumberStepParser numberStepParser;
 
     public StepikBlockRequest parseResponse(String aiResponse, String stepType) {
         try {
@@ -42,6 +50,10 @@ public class StepikResponseParser {
                 case "matching" -> matchingStepParser.parseMatchingRequest(cleanJson);
                 case "table" -> tableStepParser.parseTableRequest(cleanJson);
                 case "fill-blanks" -> fillBlanksStepParser.parseFillBlanksRequest(cleanJson);
+                case "math" -> mathStepParser.parseMathRequest(cleanJson);
+                case "string" -> stringStepParser.parseStringRequest(cleanJson);
+                case "random-tasks" -> randomTasksStepParser.parseRandomTasksRequest(cleanJson);
+                case "number" -> numberStepParser.parseNumberRequest(cleanJson);
                 default -> throw new IllegalArgumentException("Unsupported step type: " + stepType);
             };
             
