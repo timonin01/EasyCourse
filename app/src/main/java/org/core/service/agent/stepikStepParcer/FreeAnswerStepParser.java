@@ -1,6 +1,8 @@
 package org.core.service.agent.stepikStepParcer;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +19,11 @@ public class FreeAnswerStepParser {
 
     public StepikBlockRequest parseFreeAnswerRequest(String json) {
         try {
-            StepikBlockFreeAnswerRequest request = objectMapper.readValue(json, StepikBlockFreeAnswerRequest.class);
+            JsonNode node = objectMapper.readTree(json);
+            if (node.isObject() && !node.has("name")) {
+                ((ObjectNode) node).put("name", "free-answer");
+            }
+            StepikBlockFreeAnswerRequest request = objectMapper.treeToValue(node, StepikBlockFreeAnswerRequest.class);
             if (!validateFreeAnswerRequest(request)) {
                 throw new IllegalArgumentException("Invalid free-answer request structure");
             }

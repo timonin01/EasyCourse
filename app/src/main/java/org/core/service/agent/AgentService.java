@@ -108,7 +108,7 @@ public class AgentService {
         return history.stream()
                 .filter(msg -> "system".equals(msg.getRole()))
                 .findFirst()
-                .map(ChatMessage::getContent);
+                .map(ChatMessage::getStepType);
     }
 
     public List<ChatMessage> getSessionHistory(String sessionId) {
