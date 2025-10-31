@@ -9,6 +9,7 @@ import org.core.service.agent.stepikStepParcer.FreeAnswerStepParser;
 import org.core.service.agent.stepikStepParcer.TextStepParser;
 import org.core.service.agent.stepikStepParcer.SortingStepParser;
 import org.core.service.agent.stepikStepParcer.MatchingStepParser;
+import org.core.service.agent.stepikStepParcer.TableStepParser;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Pattern;
@@ -25,6 +26,7 @@ public class StepikResponseParser {
     private final FreeAnswerStepParser freeAnswerStepParser;
     private final SortingStepParser sortingStepParser;
     private final MatchingStepParser matchingStepParser;
+    private final TableStepParser tableStepParser;
 
     public StepikBlockRequest parseResponse(String aiResponse, String stepType) {
         try {
@@ -36,6 +38,7 @@ public class StepikResponseParser {
                 case "free-answer" -> freeAnswerStepParser.parseFreeAnswerRequest(cleanJson);
                 case "sorting" -> sortingStepParser.parseSortingRequest(cleanJson);
                 case "matching" -> matchingStepParser.parseMatchingRequest(cleanJson);
+                case "table" -> tableStepParser.parseTableRequest(cleanJson);
                 default -> throw new IllegalArgumentException("Unsupported step type: " + stepType);
             };
             
