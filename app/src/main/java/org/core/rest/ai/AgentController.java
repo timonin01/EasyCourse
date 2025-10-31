@@ -50,10 +50,13 @@ public class AgentController {
     @PostMapping("/generate-step")
     public ResponseEntity<StepikBlockRequest> generateStep(
             @RequestParam String sessionId,
-            @RequestParam String stepType,
+            @RequestParam(required = false) String stepType,
             @RequestBody String userInput) {
 
         try {
+            if(stepType == null || stepType.isEmpty()){
+                stepType = agentService.classifyStepTypeFromUserInput(userInput);
+            }
             StepikBlockRequest stepikRequest = agentService.generateStep(sessionId, userInput, stepType);
             log.info("Generated step of type {} for session {}", stepType, sessionId);
             return ResponseEntity.ok(stepikRequest);

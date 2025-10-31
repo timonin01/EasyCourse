@@ -1,4 +1,4 @@
-package org.core.service.agent;
+package org.core.service.agent.llmProvider;
 
 import org.core.dto.agent.ChatMessage;
 import java.util.List;

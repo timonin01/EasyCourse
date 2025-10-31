@@ -3,6 +3,7 @@ package org.core.service.agent;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.stepik.step.StepikBlockRequest;
+import org.core.service.agent.llmProvider.LlmProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,16 +19,19 @@ public class AgentService {
     private final LlmProvider llmProvider;
     private final SystemPromptService systemPromptService;
     private final StepikResponseParser responseParser;
+    private final StepTypeClassifier stepTypeClassifier;
 
     public AgentService(ContextStore contextStore,
                         SystemPromptService systemPromptService,
                         StepikResponseParser responseParser,
+                        StepTypeClassifier stepTypeClassifier,
                         @Value("${default.llm.provider}") String defaultProvider,
                         @Qualifier("yandexProvider") LlmProvider yandexProvider,
                         @Qualifier("deepseekProvider") LlmProvider deepseekProvider){
         this.systemPromptService = systemPromptService;
         this.responseParser = responseParser;
         this.contextStore = contextStore;
+        this.stepTypeClassifier = stepTypeClassifier;
         this.llmProvider = "yandex".equalsIgnoreCase(defaultProvider) ? yandexProvider : deepseekProvider;
     }
     
@@ -102,6 +106,10 @@ public class AgentService {
             log.error("Error generating step for session {}: {}", sessionId, e.getMessage(), e);
             throw new RuntimeException("Failed to generate step. Please try again.", e);
         }
+    }
+
+    public String classifyStepTypeFromUserInput(String userInput){
+        return stepTypeClassifier.detectStepType(userInput);
     }
 
     private Optional<String> extractStepTypeFromHistory(List<ChatMessage> history) {
