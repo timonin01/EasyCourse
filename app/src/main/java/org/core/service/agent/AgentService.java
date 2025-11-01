@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,9 +45,9 @@ public class AgentService {
                     .build();
             contextStore.addMessage(sessionId, userMessage);
             
-            List<ChatMessage> history = contextStore.getHistory(sessionId);
+            List<ChatMessage> historyForLLM = processHistoryMessage(sessionId);
             
-            String assistantReply = llmProvider.chat(history);
+            String assistantReply = llmProvider.chat(historyForLLM);
             ChatMessage assistantMessage = ChatMessage.builder()
                     .role("assistant")
                     .content(assistantReply)
@@ -63,17 +65,10 @@ public class AgentService {
     public StepikBlockRequest generateStep(String sessionId, String userInput, String stepType) {
         try {
             List<ChatMessage> history = contextStore.getHistory(sessionId);
-            Optional<String> existingStepType = extractStepTypeFromHistory(history);
-            if (existingStepType.isPresent()) {
-                if (!existingStepType.get().equals(stepType)) {
-                    String errorMsg = String.format(
-                        "Session '%s' is already configured for step type '%s', but received request for '%s'. " +
-                        "Please use a new session ID or clear the current session using DELETE /api/agent/session/%s",
-                        sessionId, existingStepType.get(), stepType, sessionId
-                    );
-                    throw new RuntimeException(errorMsg);
-                }
-            } else {
+            List<ChatMessage> historyForLLM = new ArrayList<>();
+
+            Optional<String> existingStepType = extractStepTypeFromHistory(contextStore.getHistory(sessionId));
+            if(existingStepType.isEmpty() || !existingStepType.get().equals(stepType)) {
                 String systemPrompt = systemPromptService.getPromptForStepType(stepType);
                 ChatMessage systemMessage = ChatMessage.builder()
                         .role("system")
@@ -82,6 +77,16 @@ public class AgentService {
                         .build();
                 contextStore.addMessage(sessionId, systemMessage);
                 log.info("Initialized session {} with system prompt for step type {}", sessionId, stepType);
+
+                historyForLLM.add(systemMessage);
+            }else{
+                ChatMessage lastSystemPrompt = history.stream()
+                        .filter(msg -> "system".equals(msg.getRole()))
+                        .reduce((first, second) -> second)
+                        .orElse(null);
+                if (lastSystemPrompt != null) {
+                    historyForLLM.add(lastSystemPrompt);
+                }
             }
 
             ChatMessage userMessage = ChatMessage.builder()
@@ -89,8 +94,9 @@ public class AgentService {
                     .content(userInput)
                     .build();
             contextStore.addMessage(sessionId, userMessage);
-            history = contextStore.getHistory(sessionId);
-            String aiResponse = llmProvider.chat(history);
+            historyForLLM.addAll(processHistoryMessage(sessionId));
+
+            String aiResponse = llmProvider.chat(historyForLLM);
             ChatMessage assistantMessage = ChatMessage.builder()
                     .role("assistant")
                     .content(aiResponse)
@@ -106,6 +112,17 @@ public class AgentService {
             log.error("Error generating step for session {}: {}", sessionId, e.getMessage(), e);
             throw new RuntimeException("Failed to generate step. Please try again.", e);
         }
+    }
+
+    private List<ChatMessage> processHistoryMessage(String sessionId){
+        List<ChatMessage> history = contextStore.getHistory(sessionId);
+        int windowSize = 16;
+        if(history.isEmpty()) return history;
+
+        return history.subList(history.size() - windowSize, history.size())
+                .stream()
+                .filter(chatMessage -> !chatMessage.getRole().equals("system"))
+                .toList();
     }
 
     public String classifyStepTypeFromUserInput(String userInput){
