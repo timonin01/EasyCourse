@@ -9,7 +9,7 @@ import org.core.domain.Step;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.StepikStepSourceRequestData;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
-import org.core.exception.StepikStepIntegrationException;
+import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.springframework.stereotype.Component;
 
 @Component

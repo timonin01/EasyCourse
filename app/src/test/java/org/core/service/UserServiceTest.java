@@ -2,9 +2,9 @@ package org.core.service;
 
 import org.core.domain.User;
 import org.core.dto.user.*;
-import org.core.exception.InvalidPasswordException;
-import org.core.exception.UserAlreadyExistsException;
-import org.core.exception.UserNotFoundException;
+import org.core.exception.exceptions.InvalidPasswordException;
+import org.core.exception.exceptions.UserAlreadyExistsException;
+import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.service.crud.UserService;
 import org.core.util.JwtUtil;

@@ -9,7 +9,7 @@ import org.core.dto.stepik.step.test.matching.response.StepikBlockMatchingRespon
 import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
-import org.core.exception.StepikStepIntegrationException;
+import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.springframework.stereotype.Service;
 
 @Service

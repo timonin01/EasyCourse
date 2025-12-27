@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.deepseek.DeepSeekRequest;
 import org.core.dto.deepseek.DeepSeekResponse;
-import org.core.exception.DeepSeekException;
+import org.core.exception.exceptions.DeepSeekException;
 import org.core.service.AiService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;

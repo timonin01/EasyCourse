@@ -39,15 +39,6 @@ public class StepikTokenService {
             log.debug("Using cached token from Redis for user: {}", userId);
             return cachedToken;
         }
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-
-        String dbToken = user.getStepikAccessToken();
-        if (dbToken != null && !dbToken.trim().isEmpty()) {
-            redisTokenCacheService.cacheToken(userId, dbToken);
-            log.debug("Token loaded from database and cached in Redis for user: {}", userId);
-            return dbToken;
-        }
 
         if (stepikOAuthService.hasStepikOAuthConfig(userId)) {
             try {

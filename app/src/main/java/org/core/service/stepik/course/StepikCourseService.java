@@ -10,7 +10,7 @@ import org.core.dto.stepik.course.StepikCourseRequest;
 import org.core.dto.stepik.course.StepikCourseRequestData;
 import org.core.dto.stepik.course.StepikCourseResponse;
 import org.core.dto.stepik.course.StepikCourseResponseData;
-import org.core.exception.StepikCourseIntegrationException;
+import org.core.exception.exceptions.StepikCourseIntegrationException;
 import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;

@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Step;
 import org.core.dto.stepik.step.*;
-import org.core.exception.StepikStepIntegrationException;
+import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.repository.StepRepository;
 import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;

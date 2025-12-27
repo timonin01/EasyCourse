@@ -10,7 +10,7 @@ import org.core.dto.stepik.lesson.StepikLessonRequest;
 import org.core.dto.stepik.lesson.StepikLessonRequestData;
 import org.core.dto.stepik.lesson.StepikLessonResponse;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
-import org.core.exception.StepikLessonIntegrationException;
+import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.util.HeaderBuilder;
 import org.core.util.StepikLessonRequestDataBuilder;

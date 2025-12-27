@@ -7,7 +7,7 @@ import org.core.dto.stepik.unit.StepikUnitRequest;
 import org.core.dto.stepik.unit.StepikUnitRequestData;
 import org.core.dto.stepik.unit.StepikUnitResponse;
 import org.core.dto.stepik.unit.StepikUnitResponseData;
-import org.core.exception.StepikUnitIntegrationException;
+import org.core.exception.exceptions.StepikUnitIntegrationException;
 import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;

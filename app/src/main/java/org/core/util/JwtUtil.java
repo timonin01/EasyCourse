@@ -32,18 +32,6 @@ public class JwtUtil {
                 .compact();
     }
 
-    public String extractUsername(String token) {
-        return extractAllClaims(token).get("username", String.class);
-    }
-
-    public String extractEmail(String token) {
-        return extractAllClaims(token).get("email", String.class);
-    }
-
-    public Long extractUserId(String token) {
-        return Long.parseLong(extractAllClaims(token).getSubject());
-    }
-
     public Date extractExpiration(String token) {
         return extractAllClaims(token).getExpiration();
     }

@@ -12,7 +12,7 @@ import org.core.dto.lesson.UpdateLessonDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.stepik.lesson.StepikLessonResponse;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
-import org.core.exception.StepikStepIntegrationException;
+import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.ModelService;
 import org.core.util.HeaderBuilder;

@@ -8,7 +8,7 @@ import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.lesson.UpdateLessonDTO;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.dto.stepik.unit.StepikUnitResponseData;
-import org.core.exception.StepikLessonIntegrationException;
+import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.service.crud.LessonService;
 import org.core.service.stepik.unit.StepikUnitService;

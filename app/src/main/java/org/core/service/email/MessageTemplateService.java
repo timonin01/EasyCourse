@@ -2,9 +2,10 @@ package org.core.service.email;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class MessageTemplateService {
@@ -13,7 +14,10 @@ public class MessageTemplateService {
 
     public MessageTemplateService() throws IOException {
         ClassPathResource resource = new ClassPathResource("email-verification.html");
-        this.emailVerificationTemplate = Files.readString(resource.getFile().toPath());
+        this.emailVerificationTemplate = StreamUtils.copyToString(
+            resource.getInputStream(), 
+            StandardCharsets.UTF_8
+        );
     }
 
     public String createEmailVerificationMessage(String code) {

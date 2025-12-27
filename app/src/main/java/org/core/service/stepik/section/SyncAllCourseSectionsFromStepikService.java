@@ -1,7 +1,5 @@
 package org.core.service.stepik.section;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,19 +7,12 @@ import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.model.CreateModelDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.model.UpdateModelDTO;
-import org.core.dto.stepik.section.StepikSectionResponse;
 import org.core.dto.stepik.section.StepikSectionResponseData;
-import org.core.exception.StepikSectionIntegrationException;
+import org.core.exception.exceptions.StepikSectionIntegrationException;
 import org.core.service.crud.CourseService;
 import org.core.service.crud.ModelService;
-import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;

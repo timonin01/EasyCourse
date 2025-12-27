@@ -119,7 +119,8 @@ public class AgentService {
         int windowSize = 16;
         if(history.isEmpty()) return history;
 
-        return history.subList(history.size() - windowSize, history.size())
+        int startIndex = Math.max(0, history.size() - windowSize);
+        return history.subList(startIndex, history.size())
                 .stream()
                 .filter(chatMessage -> !chatMessage.getRole().equals("system"))
                 .toList();

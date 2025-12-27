@@ -10,7 +10,7 @@ import org.core.domain.Model;
 import org.core.dto.stepik.section.StepikSectionRequest;
 import org.core.dto.stepik.section.StepikSectionResponse;
 import org.core.dto.stepik.section.StepikSectionResponseData;
-import org.core.exception.StepikSectionIntegrationException;
+import org.core.exception.exceptions.StepikSectionIntegrationException;
 import org.core.repository.ModelRepository;
 import org.core.util.HeaderBuilder;
 import org.core.util.StepikSectionRequestDataBuilder;

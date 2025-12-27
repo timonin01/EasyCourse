@@ -6,11 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Model;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.model.UpdateModelDTO;
-import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 
-import org.core.dto.stepik.step.StepikStepSourceResponseData;
-import org.core.exception.StepikSectionIntegrationException;
+import org.core.exception.exceptions.StepikSectionIntegrationException;
 import org.core.repository.ModelRepository;
 import org.core.service.crud.ModelService;
 import org.springframework.stereotype.Service;

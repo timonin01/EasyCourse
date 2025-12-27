@@ -21,8 +21,8 @@ import org.core.dto.stepik.step.enterWord.number.response.StepikBlockNumberRespo
 import org.core.dto.stepik.step.enterWord.math.response.StepikBlockMathResponse;
 import org.core.dto.stepik.step.enterWord.freeAnswer.response.StepikBlockFreeAnswerResponse;
 import org.core.dto.stepik.step.enterWord.randomTasks.response.StepikBlockRandomTasksResponse;
-import org.core.exception.LessonNotFoundException;
-import org.core.exception.StepikStepIntegrationException;
+import org.core.exception.exceptions.LessonNotFoundException;
+import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.service.crud.StepService;
 import org.core.service.stepik.step.convereter.ConverterStepikStepBlockResponseToRequest;

@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.core.dto.email.EmailRequest;
-import org.core.exception.EmailSendException;
+import org.core.exception.exceptions.EmailSendException;
 import org.core.dto.email.EmailCodeResponse;
 import org.core.service.email.EmailService;
 import org.springframework.web.bind.annotation.*;

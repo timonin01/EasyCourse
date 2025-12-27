@@ -9,7 +9,7 @@ import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
 import org.core.dto.stepik.step.StepikStepSourceResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
-import org.core.exception.StepikStepIntegrationException;
+import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;

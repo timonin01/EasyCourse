@@ -1,4 +1,4 @@
-package org.core.exception;
+package org.core.exception.exceptions;
 
 public class StepikCourseIntegrationException extends RuntimeException {
     public StepikCourseIntegrationException(String message) {

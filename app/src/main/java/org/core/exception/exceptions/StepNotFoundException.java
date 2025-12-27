@@ -1,4 +1,4 @@
-package org.core.exception;
+package org.core.exception.exceptions;
 
 public class StepNotFoundException extends RuntimeException {
     public StepNotFoundException(String message) {

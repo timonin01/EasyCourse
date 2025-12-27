@@ -1,4 +1,4 @@
-package org.core.exception;
+package org.core.exception.exceptions;
 
 public class LessonNotFoundException extends RuntimeException {
     public LessonNotFoundException(String message) {
