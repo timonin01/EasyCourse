@@ -21,14 +21,23 @@ public class StepikCourseSyncService {
     public CourseCaptchaChallenge syncCourseWithStepik(Long courseId, String captchaToken) {
         log.info("Starting sync course ID: {} with Stepik (captcha provided: {})", courseId, captchaToken != null);
         
+        CourseResponseDTO courseDTO = courseService.getCourseByCourseId(courseId);
+        
+        if (courseDTO.getStepikCourseId() != null) {
+            log.info("Course {} already synced with Stepik (ID: {}), skipping creation", 
+                    courseId, courseDTO.getStepikCourseId());
+            CourseCaptchaChallenge result = CourseCaptchaChallenge.noCaptchaNeeded(courseId);
+            result.setCaptchaKey(courseDTO.getStepikCourseId().toString());
+            result.setMessage("Course already synced with Stepik ID: " + courseDTO.getStepikCourseId());
+            return result;
+        }
+        
         if (captchaToken != null) {
             log.info("Captcha token length: {}, starts with: {}", 
                     captchaToken.length(), 
                     captchaToken.substring(0, Math.min(captchaToken.length(), 30)) + "...");
         }
-        CourseResponseDTO courseDTO = courseService.getCourseByCourseId(courseId);
         Course course = mapToCourse(courseDTO);
-
         CourseCaptchaChallenge result = stepikCourseService.tryCreateCourseAndGetCaptcha(course, captchaToken);
         return processStepikResponse(courseId, result);
     }

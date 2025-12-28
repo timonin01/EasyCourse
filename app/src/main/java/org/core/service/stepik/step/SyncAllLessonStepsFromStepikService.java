@@ -142,30 +142,19 @@ public class SyncAllLessonStepsFromStepikService {
     }
 
     private StepType qualifiedStepTypeFromBlock(StepikBlockResponse block) {
-        if (block instanceof StepikBlockTextResponse) {
-            return StepType.TEXT;
-        } else if (block instanceof StepikBlockChoiceResponse) {
-            return StepType.CHOICE;
-        } else if (block instanceof StepikBlockSortingResponse) {
-            return StepType.SORTING;
-        } else if (block instanceof StepikBlockMatchingResponse) {
-            return StepType.MATCHING;
-        } else if (block instanceof StepikBlockTableResponse) {
-            return StepType.TABLE;
-        } else if (block instanceof StepikBlockFillBlanksResponse) {
-            return StepType.FILL_BLANK;
-        } else if (block instanceof StepikBlockStringResponse) {
-            return StepType.STRING;
-        } else if (block instanceof StepikBlockNumberResponse) {
-            return StepType.NUMBER;
-        } else if (block instanceof StepikBlockMathResponse) {
-            return StepType.MATH;
-        } else if (block instanceof StepikBlockFreeAnswerResponse) {
-            return StepType.FREE_ANSWER;
-        } else if (block instanceof StepikBlockRandomTasksResponse) {
-            return StepType.RANDOM_TASKS;
-        } else {
-            throw new StepikStepIntegrationException("Unknown StepType in step");
-        }
+        return switch (block) {
+            case StepikBlockTextResponse stepikBlockTextResponse -> StepType.TEXT;
+            case StepikBlockChoiceResponse stepikBlockChoiceResponse -> StepType.CHOICE;
+            case StepikBlockSortingResponse stepikBlockSortingResponse -> StepType.SORTING;
+            case StepikBlockMatchingResponse stepikBlockMatchingResponse -> StepType.MATCHING;
+            case StepikBlockTableResponse stepikBlockTableResponse -> StepType.TABLE;
+            case StepikBlockFillBlanksResponse stepikBlockFillBlanksResponse -> StepType.FILL_BLANK;
+            case StepikBlockStringResponse stepikBlockStringResponse -> StepType.STRING;
+            case StepikBlockNumberResponse stepikBlockNumberResponse -> StepType.NUMBER;
+            case StepikBlockMathResponse stepikBlockMathResponse -> StepType.MATH;
+            case StepikBlockFreeAnswerResponse stepikBlockFreeAnswerResponse -> StepType.FREE_ANSWER;
+            case StepikBlockRandomTasksResponse stepikBlockRandomTasksResponse -> StepType.RANDOM_TASKS;
+            case null, default -> throw new StepikStepIntegrationException("Unknown StepType in step");
+        };
     }
 }

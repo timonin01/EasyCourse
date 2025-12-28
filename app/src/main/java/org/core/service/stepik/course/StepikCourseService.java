@@ -17,6 +17,8 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
@@ -39,10 +41,6 @@ public class StepikCourseService {
 
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
-
-    public StepikCourseResponseData createCourse(Course course){
-        return createCourse(course, null);
-    }
 
     @RequiresStepikToken
     public StepikCourseResponseData createCourse(Course course, String captchaToken){
@@ -170,6 +168,4 @@ public class StepikCourseService {
         
         return requestData;
     }
-
-
 }
