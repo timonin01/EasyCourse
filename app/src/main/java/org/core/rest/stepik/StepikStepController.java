@@ -7,7 +7,6 @@ import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.service.stepik.step.StepikStepService;
 import org.core.service.stepik.step.StepikStepSyncService;
-import org.core.util.ConverterStepikStepSourceResponseDataToStepikResponseDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,10 +18,8 @@ import java.util.List;
 @Slf4j
 public class StepikStepController {
 
-    private final StepikStepService stepikStepService;
     private final StepikStepSyncService stepikStepSyncService;
     private final UserContextBean userContextBean;
-    private final ConverterStepikStepSourceResponseDataToStepikResponseDTO converter;
 
     @PostMapping("/sync-step")
     public ResponseEntity<StepikStepSourceResponseData> syncStepWithStepik(
@@ -70,17 +67,5 @@ public class StepikStepController {
         
         List<StepResponseDTO> syncedSteps = stepikStepSyncService.syncAllLessonStepsFromStepik(lessonId);
         return ResponseEntity.ok(syncedSteps);
-    }
-
-    @GetMapping("/get-step-from-stepik")
-    public StepResponseDTO fetStepFromStepik(
-            @RequestParam Long stepikStepId,
-            @RequestHeader("User-Id") Long userId){
-
-        log.info("Get step: {}, for: {}", stepikStepId, userId);
-        userContextBean.setUserId(userId);
-
-        StepikStepSourceResponseData stepSourceResponseData = stepikStepService.getStepikStepById(stepikStepId);
-        return converter.convertStepikStepToResponseDTO(stepSourceResponseData);
     }
 }
