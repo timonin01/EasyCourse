@@ -54,18 +54,6 @@ public class StepikTokenService {
         return null;
     }
 
-    @Transactional
-    public void clearAccessToken(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-
-        user.setStepikAccessToken(null);
-        userRepository.save(user);
-        
-        redisTokenCacheService.evictToken(userId);
-        log.info("Access token cleared from database and Redis cache for user: {}", userId);
-    }
-
     @EventListener
     public void handleOAuthConfigChanged(OAuthConfigChangedEvent event) {
         clearTokenCacheForUser(event.getUserId());

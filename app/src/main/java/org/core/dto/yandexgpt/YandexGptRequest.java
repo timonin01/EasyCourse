@@ -24,10 +24,14 @@ public class YandexGptRequest {
 
     private Double temperature;
 
-    public YandexGptRequest(String modelUri, String text) {
+    @JsonProperty("json_object")
+    private Boolean jsonObject;
+
+    public YandexGptRequest(String modelUri, List<Message> messages, Boolean jsonObject) {
         this.modelUri = modelUri;
-        this.messages = List.of(new Message("user", text));
+        this.messages = messages;
         this.maxTokens = 2000;
         this.temperature = 0.6;
+        this.jsonObject = jsonObject;
     }
 }

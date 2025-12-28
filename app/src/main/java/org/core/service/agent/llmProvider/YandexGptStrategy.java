@@ -19,32 +19,13 @@ public class YandexGptStrategy implements LlmProvider {
     @Override
     public String chat(List<ChatMessage> messages) {
         try {
-            String prompt = buildPrompt(messages);
-            return yandexGptService.generateResponse(prompt);
+            boolean hasSystemPrompt = messages.stream()
+                    .anyMatch(chatMessage -> chatMessage.getRole().equals("system"));
+
+            return yandexGptService.generateResponse(messages, hasSystemPrompt);
         } catch (Exception e) {
             log.error("Error in YandexGPT adapter: {}", e.getMessage());
             throw new RuntimeException("Failed to get response from YandexGPT: " + e.getMessage());
         }
-    }
-    
-    private String buildPrompt(List<ChatMessage> messages) {
-        StringBuilder prompt = new StringBuilder();
-        for (ChatMessage message : messages) {
-            String role = message.getRole();
-            String content = message.getContent();
-            
-            switch (role) {
-                case "system":
-                    prompt.append("Система: ").append(content).append("\n\n");
-                    break;
-                case "user":
-                    prompt.append("Пользователь: ").append(content).append("\n\n");
-                    break;
-                case "assistant":
-                    prompt.append("Ассистент: ").append(content).append("\n\n");
-                    break;
-            }
-        }
-        return prompt.toString();
     }
 }

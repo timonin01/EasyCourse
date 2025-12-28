@@ -2,7 +2,10 @@ package org.core.service.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.core.dto.agent.ChatMessage;
+import org.core.dto.yandexgpt.Message;
 import org.core.dto.yandexgpt.YandexGptRequest;
 import org.core.dto.yandexgpt.YandexGptResponse;
 import org.core.exception.exceptions.YandexGptException;
@@ -10,9 +13,13 @@ import org.core.service.AiService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -31,14 +38,17 @@ public class YandexGptService implements AiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Override
-    public String generateResponse(String prompt) {
-        if (prompt == null || prompt.trim().isEmpty()) {
-            throw new YandexGptException("Prompt cannot be empty");
+    @SneakyThrows
+    public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt){
+        if (messages == null || messages.isEmpty()) {
+            throw new YandexGptException("Messages cannot be empty");
         }
-        try {
-            YandexGptRequest request = new YandexGptRequest(modelUri, prompt.trim());
-            log.info("Sending request to Yandex GPT: {}", objectMapper.writeValueAsString(request));
+        try{
+            List<Message> yandexMessages = messages.stream()
+                    .map(chatMessage -> new Message(chatMessage.getRole(), chatMessage.getContent()))
+                    .toList();
+            YandexGptRequest yandexGptRequest = new YandexGptRequest(modelUri, yandexMessages, hasSystemPrompt);
+            log.info("Sending request to Yandex GPT: {}", objectMapper.writeValueAsString(yandexGptRequest));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -46,29 +56,29 @@ public class YandexGptService implements AiService {
             headers.set("Authorization", "Api-Key " + apiKey);
             headers.set("x-folder-id", "b1grl0e87ma0oc0sae8c");
 
-            HttpEntity<YandexGptRequest> entity = new HttpEntity<>(request, headers);
+            HttpEntity<YandexGptRequest> entity = new HttpEntity<>(yandexGptRequest, headers);
             ResponseEntity<String> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
                     entity,
                     String.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 log.info("Response from Yandex GPT: {}", response.getBody());
-                YandexGptResponse gptResponse = objectMapper.readValue(response.getBody(), YandexGptResponse.class);
-                if (gptResponse.getError() != null) {
-                    throw new YandexGptException("Yandex GPT error: " + gptResponse.getError().getMessage());
+                YandexGptResponse yandexGptResponse = objectMapper.readValue(response.getBody(), YandexGptResponse.class);
+                if (yandexGptResponse.getError() != null) {
+                    throw new YandexGptException("Yandex GPT error: " + yandexGptResponse.getError().getMessage());
                 }
-                if (gptResponse.getResult() != null && 
-                    gptResponse.getResult().getAlternatives() != null && 
-                    !gptResponse.getResult().getAlternatives().isEmpty()) {
-                    return gptResponse.getResult().getAlternatives().get(0).getMessage().getText();
+                if (yandexGptResponse.getResult() != null &&
+                        yandexGptResponse.getResult().getAlternatives() != null &&
+                        !yandexGptResponse.getResult().getAlternatives().isEmpty()) {
+                    return yandexGptResponse.getResult().getAlternatives().get(0).getMessage().getText();
                 }
                 throw new YandexGptException("No response from Yandex GPT");
             }
 
-        } catch (Exception e) {
+        }catch (RuntimeException e){
             log.error("Error calling Yandex GPT API: {}", e.getMessage());
             throw new YandexGptException("Sorry, I couldn't generate a response at the moment.");
         }
