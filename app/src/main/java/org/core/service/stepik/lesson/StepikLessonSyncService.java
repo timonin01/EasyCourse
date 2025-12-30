@@ -81,6 +81,7 @@ public class StepikLessonSyncService {
             throw new StepikLessonIntegrationException("Failed to update lesson in Stepik: " + e.getMessage());
         }
     }
+
     public void deleteLessonFromStepik(Long lessonId) {
         LessonResponseDTO lessonDTO = lessonService.getLessonByLessonID(lessonId);
         log.info("Lesson data: ID={}, Title='{}', StepikLessonId={}",

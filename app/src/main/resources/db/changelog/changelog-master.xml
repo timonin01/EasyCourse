@@ -23,6 +23,7 @@
     <include file="db/changelog/templates/changelog-16.xml"/>
     <include file="db/changelog/templates/changelog-17.xml"/>
     <include file="db/changelog/templates/changelog-18.xml"/>
+    <include file="db/changelog/templates/changelog-19.xml"/>
 
 
 </databaseChangeLog>

@@ -10,7 +10,6 @@ import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.lesson.UpdateLessonDTO;
 import org.core.dto.model.ModelResponseDTO;
-import org.core.dto.stepik.lesson.StepikLessonResponse;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.service.crud.LessonService;
@@ -36,6 +35,7 @@ public class SyncAllSectionLessonsFromStepikService {
     @Value("${stepik.api.base-url}")
     private String baseUrl;
 
+    private final StepikLessonService stepikLessonService;
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -56,10 +56,10 @@ public class SyncAllSectionLessonsFromStepikService {
             List<LessonResponseDTO> localLessons = lessonService.getModelLessonsByModelId(modelId);
             for (Long unitId : unitIds) {
                 try {
-                    Long lessonId = getUnitLessonId(unitId);
+                    Long lessonId = getLessonIdByUnitID(unitId);
                     if (lessonId != null) {
                         log.info("Processing lesson {} from unit {}", lessonId, unitId);
-                        StepikLessonResponseData stepikLesson = getLessonById(lessonId);
+                        StepikLessonResponseData stepikLesson = stepikLessonService.getLessonByStepikId(lessonId);
                         LessonResponseDTO syncedLesson = syncSingleLessonFromStepik(modelId, stepikLesson, localLessons);
                         syncedLessons.add(syncedLesson);
                         log.info("Successfully synced lesson {} from Stepik", lessonId);
@@ -78,7 +78,7 @@ public class SyncAllSectionLessonsFromStepikService {
     }
 
     @RequiresStepikToken
-    private List<Long> getSectionUnitIds(Long sectionId) {
+    public List<Long> getSectionUnitIds(Long sectionId) {
         try {
             String url = baseUrl + "/sections/" + sectionId;
             HttpHeaders headers = headerBuilder.createHeaders();
@@ -118,7 +118,7 @@ public class SyncAllSectionLessonsFromStepikService {
     }
 
     @RequiresStepikToken
-    private Long getUnitLessonId(Long unitId) {
+    public Long getLessonIdByUnitID(Long unitId) {
         try {
             String url = baseUrl + "/units/" + unitId;
             HttpHeaders headers = headerBuilder.createHeaders();
@@ -150,37 +150,6 @@ public class SyncAllSectionLessonsFromStepikService {
         } catch (Exception e) {
             log.error("Error getting unit {} from Stepik: {}", unitId, e.getMessage());
             throw new StepikStepIntegrationException("Failed to get unit " + unitId +
-                    " from Stepik: " + e.getMessage());
-        }
-    }
-
-    @RequiresStepikToken
-    private StepikLessonResponseData getLessonById(Long lessonId) {
-        try {
-            String url = baseUrl + "/lessons/" + lessonId;
-            HttpHeaders headers = headerBuilder.createHeaders();
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                StepikLessonResponse stepikResponse = objectMapper.readValue(
-                        response.getBody(), StepikLessonResponse.class);
-
-                if (stepikResponse.getLesson() != null) {
-                    log.info("Successfully retrieved lesson {} from Stepik", lessonId);
-                    return stepikResponse.getLesson();
-                } else {
-                    throw new StepikStepIntegrationException("No lesson data received from Stepik for lesson " + lessonId);
-                }
-            } else {
-                throw new StepikStepIntegrationException("Failed to get lesson " + lessonId +
-                        ". Status: " + response.getStatusCode());
-            }
-        } catch (Exception e) {
-            log.error("Error getting lesson {} from Stepik: {}", lessonId, e.getMessage());
-            throw new StepikStepIntegrationException("Failed to get lesson " + lessonId +
                     " from Stepik: " + e.getMessage());
         }
     }

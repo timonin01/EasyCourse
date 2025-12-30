@@ -43,6 +43,22 @@ public class ModelService {
         return mapToResponseDTO(modelRepository.save(model));
     }
 
+    public Model createModuleFromDTO(ModelResponseDTO modelResponseDTO){
+        Course course = courseRepository.findById(modelResponseDTO.getCourseId())
+                .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+
+        Model model = Model.builder()
+                .course(course)
+                .title(modelResponseDTO.getTitle())
+                .description(modelResponseDTO.getDescription())
+                .position(modelResponseDTO.getPosition())
+                .stepikSectionId(modelResponseDTO.getStepikSectionId())
+                .createdAt(modelResponseDTO.getCreatedAt())
+                .updatedAt(modelResponseDTO.getUpdatedAt())
+                .build();
+        return modelRepository.save(model);
+    }
+
     public ModelResponseDTO getModelBuModelId(Long modelId){
         Model model = findModelByModelId(modelId);
         return mapToResponseDTO(model);

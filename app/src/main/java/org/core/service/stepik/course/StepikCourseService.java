@@ -11,13 +11,12 @@ import org.core.dto.stepik.course.StepikCourseRequestData;
 import org.core.dto.stepik.course.StepikCourseResponse;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.exception.exceptions.StepikCourseIntegrationException;
+import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.List;
 
 @Service
 @Slf4j
@@ -86,9 +85,9 @@ public class StepikCourseService {
     }
 
     @RequiresStepikToken
-    public StepikCourseResponseData updateCourse(Long courseId, Course course) {
+    public StepikCourseResponseData updateCourse(Long stepikCourseId, Course course) {
         try {
-            String url = baseUrl + "/courses/" + courseId;
+            String url = baseUrl + "/courses/" + stepikCourseId;
 
             StepikCourseRequest request = new StepikCourseRequest();
             StepikCourseRequestData requestData = createCourseRequestData(course);
@@ -100,7 +99,7 @@ public class StepikCourseService {
                     url, HttpMethod.PUT, entity, StepikCourseResponse.class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                log.info("Course updated in Stepik with ID: {}", courseId);
+                log.info("Course updated in Stepik with ID: {}", stepikCourseId);
                 return response.getBody().getCourse();
             }
             else throw new StepikCourseIntegrationException("Failed to update course in Stepik");
@@ -111,9 +110,9 @@ public class StepikCourseService {
     }
 
     @RequiresStepikToken
-    public void deleteCourse(Long courseId) {
+    public void deleteCourse(Long stepikCourseId) {
         try {
-            String url = baseUrl + "/courses/" + courseId;
+            String url = baseUrl + "/courses/" + stepikCourseId;
 
             HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<Void> entity = new HttpEntity<>(headers);
@@ -121,12 +120,41 @@ public class StepikCourseService {
                     url, HttpMethod.DELETE, entity, Void.class);
 
             if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
-                log.info("Course deleted from Stepik with ID: {}", courseId);
+                log.info("Course deleted from Stepik with ID: {}", stepikCourseId);
             }
             else throw new StepikCourseIntegrationException("Failed to delete course in Stepik");
         } catch (Exception e) {
             log.error("Error deleting course in Stepik: {}", e.getMessage());
             throw new StepikCourseIntegrationException("Failed to delete course in Stepik: " + e.getMessage());
+        }
+    }
+
+    @RequiresStepikToken
+    public StepikCourseResponseData getCourse(Long stepikCourseId) {
+        try {
+            String url = baseUrl + "/courses/" + stepikCourseId;
+
+            HttpHeaders headers = headerBuilder.createHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            ResponseEntity<StepikCourseResponse> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, StepikCourseResponse.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                StepikCourseResponseData courseResponseData = response.getBody().getCourse();
+                if (courseResponseData != null) {
+                    log.info("Successfully retrieved course from Stepik. ID: {}, Title: '{}'", courseResponseData.getId(), courseResponseData.getTitle());
+                    return courseResponseData;
+                } else {
+                    log.error("Course data is null in response");
+                    throw new StepikLessonIntegrationException("Course data is null in Stepik response");
+                }
+            } else {
+                log.error("Failed to get course. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
+                throw new StepikLessonIntegrationException("Failed to get course from Stepik. Status: " + response.getStatusCode());
+            }
+        } catch (RuntimeException e) {
+            log.error("Error getting course from Stepik with stepikCourseId: {}: {}", stepikCourseId, e.getMessage());
+            throw new StepikLessonIntegrationException("Failed to get course from Stepik: " + e.getMessage());
         }
     }
 

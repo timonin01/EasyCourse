@@ -9,6 +9,7 @@ import org.core.domain.User;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.course.CreateCourseDTO;
 import org.core.dto.course.UpdateCourseDTO;
+import org.core.dto.stepik.FullCourseResponseDTO;
 import org.core.exception.exceptions.CourseNotFoundException;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.CourseRepository;
@@ -40,6 +41,21 @@ public class CourseService {
         log.info("Course can be synced with Stepik later using /sync endpoint");
         
         return mapToResponseDTO(savedCourse);
+    }
+
+    public Course createCourseFromDTO(FullCourseResponseDTO courseResponseDTO){
+        User user = userRepository.findById(courseResponseDTO.getUserId())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        Course course = Course.builder()
+                .author(user)
+                .title(courseResponseDTO.getTitle())
+                .description(courseResponseDTO.getDescription())
+                .stepikCourseId(courseResponseDTO.getStepikCourseId())
+                .createdAt(courseResponseDTO.getCreatedAt())
+                .updatedAt(courseResponseDTO.getUpdatedAt())
+                .build();
+        return courseRepository.save(course);
     }
 
     public CourseResponseDTO getCourseByCourseId(Long courseId){

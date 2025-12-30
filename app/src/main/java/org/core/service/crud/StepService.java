@@ -1,5 +1,6 @@
 package org.core.service.crud;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,24 @@ public class StepService {
 
         log.info("Step created with id: {} in lesson: {} at position {}", step.getId(), lesson.getId(), position);
         return mapToResponseDto(stepRepository.save(step));
+    }
+
+    public Step createStepFromDTO(StepResponseDTO stepResponseDTO){
+        Lesson lesson = lessonRepository.findById(stepResponseDTO.getLessonId())
+                .orElseThrow(() -> new LessonNotFoundException("Lesson not found"));
+
+        Step step = Step.builder()
+                .lesson(lesson)
+                .position(stepResponseDTO.getPosition())
+                .type(stepResponseDTO.getType())
+                .cost(stepResponseDTO.getCost())
+                .content(stepResponseDTO.getContent())
+                .stepikStepId(stepResponseDTO.getStepikStepId())
+                .stepikBlockData(stepResponseDTO.getStepikBlockJson())
+                .createdAt(stepResponseDTO.getCreatedAt())
+                .updatedAt(stepResponseDTO.getUpdatedAt())
+                .build();
+        return stepRepository.save(step);
     }
 
     public StepResponseDTO getStepById(Long stepId) {
@@ -144,7 +163,7 @@ public class StepService {
         if (step.getStepikBlockData() != null) {
             try {
                 stepikBlock = objectMapper.readValue(step.getStepikBlockData(), StepikBlockResponse.class);
-            } catch (Exception e) {
+            } catch (RuntimeException | JsonProcessingException e) {
                 log.error("Error deserializing stepik block data", e);
             }
         }

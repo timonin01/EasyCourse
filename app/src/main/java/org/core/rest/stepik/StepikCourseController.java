@@ -5,11 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
 import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.course.CourseResponseDTO;
+import org.core.dto.stepik.FullCourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.service.crud.CourseService;
 import org.core.service.stepik.course.StepikCourseSyncService;
 
 import java.util.List;
+
+import org.core.service.stepik.course.getCourseFromStepik.StepikFullCourseService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class StepikCourseController {
 
     private final StepikCourseSyncService stepikCourseSyncService;
+    private final StepikFullCourseService fullCourseService;
     private final CourseService courseService;
     private final UserContextBean userContextBean;
 
@@ -83,6 +87,21 @@ public class StepikCourseController {
         } catch (Exception e) {
             log.error("Failed to delete course {} from Stepik: {}", courseId, e.getMessage());
             return ResponseEntity.internalServerError().body("Failed to delete course from Stepik: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/full-course-from-stepik/{stepikCourseId}")
+    public ResponseEntity<FullCourseResponseDTO> getFullCourseFromStepik(
+            @PathVariable Long stepikCourseId,
+            @RequestHeader("User-Id") Long userId){
+        try {
+            log.info("Get full course: {}, for: {}", stepikCourseId, userId);
+            userContextBean.setUserId(userId);
+
+            return ResponseEntity.ok(fullCourseService.buildFullCourseResponseDTO(stepikCourseId, userId));
+        }catch (RuntimeException e){
+            log.error("Failed to getting full course from stepik to {}: {}", stepikCourseId, e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

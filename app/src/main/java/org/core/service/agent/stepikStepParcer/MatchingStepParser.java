@@ -1,5 +1,7 @@
 package org.core.service.agent.stepikStepParcer;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -22,11 +24,19 @@ public class MatchingStepParser {
 
     public StepikBlockRequest parseMatchingRequest(String json) {
         try {
-            JsonNode node = objectMapper.readTree(json);
+            JsonFactory jsonFactory = JsonFactory.builder()
+                    .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
+                    .build();
+            
+            ObjectMapper lenientMapper = new ObjectMapper(jsonFactory);
+            lenientMapper.setConfig(objectMapper.getDeserializationConfig());
+            lenientMapper.setConfig(objectMapper.getSerializationConfig());
+            
+            JsonNode node = lenientMapper.readTree(json);
             if (node.isObject() && !node.has("name")) {
                 ((ObjectNode) node).put("name", "matching");
             }
-            StepikBlockMatchingRequest request = objectMapper.treeToValue(node, StepikBlockMatchingRequest.class);
+            StepikBlockMatchingRequest request = lenientMapper.treeToValue(node, StepikBlockMatchingRequest.class);
             if (!validateMatchingRequest(request)) {
                 throw new IllegalArgumentException("Invalid matching request structure");
             }

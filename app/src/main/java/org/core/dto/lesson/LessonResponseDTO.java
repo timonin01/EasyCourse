@@ -17,6 +17,7 @@ public class LessonResponseDTO {
     private Integer position;
     private Long stepikLessonId;
     private Long modelId;
+    private Long stepikSectionId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

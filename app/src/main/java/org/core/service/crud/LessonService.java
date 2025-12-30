@@ -43,6 +43,22 @@ public class LessonService {
         return mapToResponseDTO(lessonRepository.save(lesson));
     }
 
+    public Lesson createLessonFromDTO(LessonResponseDTO lessonResponseDTO){
+        Model model = modelRepository.findById(lessonResponseDTO.getModelId())
+                .orElseThrow(() -> new ModelNotFoundException("Model not found"));
+
+        Lesson lesson = Lesson.builder()
+                .model(model)
+                .title(lessonResponseDTO.getTitle())
+                .description(lessonResponseDTO.getDescription() != null ? lessonResponseDTO.getDescription() : model.getDescription())
+                .position(lessonResponseDTO.getPosition())
+                .stepikLessonId(lessonResponseDTO.getStepikLessonId())
+                .createdAt(lessonResponseDTO.getCreatedAt())
+                .updatedAt(lessonResponseDTO.getUpdatedAt())
+                .build();
+        return lessonRepository.save(lesson);
+    }
+
     public LessonResponseDTO getLessonByLessonID(Long lessonId) {
         Lesson lesson = findLessonById(lessonId);
         return mapToResponseDTO(lesson);
