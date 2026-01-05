@@ -24,16 +24,20 @@ public class TableStepParser {
     public StepikBlockRequest parseTableRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "table");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "table");
+                }
             }
-            StepikBlockTableRequest request = objectMapper.treeToValue(node, StepikBlockTableRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockTableRequest request = objectMapper.readValue(jsonWithName, StepikBlockTableRequest.class);
             if (!validateTableRequest(request)) {
                 throw new IllegalArgumentException("Invalid table request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse table request: {}", e.getMessage());
+            log.error("Failed to parse table request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid table request format", e);
         }
     }

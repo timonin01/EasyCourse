@@ -23,16 +23,20 @@ public class NumberStepParser {
     public StepikBlockRequest parseNumberRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "number");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "number");
+                }
             }
-            StepikBlockNumberRequest request = objectMapper.treeToValue(node, StepikBlockNumberRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockNumberRequest request = objectMapper.readValue(jsonWithName, StepikBlockNumberRequest.class);
             if (!validateNumberRequest(request)) {
                 throw new IllegalArgumentException("Invalid number request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse number request: {}", e.getMessage());
+            log.error("Failed to parse number request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid number request format", e);
         }
     }

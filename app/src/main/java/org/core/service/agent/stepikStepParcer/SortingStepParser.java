@@ -23,16 +23,20 @@ public class SortingStepParser {
     public StepikBlockRequest parseSortingRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "sorting");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "sorting");
+                }
             }
-            StepikBlockSortingRequest request = objectMapper.treeToValue(node, StepikBlockSortingRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockSortingRequest request = objectMapper.readValue(jsonWithName, StepikBlockSortingRequest.class);
             if (!validateSortingRequest(request)) {
                 throw new IllegalArgumentException("Invalid sorting request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse sorting request: {}", e.getMessage());
+            log.error("Failed to parse sorting request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid sorting request format", e);
         }
     }

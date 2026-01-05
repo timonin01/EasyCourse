@@ -20,17 +20,21 @@ public class FreeAnswerStepParser {
     public StepikBlockRequest parseFreeAnswerRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "free-answer");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "free-answer");
+                }
             }
-            StepikBlockFreeAnswerRequest request = objectMapper.treeToValue(node, StepikBlockFreeAnswerRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockFreeAnswerRequest request = objectMapper.readValue(jsonWithName, StepikBlockFreeAnswerRequest.class);
             if (!validateFreeAnswerRequest(request)) {
                 throw new IllegalArgumentException("Invalid free-answer request structure");
             }
 
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse free-answer request: {}", e.getMessage());
+            log.error("Failed to parse free-answer request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid free-answer request format", e);
         }
     }

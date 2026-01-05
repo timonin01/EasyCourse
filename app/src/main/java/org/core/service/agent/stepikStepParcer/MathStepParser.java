@@ -20,16 +20,20 @@ public class MathStepParser {
     public StepikBlockRequest parseMathRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "math");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "math");
+                }
             }
-            StepikBlockMathRequest request = objectMapper.treeToValue(node, StepikBlockMathRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockMathRequest request = objectMapper.readValue(jsonWithName, StepikBlockMathRequest.class);
             if (!validateMathRequest(request)) {
                 throw new IllegalArgumentException("Invalid math request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse math request: {}", e.getMessage());
+            log.error("Failed to parse math request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid math request format", e);
         }
     }

@@ -20,16 +20,20 @@ public class StringStepParser {
     public StepikBlockRequest parseStringRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "string");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "string");
+                }
             }
-            StepikBlockStringRequest request = objectMapper.treeToValue(node, StepikBlockStringRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockStringRequest request = objectMapper.readValue(jsonWithName, StepikBlockStringRequest.class);
             if (!validateStringRequest(request)) {
                 throw new IllegalArgumentException("Invalid string request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse string request: {}", e.getMessage());
+            log.error("Failed to parse string request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid string request format", e);
         }
     }

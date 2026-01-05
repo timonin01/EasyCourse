@@ -33,16 +33,20 @@ public class MatchingStepParser {
             lenientMapper.setConfig(objectMapper.getSerializationConfig());
             
             JsonNode node = lenientMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "matching");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "matching");
+                }
             }
-            StepikBlockMatchingRequest request = lenientMapper.treeToValue(node, StepikBlockMatchingRequest.class);
+            String jsonWithName = lenientMapper.writeValueAsString(node);
+            StepikBlockMatchingRequest request = lenientMapper.readValue(jsonWithName, StepikBlockMatchingRequest.class);
             if (!validateMatchingRequest(request)) {
                 throw new IllegalArgumentException("Invalid matching request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse matching request: {}", e.getMessage());
+            log.error("Failed to parse matching request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid matching request format", e);
         }
     }

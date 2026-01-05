@@ -24,16 +24,20 @@ public class FillBlanksStepParser {
     public StepikBlockRequest parseFillBlanksRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "fill-blanks");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "fill-blanks");
+                }
             }
-            StepikBlockFillBlanksRequest request = objectMapper.treeToValue(node, StepikBlockFillBlanksRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockFillBlanksRequest request = objectMapper.readValue(jsonWithName, StepikBlockFillBlanksRequest.class);
             if (!validateFillBlanksRequest(request)) {
                 throw new IllegalArgumentException("Invalid fill-blanks request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse fill-blanks request: {}", e.getMessage());
+            log.error("Failed to parse fill-blanks request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid fill-blanks request format", e);
         }
     }

@@ -20,16 +20,20 @@ public class RandomTasksStepParser {
     public StepikBlockRequest parseRandomTasksRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "random-tasks");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "random-tasks");
+                }
             }
-            StepikBlockRandomTasksRequest request = objectMapper.treeToValue(node, StepikBlockRandomTasksRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockRandomTasksRequest request = objectMapper.readValue(jsonWithName, StepikBlockRandomTasksRequest.class);
             if (!validateRandomTasksRequest(request)) {
                 throw new IllegalArgumentException("Invalid random-tasks request structure");
             }
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse random-tasks request: {}", e.getMessage());
+            log.error("Failed to parse random-tasks request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid random-tasks request format", e);
         }
     }

@@ -20,10 +20,14 @@ public class TextStepParser {
     public StepikBlockRequest parseTextRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "text");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "text");
+                }
             }
-            StepikBlockTextRequest request = objectMapper.treeToValue(node, StepikBlockTextRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockTextRequest request = objectMapper.readValue(jsonWithName, StepikBlockTextRequest.class);
 
             if (!validateTextRequest(request)) {
                 throw new IllegalArgumentException("Invalid text request structure");
@@ -33,7 +37,7 @@ public class TextStepParser {
             return request;
 
         } catch (Exception e) {
-            log.error("Failed to parse text request: {}", e.getMessage());
+            log.error("Failed to parse text request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid text request format", e);
         }
     }
