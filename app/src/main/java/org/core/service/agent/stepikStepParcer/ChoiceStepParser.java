@@ -23,17 +23,21 @@ public class ChoiceStepParser {
     public StepikBlockRequest parseChoiceRequest(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
-            if (node.isObject() && !node.has("name")) {
-                ((ObjectNode) node).put("name", "choice");
+            if (node.isObject()) {
+                ObjectNode objectNode = (ObjectNode) node;
+                if (!objectNode.has("name") || objectNode.get("name").isNull()) {
+                    objectNode.put("name", "choice");
+                }
             }
-            StepikBlockChoiceRequest request = objectMapper.treeToValue(node, StepikBlockChoiceRequest.class);
+            String jsonWithName = objectMapper.writeValueAsString(node);
+            StepikBlockChoiceRequest request = objectMapper.readValue(jsonWithName, StepikBlockChoiceRequest.class);
             if (!validateChoiceRequest(request)) {
                 throw new IllegalArgumentException("Invalid choice request structure");
             }
 
             return request;
         } catch (Exception e) {
-            log.error("Failed to parse choice request: {}", e.getMessage());
+            log.error("Failed to parse choice request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid choice request format", e);
         }
     }
