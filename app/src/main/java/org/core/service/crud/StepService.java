@@ -6,13 +6,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
+import org.core.domain.StepType;
 import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
+import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.StepikBlockResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.core.exception.exceptions.LessonNotFoundException;
 import org.core.exception.exceptions.StepNotFoundException;
+import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.repository.StepRepository;
 import org.springframework.stereotype.Service;
@@ -138,10 +141,6 @@ public class StepService {
         return maxPosition == null ? 1 : maxPosition + 1;
     }
 
-    private void shiftStepsPositions(Long lessonId, Integer fromPosition) {
-        stepRepository.incrementPositionsFrom(lessonId, fromPosition);
-    }
-
     private void changeStepPosition(Step step, Integer newPosition) {
         Long lessonId = step.getLesson().getId();
         Integer oldPosition = step.getPosition();
@@ -175,6 +174,7 @@ public class StepService {
                 .position(step.getPosition())
                 .cost(step.getCost())
                 .stepikBlock(stepikBlock)
+                .stepikBlockData(step.getStepikBlockData())
                 .stepikStepId(step.getStepikStepId())
                 .createdAt(step.getCreatedAt())
                 .updatedAt(step.getUpdatedAt())

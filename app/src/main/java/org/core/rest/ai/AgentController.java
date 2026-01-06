@@ -5,14 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.service.agent.AgentService;
+import org.core.service.agent.StepikRequestParser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import org.core.dto.stepik.step.StepikBlockRequest;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -21,6 +18,7 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 public class AgentController {
     
     private final AgentService agentService;
+    private final StepikRequestParser stepikRequestParser;
     
     @PostMapping("/chat")
     public ResponseEntity<String> chat(
@@ -62,6 +60,25 @@ public class AgentController {
             return ResponseEntity.ok(stepikRequest);
         } catch (Exception e) {
             log.error("Error in generateStep endpoint: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/modify-stepContent")
+    public ResponseEntity<StepikBlockRequest> modifyStepContent(
+            @RequestParam String sessionId,
+            @RequestParam String stepType,
+            @RequestParam String userInput,
+            @RequestBody String previousStepikBlockRequestJson) {
+
+        try {
+            StepikBlockRequest previousStepikBlockRequest = stepikRequestParser.parseRequest(previousStepikBlockRequestJson, stepType);
+            
+            StepikBlockRequest stepikRequest = agentService.modifyStepContent(sessionId, userInput, stepType, previousStepikBlockRequest);
+            log.info("Modified step content of type {} for session {}", stepType, sessionId);
+            return ResponseEntity.ok(stepikRequest);
+        } catch (Exception e) {
+            log.error("Error in modifyStepContent endpoint: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

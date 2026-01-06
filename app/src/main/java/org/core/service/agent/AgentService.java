@@ -1,5 +1,6 @@
 package org.core.service.agent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.stepik.step.StepikBlockRequest;
@@ -16,20 +17,22 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class AgentService {
-    
+
+    private final ObjectMapper objectMapper;
     private final ContextStore contextStore;
     private final LlmProvider llmProvider;
     private final SystemPromptService systemPromptService;
     private final StepikResponseParser responseParser;
     private final StepTypeClassifier stepTypeClassifier;
 
-    public AgentService(ContextStore contextStore,
+    public AgentService(ObjectMapper objectMapper, ContextStore contextStore,
                         SystemPromptService systemPromptService,
                         StepikResponseParser responseParser,
                         StepTypeClassifier stepTypeClassifier,
                         @Value("${default.llm.provider}") String defaultProvider,
                         @Qualifier("yandexProvider") LlmProvider yandexProvider,
                         @Qualifier("deepseekProvider") LlmProvider deepseekProvider){
+        this.objectMapper = objectMapper;
         this.systemPromptService = systemPromptService;
         this.responseParser = responseParser;
         this.contextStore = contextStore;
@@ -114,10 +117,68 @@ public class AgentService {
         }
     }
 
-    private List<ChatMessage> processHistoryMessage(String sessionId){
+    public StepikBlockRequest modifyStepContent(String sessionId, String userInput, String stepType, StepikBlockRequest stepikBlockRequest) {
+        try {
+            List<ChatMessage> history = contextStore.getHistory(sessionId);
+            List<ChatMessage> historyForLLM = new ArrayList<>();
+
+            Optional<String> existingStepType = extractStepTypeFromHistory(contextStore.getHistory(sessionId));
+            if(existingStepType.isEmpty() || !existingStepType.get().equals(stepType)) {
+                String systemPrompt = systemPromptService.getPromptForStepType(stepType);
+                ChatMessage systemMessage = ChatMessage.builder()
+                        .role("system")
+                        .content(systemPrompt)
+                        .stepType(stepType)
+                        .build();
+                contextStore.addMessage(sessionId, systemMessage);
+                log.info("Initialized session {} with system prompt for step type {}", sessionId, stepType);
+
+                historyForLLM.add(systemMessage);
+            }else{
+                ChatMessage lastSystemPrompt = history.stream()
+                        .filter(msg -> "system".equals(msg.getRole()))
+                        .reduce((first, second) -> second)
+                        .orElse(null);
+                if (lastSystemPrompt != null) {
+                    historyForLLM.add(lastSystemPrompt);
+                }
+            }
+
+            String messageWithPrevBlockRequestAndNewUserInput = String.format(
+                    "Текущий контент шага (JSON):\n%s\n\nЗапрос пользователя: %s",
+                    objectMapper.writeValueAsString(stepikBlockRequest),
+                    userInput
+            );
+
+            ChatMessage userMessage = ChatMessage.builder()
+                    .role("user")
+                    .content(messageWithPrevBlockRequestAndNewUserInput)
+                    .build();
+            contextStore.addMessage(sessionId, userMessage);
+            historyForLLM.addAll(processHistoryMessage(sessionId));
+
+            String aiResponse = llmProvider.chat(historyForLLM);
+            ChatMessage assistantMessage = ChatMessage.builder()
+                    .role("assistant")
+                    .content(aiResponse)
+                    .build();
+            contextStore.addMessage(sessionId, assistantMessage);
+
+            StepikBlockRequest stepikRequest = responseParser.parseResponse(aiResponse, stepType);
+            log.info("Successfully generated step for session {}, step type: {}", sessionId, stepType);
+            return stepikRequest;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error generating step for session {}: {}", sessionId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate step. Please try again.", e);
+        }
+    }
+
+    private List<ChatMessage> processHistoryMessage(String sessionId) {
         List<ChatMessage> history = contextStore.getHistory(sessionId);
         int windowSize = 16;
-        if(history.isEmpty()) return history;
+        if (history.isEmpty()) return history;
 
         int startIndex = Math.max(0, history.size() - windowSize);
         return history.subList(startIndex, history.size())
