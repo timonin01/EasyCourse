@@ -33,9 +33,9 @@ public class StepikFullCourseService {
             throw new CourseNotFoundException("Not found course with stepikCourseId: " + stepikCourseId);
         }
 
-        List<ModelResponseDTO> modelResponseDTOS = dataService.getSectionsResponseDTO(stepikCourseId);
-        List<LessonResponseDTO> lessonsResponseDTOS = dataService.getLessonsResponseDTO(modelResponseDTOS);
-        List<StepResponseDTO> stepResponseDTOS = dataService.getStepResponseDTO(lessonsResponseDTOS);
+        List<ModelResponseDTO> modelResponseDTOS = dataService.getSectionsResponseDTO(stepikCourseId, userId);
+        List<LessonResponseDTO> lessonsResponseDTOS = dataService.getLessonsResponseDTO(modelResponseDTOS, userId);
+        List<StepResponseDTO> stepResponseDTOS = dataService.getStepResponseDTO(lessonsResponseDTOS, userId);
 
         Course existingCourse = courseRepository.findByStepikCourseId(stepikCourseId);
         Long existingCourseId = existingCourse != null ? existingCourse.getId() : null;

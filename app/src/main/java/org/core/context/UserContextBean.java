@@ -1,17 +1,26 @@
 package org.core.context;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.context.annotation.Scope;
-import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.stereotype.Component;
 
-@Getter
-@Setter
 @Component
-@Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class UserContextBean {
     
-    private Long userId;
+    private static final ThreadLocal<Long> userIdHolder = new ThreadLocal<>();
+    
+    public Long getUserId() {
+        return userIdHolder.get();
+    }
+    
+    public void setUserId(Long userId) {
+        if (userId != null) {
+            userIdHolder.set(userId);
+        } else {
+            userIdHolder.remove();
+        }
+    }
+    
+    public void clear() {
+        userIdHolder.remove();
+    }
 
 }

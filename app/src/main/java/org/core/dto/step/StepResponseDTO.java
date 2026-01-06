@@ -1,5 +1,6 @@
 package org.core.dto.step;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -37,6 +38,7 @@ public class StepResponseDTO {
         @JsonSubTypes.Type(value = StepikBlockTableResponse.class, name = "table")
     })
     private StepikBlockResponse stepikBlock;
+    private String stepikBlockData;
     private Long stepikStepId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -51,6 +53,14 @@ public class StepResponseDTO {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to convert stepikBlock to JSON", e);
         }
+    }
+
+    @JsonGetter("stepikBlockData")
+    public String getStepikBlockData() {
+        if (stepikBlockData != null) {
+            return stepikBlockData;
+        }
+        return getStepikBlockJson();
     }
 
 }
