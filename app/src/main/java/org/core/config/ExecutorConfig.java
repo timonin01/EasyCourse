@@ -19,6 +19,11 @@ public class ExecutorConfig {
     @Value("${stepPool}")
     private int stepPoolSize;
 
+    @Bean(name = "virtualExecutor", destroyMethod = "shutdown")
+    public ExecutorService virtualExecutor(){
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
     @Bean(name = "sectionExecutor", destroyMethod = "shutdown")
     public ExecutorService sectionExecutor(){
         return Executors.newFixedThreadPool(sectionPoolSize);

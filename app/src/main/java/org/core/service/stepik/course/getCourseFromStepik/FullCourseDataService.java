@@ -1,5 +1,6 @@
 package org.core.service.stepik.course.getCourseFromStepik;
 
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
@@ -38,14 +39,8 @@ import java.util.concurrent.ExecutorService;
 @RequiredArgsConstructor
 public class FullCourseDataService {
 
-    @Qualifier("sectionExecutor")
-    private final ExecutorService sectionExecutor;
-
-    @Qualifier("lessonExecutor")
-    private final ExecutorService lessonExecutor;
-
-    @Qualifier("stepExecutor")
-    private final ExecutorService stepExecutor;
+    @Resource(name = "virtualExecutor")
+    private final ExecutorService virtualExecutor;
 
     private final StepikSectionService stepikSectionService;
     private final StepikLessonService stepikLessonService;
@@ -81,7 +76,7 @@ public class FullCourseDataService {
                     } finally {
                         userContextBean.clear();
                     }
-                },sectionExecutor)).toList();
+                },virtualExecutor)).toList();
         return modelResponseDTOS.stream()
                 .map(CompletableFuture::join)
                 .filter(Objects::nonNull)
@@ -114,7 +109,7 @@ public class FullCourseDataService {
                                     } finally {
                                         userContextBean.clear();
                                     }
-                                }, lessonExecutor))
+                                }, virtualExecutor))
                                 .map(CompletableFuture::join)
                                 .filter(Objects::nonNull)
                                 .toList();
@@ -124,7 +119,7 @@ public class FullCourseDataService {
                     } finally {
                         userContextBean.clear();
                     }
-                }, sectionExecutor))
+                }, virtualExecutor))
                 .toList();
         return lessonsResponseDTOS.stream()
                 .map(CompletableFuture::join)
@@ -159,7 +154,7 @@ public class FullCourseDataService {
                                     } finally {
                                         userContextBean.clear();
                                     }
-                                }, stepExecutor))
+                                }, virtualExecutor))
                                 .map(CompletableFuture::join)
                                 .filter(Objects::nonNull)
                                 .toList();
@@ -169,7 +164,7 @@ public class FullCourseDataService {
                     } finally {
                         userContextBean.clear();
                     }
-                },lessonExecutor))
+                },virtualExecutor))
                 .toList();
         return stepResponseDTOS.stream()
                 .map(CompletableFuture::join)
