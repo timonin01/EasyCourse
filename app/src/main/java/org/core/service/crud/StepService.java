@@ -1,21 +1,19 @@
 package org.core.service.crud;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
-import org.core.domain.StepType;
 import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
-import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.StepikBlockResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.core.exception.exceptions.LessonNotFoundException;
 import org.core.exception.exceptions.StepNotFoundException;
-import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
 import org.core.repository.StepRepository;
 import org.springframework.stereotype.Service;
@@ -107,9 +105,11 @@ public class StepService {
         }
         if (updateDto.getStepikBlock() != null) {
             try {
-                step.setStepikBlockData(objectMapper.writeValueAsString(updateDto.getStepikBlock()));
+                String serializedBlock = objectMapper.writeValueAsString(updateDto.getStepikBlock());
+                log.debug("Serializing stepik block for step {}: {}", updateDto.getStepId(), serializedBlock);
+                step.setStepikBlockData(serializedBlock);
             } catch (Exception e) {
-                log.error("Error serializing stepik block data", e);
+                log.error("Error serializing stepik block data for step {}", updateDto.getStepId(), e);
                 throw new RuntimeException("Error serializing stepik block data", e);
             }
         }
@@ -161,9 +161,15 @@ public class StepService {
         StepikBlockResponse stepikBlock = null;
         if (step.getStepikBlockData() != null) {
             try {
-                stepikBlock = objectMapper.readValue(step.getStepikBlockData(), StepikBlockResponse.class);
+                JsonNode jsonNode = objectMapper.readTree(step.getStepikBlockData());
+                
+                if (jsonNode.has("name") && !jsonNode.get("name").isNull()) {
+                    stepikBlock = objectMapper.readValue(step.getStepikBlockData(), StepikBlockResponse.class);
+                } else {
+                    log.warn("Step {} has stepikBlockData with null or missing name field, skipping deserialization", step.getId());
+                }
             } catch (RuntimeException | JsonProcessingException e) {
-                log.error("Error deserializing stepik block data", e);
+                log.error("Error deserializing stepik block data for step {}: {}", step.getId(), e.getMessage());
             }
         }
 

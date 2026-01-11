@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.core.annotation.RequiresStepikToken;
 
@@ -50,22 +51,65 @@ public class StepikStepService {
             ResponseEntity<String> rawResponse = restTemplate.exchange(
                 url, HttpMethod.POST, entity, String.class);
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            StepikStepSourceResponse response = objectMapper.readValue(rawResponse.getBody(), StepikStepSourceResponse.class);
-            if (rawResponse.getStatusCode().is2xxSuccessful() && response != null) {
-                if (response.getStepSource() != null) {
+            if (rawResponse.getStatusCode().is2xxSuccessful()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                StepikStepSourceResponse response = objectMapper.readValue(rawResponse.getBody(), StepikStepSourceResponse.class);
+                if (response != null && response.getStepSource() != null) {
                     log.info("Successfully created step in Stepik for step ID: {}", step.getId());
                     return response;
                 } else {
-                    log.error("Step data is null in Stepik response. Full response: {}", response);
+                    log.error("Step data is null in Stepik response. Full response: {}", rawResponse.getBody());
                     throw new StepikStepIntegrationException("No step data in Stepik response");
                 }
             } else {
-                throw new StepikStepIntegrationException("Failed to create step in Stepik");
+                // Обработка ошибок от Stepik API
+                String errorMessage = parseStepikError(rawResponse.getBody());
+                log.error("Failed to create step in Stepik for step ID: {}. Status: {}, Error: {}", 
+                    step.getId(), rawResponse.getStatusCode(), errorMessage);
+                throw new StepikStepIntegrationException(
+                    String.format("%d Bad Request: %s", rawResponse.getStatusCode().value(), errorMessage));
             }
+        } catch (HttpClientErrorException e) {
+            String errorBody = e.getResponseBodyAsString();
+            String errorMessage = parseStepikError(errorBody);
+            log.error("HTTP error creating step in Stepik for step ID: {}. Status: {}, Error: {}", 
+                step.getId(), e.getStatusCode(), errorMessage);
+            throw new StepikStepIntegrationException(errorMessage);
+        } catch (StepikStepIntegrationException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Error creating step in Stepik for step ID: {}: {}", step.getId(), e.getMessage());
+            log.error("Error creating step in Stepik for step ID: {}: {}", step.getId(), e.getMessage(), e);
             throw new StepikStepIntegrationException("Failed to create step in Stepik: " + e.getMessage());
+        }
+    }
+
+    private String parseStepikError(String errorBody) {
+        if (errorBody == null || errorBody.trim().isEmpty()) {
+            return "Unknown error from Stepik API";
+        }
+        try {
+            JsonNode errorNode = objectMapper.readTree(errorBody);
+            if (errorNode.has("block") && errorNode.get("block").isArray()) {
+                JsonNode blockArray = errorNode.get("block");
+                for (JsonNode blockItem : blockArray) {
+                    if (blockItem.has("non_field_errors") && blockItem.get("non_field_errors").isArray()) {
+                        JsonNode errorsArray = blockItem.get("non_field_errors");
+                        for (JsonNode error : errorsArray) {
+                            if (error.has("code") && error.get("code").asText().equals("plugins.matching.errors.pairs-ambiguous")) {
+                                return "Ошибка в шаге типа 'Соответствие': обнаружены дублирующиеся или неоднозначные пары. " +
+                                       "Убедитесь, что все значения в левой и правой колонках уникальны.";
+                            }
+                            if (error.has("text")) {
+                                return error.get("text").asText();
+                            }
+                        }
+                    }
+                }
+            }
+            return errorBody;
+        } catch (Exception e) {
+            log.warn("Failed to parse Stepik error: {}", e.getMessage());
+            return errorBody;
         }
     }
 

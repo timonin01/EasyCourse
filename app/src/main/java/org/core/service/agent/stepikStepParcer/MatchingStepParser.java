@@ -74,6 +74,34 @@ public class MatchingStepParser {
             log.warn("Matching request validation failed: some pairs have empty values");
             return false;
         }
+
+        long uniqueFirsts = pairs.stream()
+                .map(p -> p.getFirst().trim().toLowerCase())
+                .distinct()
+                .count();
+        if (uniqueFirsts != pairs.size()) {
+            log.warn("Matching request validation failed: duplicate 'first' values found (ambiguous pairs)");
+            return false;
+        }
+
+        long uniqueSeconds = pairs.stream()
+                .map(p -> p.getSecond().trim().toLowerCase())
+                .distinct()
+                .count();
+        if (uniqueSeconds != pairs.size()) {
+            log.warn("Matching request validation failed: duplicate 'second' values found (ambiguous pairs)");
+            return false;
+        }
+
+        long uniquePairs = pairs.stream()
+                .map(p -> p.getFirst().trim().toLowerCase() + "|" + p.getSecond().trim().toLowerCase())
+                .distinct()
+                .count();
+        if (uniquePairs != pairs.size()) {
+            log.warn("Matching request validation failed: duplicate pairs found");
+            return false;
+        }
+
         return true;
     }
 }
