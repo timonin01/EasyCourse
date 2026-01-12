@@ -9,8 +9,12 @@ import org.core.domain.Step;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.StepikStepSourceRequestData;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
+import org.core.dto.stepik.step.enterWord.fillBlanks.request.StepikBlockFillBlanksRequest;
+import org.core.dto.stepik.step.enterWord.fillBlanks.request.StepikFillBlanksComponentRequest;
 import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
 
 @Component
 @Slf4j
@@ -30,6 +34,10 @@ public class StepikStepSourceDataRequestBuilder {
         try {
             if (step.getStepikBlockData() != null && !step.getStepikBlockData().trim().isEmpty()) {
                 StepikBlockRequest stepikBlockRequest = objectMapper.readValue(step.getStepikBlockData(), StepikBlockRequest.class);
+                
+                // Валидация и исправление для fill-blanks
+                validateAndFixFillBlanksBlock(stepikBlockRequest, step.getId());
+                
                 requestData.setBlock(stepikBlockRequest);
             } else {
                 log.warn("No stepikBlockData found for step ID: {}, creating default text block", step.getId());
@@ -55,6 +63,10 @@ public class StepikStepSourceDataRequestBuilder {
         try {
             if (step.getStepikBlockData() != null && !step.getStepikBlockData().trim().isEmpty()) {
                 StepikBlockRequest stepikBlockRequest = objectMapper.readValue(step.getStepikBlockData(), StepikBlockRequest.class);
+                
+                // Валидация и исправление для fill-blanks
+                validateAndFixFillBlanksBlock(stepikBlockRequest, step.getId());
+                
                 requestData.setBlock(stepikBlockRequest);
             } else {
                 log.warn("No stepikBlockData found for step ID: {}, creating default text block", step.getId());
@@ -67,5 +79,26 @@ public class StepikStepSourceDataRequestBuilder {
             throw new StepikStepIntegrationException("Failed to parse stepikBlockData: " + e.getMessage());
         }
         return requestData;
+    }
+
+    /**
+     * Валидация и исправление для fill-blanks шагов.
+     * Stepik API требует обязательное поле 'options' в components[0].
+     * Если options отсутствует или пустое, устанавливаем пустой список.
+     */
+    private void validateAndFixFillBlanksBlock(StepikBlockRequest blockRequest, Long stepId) {
+        if (blockRequest instanceof StepikBlockFillBlanksRequest fillBlanksRequest) {
+            if (fillBlanksRequest.getSource() != null && fillBlanksRequest.getSource().getComponents() != null) {
+                for (int i = 0; i < fillBlanksRequest.getSource().getComponents().size(); i++) {
+                    StepikFillBlanksComponentRequest component = fillBlanksRequest.getSource().getComponents().get(i);
+                    if (component.getOptions() == null || component.getOptions().isEmpty()) {
+                        log.warn("Step {} has fill-blanks component[{}] with missing or empty options. " +
+                                "Stepik API requires this field. Adding empty list to prevent validation error.", stepId, i);
+                        // Устанавливаем пустой список вместо null, чтобы избежать ошибки валидации Stepik
+                        component.setOptions(new ArrayList<>());
+                    }
+                }
+            }
+        }
     }
 }
