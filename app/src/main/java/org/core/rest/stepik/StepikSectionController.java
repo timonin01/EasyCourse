@@ -4,13 +4,12 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
-import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.service.crud.ModelService;
 import org.core.service.stepik.StepikCascadeDeleteService;
+import org.core.service.stepik.StepikCascadeSyncService;
 import org.core.service.stepik.section.StepikSectionSyncService;
-import org.core.service.stepik.section.SyncAllCourseSectionsFromStepikService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +26,7 @@ public class StepikSectionController {
     private final ModelService modelService;
     private final UserContextBean userContextBean;
 
+    private final StepikCascadeSyncService cascadeSyncService;
     private final StepikCascadeDeleteService cascadeDeleteService;
 
     @GetMapping("/unsynced-models/{courseId}")
@@ -44,8 +44,7 @@ public class StepikSectionController {
             @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting sync for model: {}", modelId);
-            userContextBean.setUserId(userId);
-            StepikSectionResponseData responseData = stepikSectionSyncService.syncModelWithStepik(modelId);
+            StepikSectionResponseData responseData = cascadeSyncService.syncFullSectionById(modelId, null, userId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
             log.warn("Sync failed for model {}: {}", modelId, e.getMessage());
@@ -89,15 +88,5 @@ public class StepikSectionController {
             log.error("Failed to delete model {} from Stepik: {}", modelId, e.getMessage());
             return ResponseEntity.internalServerError().body("Failed to delete model from Stepik: " + e.getMessage());
         }
-    }
-
-    @PostMapping("/sync-course-sections")
-    public ResponseEntity<List<ModelResponseDTO>> syncAllCourseSectionFromStepik(
-            @RequestParam Long courseId,
-            @RequestHeader("User-Id") Long userId){
-        log.info("Syncing all sections for course {} from Stepik", courseId);
-        userContextBean.setUserId(userId);
-        List<ModelResponseDTO> sections = stepikSectionSyncService.syncAllCourseSectionFromStepik(courseId);
-        return ResponseEntity.ok(sections);
     }
 }

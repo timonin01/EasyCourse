@@ -27,7 +27,6 @@ public class StepikLessonSyncService {
     private final LessonService lessonService;
     private final ModelService modelService;
     private final StepikUnitService stepikUnitService;
-    private final SyncAllSectionLessonsFromStepikService syncAllSectionLessonsFromStepikService;
     private final UpdateStepikLessonService updateStepikLessonService;
 
     public LessonCaptchaChallenge syncLessonWithStepik(Long lessonId, String captchaToken) {
@@ -160,9 +159,5 @@ public class StepikLessonSyncService {
             log.info("Updated local lesson {} with Stepik ID: {}", lessonId, stepikLessonId);
         }
         return result;
-    }
-
-    public List<LessonResponseDTO> syncAllSectionLessonsFromStepik(Long modelId) {
-        return syncAllSectionLessonsFromStepikService.syncAllSectionLessonsFromStepik(modelId);
     }
 }

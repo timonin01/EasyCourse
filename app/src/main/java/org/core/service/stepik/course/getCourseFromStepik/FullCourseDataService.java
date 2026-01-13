@@ -18,14 +18,13 @@ import org.core.repository.LessonRepository;
 import org.core.repository.ModelRepository;
 import org.core.repository.StepRepository;
 import org.core.service.stepik.lesson.StepikLessonService;
-import org.core.service.stepik.lesson.SyncAllSectionLessonsFromStepikService;
+import org.core.service.stepik.lesson.StepikUnitLessonFetcher;
 import org.core.service.stepik.section.StepikSectionService;
 import org.core.service.stepik.step.StepikStepService;
 import org.core.service.stepik.unit.StepikUnitService;
 import org.core.util.converterToDTO.ConverterStepikLessonResponseDataToLessonResponseDTO;
 import org.core.util.converterToDTO.ConverterStepikSectionResponseDataToModelResponseDTO;
 import org.core.util.converterToDTO.ConverterStepikStepSourceResponseDataToStepResponseDTO;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -47,7 +46,7 @@ public class FullCourseDataService {
     private final StepikUnitService stepikUnitService;
     private final StepikStepService stepikStepService;
 
-    private final SyncAllSectionLessonsFromStepikService syncAllSectionLessonsFromStepikService;
+    private final StepikUnitLessonFetcher stepikUnitLessonFetcher;
 
     private final ConverterStepikSectionResponseDataToModelResponseDTO sectionConverter;
     private final ConverterStepikLessonResponseDataToLessonResponseDTO lessonConverter;
@@ -88,13 +87,13 @@ public class FullCourseDataService {
                 .map(model -> CompletableFuture.<List<LessonResponseDTO>>supplyAsync(() -> {
                     try {
                         userContextBean.setUserId(userId);
-                        List<Long> unitIds = syncAllSectionLessonsFromStepikService.getSectionUnitIds(model.getStepikSectionId());
+                        List<Long> unitIds = stepikUnitLessonFetcher.getSectionUnitIds(model.getStepikSectionId());
                         return unitIds.stream()
                                 .map(id -> CompletableFuture.supplyAsync(() -> {
                                     try {
                                         // Устанавливаем userId в ThreadLocal для вложенного потока
                                         userContextBean.setUserId(userId);
-                                        Long stepikLessonId = syncAllSectionLessonsFromStepikService.getLessonIdByUnitID(id);
+                                        Long stepikLessonId = stepikUnitLessonFetcher.getLessonIdByUnitID(id);
                                         StepikLessonResponseData stepikLessonResponseData = stepikLessonService.getLessonByStepikId(stepikLessonId);
 
                                         StepikUnitResponseData unit = stepikUnitService.getUnitByLessonId(stepikLessonResponseData.getId());

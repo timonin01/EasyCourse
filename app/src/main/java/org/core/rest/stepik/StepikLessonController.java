@@ -9,6 +9,7 @@ import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.service.crud.LessonService;
 import org.core.service.stepik.StepikCascadeDeleteService;
+import org.core.service.stepik.StepikCascadeSyncService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,7 @@ public class StepikLessonController {
     private final LessonService lessonService;
     private final UserContextBean userContextBean;
 
+    private final StepikCascadeSyncService cascadeSyncService;
     private final StepikCascadeDeleteService cascadeDeleteService;
 
     @GetMapping("/unsynced-lessons/{modelId}")
@@ -44,8 +46,7 @@ public class StepikLessonController {
             @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting sync for lesson: {} with captcha: {}", lessonId, captchaToken != null);
-            userContextBean.setUserId(userId);
-            LessonCaptchaChallenge result = stepikLessonSyncService.syncLessonWithStepik(lessonId, captchaToken);
+            LessonCaptchaChallenge result = cascadeSyncService.syncFullLessonById(lessonId, captchaToken, userId);
             return ResponseEntity.ok(result);
         } catch (IllegalStateException e) {
             log.warn("Sync failed for lesson {}: {}", lessonId, e.getMessage());
@@ -89,15 +90,5 @@ public class StepikLessonController {
             log.error("Failed to delete lesson {} from Stepik: {}", lessonId, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
-    }
-
-    @PostMapping("/sync-section-lessons")
-    public ResponseEntity<List<LessonResponseDTO>> syncAllSectionLessonsFromStepik(
-            @RequestParam Long modelId,
-            @RequestHeader("User-Id") Long userId) {
-        log.info("Syncing all lessons for model {} from Stepik", modelId);
-        userContextBean.setUserId(userId);
-        List<LessonResponseDTO> lessons = stepikLessonSyncService.syncAllSectionLessonsFromStepik(modelId);
-        return ResponseEntity.ok(lessons);
     }
 }

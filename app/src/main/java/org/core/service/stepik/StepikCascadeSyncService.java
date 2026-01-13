@@ -1,4 +1,4 @@
-package org.core.service.stepik.course;
+package org.core.service.stepik;
 
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +9,13 @@ import org.core.domain.Lesson;
 import org.core.domain.Model;
 import org.core.domain.Step;
 import org.core.dto.CourseCaptchaChallenge;
+import org.core.dto.LessonCaptchaChallenge;
+import org.core.dto.stepik.lesson.StepikLessonResponseData;
+import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.repository.CourseRepository;
+import org.core.repository.LessonRepository;
+import org.core.repository.ModelRepository;
+import org.core.service.stepik.course.StepikCourseSyncService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.core.service.stepik.section.StepikSectionSyncService;
 import org.core.service.stepik.step.StepikStepSyncService;
@@ -24,7 +30,7 @@ import java.util.concurrent.ExecutorService;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class SyncFullCourseForStepik {
+public class StepikCascadeSyncService {
 
     @Resource(name = "virtualExecutor")
     private final ExecutorService virtualExecutor;
@@ -36,6 +42,9 @@ public class SyncFullCourseForStepik {
 
     private final CourseRepository courseRepository;
     private final UserContextBean userContextBean;
+
+    private final LessonRepository lessonRepository;
+    private final ModelRepository modelRepository;
 
     public CourseCaptchaChallenge syncFullCourseForStepik(Long courseId, String captchaToken, Long userId){
         CourseCaptchaChallenge result = courseSyncService.syncCourseWithStepik(courseId, captchaToken);
@@ -52,7 +61,6 @@ public class SyncFullCourseForStepik {
             sectionFutures.add(CompletableFuture.runAsync(() -> {
                         try {
                             userContextBean.setUserId(userId);
-
                             if (section.getStepikSectionId() == null) {
                                 log.info("Start sync section with sectionId: {}", section.getId());
                                 sectionSyncService.syncModelWithStepik(section.getId());
@@ -76,8 +84,8 @@ public class SyncFullCourseForStepik {
         List<CompletableFuture<Void>> lessonFutures = new ArrayList<>();
         for(Lesson lesson : sectionLessons){
             lessonFutures.add(CompletableFuture.runAsync(() -> {
-                userContextBean.setUserId(userId);
                 try {
+                    userContextBean.setUserId(userId);
                     if(lesson.getStepikLessonId() == null) {
                         log.info("Start sync lesson with sectionId: {}", lesson.getId());
                         lessonSyncService.syncLessonWithStepik(lesson.getId(), captchaToken);
@@ -99,8 +107,8 @@ public class SyncFullCourseForStepik {
         List<CompletableFuture<Void>> stepFutures = new ArrayList<>();
         for(Step step : lessonSteps){
             stepFutures.add(CompletableFuture.runAsync(() -> {
-                userContextBean.setUserId(userId);
                 try {
+                    userContextBean.setUserId(userId);
                     if(step.getStepikStepId() == null) {
                         log.info("Start sync step with sectionId: {}", step.getId());
                         stepSyncService.syncStepWithStepik(step.getId());
@@ -116,5 +124,64 @@ public class SyncFullCourseForStepik {
         return CompletableFuture.allOf(stepFutures.toArray(new CompletableFuture[0]));
     }
 
+    public StepikSectionResponseData syncFullSectionById(Long modelId, String captchaToken, Long userId){
+        userContextBean.setUserId(userId);
+        try{
+            Model model = modelRepository.findById(modelId)
+                    .orElseThrow(() -> new IllegalArgumentException("Model with id " + modelId + " not found"));
+            sectionSyncService.syncModelWithStepik(modelId);
+
+            StepikSectionResponseData sectionResponseData;
+            if (model.getStepikSectionId() == null) {
+                log.info("Start sync section with sectionId: {}", model.getId());
+                sectionResponseData = sectionSyncService.syncModelWithStepik(model.getId());
+            } else {
+                log.info("Start update section in stepik with sectionId: {}", model.getId());
+                sectionResponseData = sectionSyncService.updateModelInStepik(model.getId());
+            }
+
+            syncAllLessons(model.getLessons(), captchaToken, userId)
+                    .exceptionally(ex -> {
+                        log.error("Error during lesson sync for model {}: {}", modelId, ex.getMessage(), ex);
+                        return null;
+                    })
+                    .join();
+            return sectionResponseData;
+        }finally {
+            userContextBean.clear();
+        }
+    }
+
+    public LessonCaptchaChallenge syncFullLessonById(Long lessonId, String captchaToken, Long userId){
+        userContextBean.setUserId(userId);
+        try{
+            Lesson lesson = lessonRepository.findById(lessonId)
+                    .orElseThrow(() -> new IllegalArgumentException("Lesson with id " + lessonId + " not found"));
+            lessonSyncService.syncLessonWithStepik(lessonId, captchaToken);
+
+            LessonCaptchaChallenge lessonCaptchaChallenge;
+            if(lesson.getStepikLessonId() == null) {
+                log.info("Start sync lesson with sectionId: {}", lesson.getId());
+                lessonCaptchaChallenge = lessonSyncService.syncLessonWithStepik(lesson.getId(), captchaToken);
+            }else {
+                log.info("Start update lesson in stepik with sectionId: {}", lesson.getId());
+                lessonSyncService.updateLessonInStepik(lesson.getId());
+
+                lessonCaptchaChallenge = LessonCaptchaChallenge.noCaptchaNeeded(lessonId);
+                lessonCaptchaChallenge.setCaptchaKey(lesson.getStepikLessonId().toString());
+                lessonCaptchaChallenge.setMessage("Lesson is already synced with Stepik (ID: " + lesson.getStepikLessonId() + ")");
+            }
+
+            syncAllSteps(lesson.getSteps(), userId)
+                    .exceptionally(ex -> {
+                        log.error("Error during step sync for lesson {}: {}", lessonId, ex.getMessage(), ex);
+                        return null;
+                    })
+                    .join();
+            return lessonCaptchaChallenge;
+        }finally {
+            userContextBean.clear();
+        }
+    }
 
 }

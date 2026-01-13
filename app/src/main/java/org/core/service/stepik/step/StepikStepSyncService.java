@@ -22,7 +22,6 @@ import java.util.Optional;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class StepikStepSyncService {
 
-    private final SyncAllLessonStepsFromStepikService syncAllLessonStepsFromStepikService;
     private final UpdateStepikStepService updateStepikStepService;
     private final StepikStepService stepikStepService;
     private final StepService stepService;
@@ -87,10 +86,6 @@ public class StepikStepSyncService {
         log.info("Step {} successfully deleted from Stepik with step ID: {}", stepId, stepDTO.getStepikStepId());
     }
 
-
-    public List<StepResponseDTO> syncAllLessonStepsFromStepik(Long lessonId) {
-        return syncAllLessonStepsFromStepikService.syncAllLessonStepsFromStepik(lessonId);
-    }
     private UpdateStepDTO createUpdateDTO(Long stepId, Long stepikStepId) {
         UpdateStepDTO updateDTO = new UpdateStepDTO();
         updateDTO.setStepId(stepId);

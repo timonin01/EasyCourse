@@ -13,7 +13,7 @@ import org.core.service.stepik.course.StepikCourseSyncService;
 
 import java.util.List;
 
-import org.core.service.stepik.course.SyncFullCourseForStepik;
+import org.core.service.stepik.StepikCascadeSyncService;
 import org.core.service.stepik.course.getCourseFromStepik.StepikFullCourseService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +31,7 @@ public class StepikCourseController {
     private final UserContextBean userContextBean;
 
     private final StepikCascadeDeleteService cascadeDeleteService;
-    private final SyncFullCourseForStepik syncFullCourseForStepik;
+    private final StepikCascadeSyncService stepikCascadeSyncService;
 
     @GetMapping("/unsynced-courses/{userId}")
     public List<CourseResponseDTO> getUnsyncedCoursesByUserId(@PathVariable Long userId) {
@@ -48,7 +48,7 @@ public class StepikCourseController {
         try {
             log.info("Starting sync for course: {} with captcha: {}", courseId, captchaToken != null);
             userContextBean.setUserId(userId);
-            CourseCaptchaChallenge result = syncFullCourseForStepik.syncFullCourseForStepik(courseId, captchaToken, userId);
+            CourseCaptchaChallenge result = stepikCascadeSyncService.syncFullCourseForStepik(courseId, captchaToken, userId);
             return ResponseEntity.ok(result);
         } catch (IllegalStateException e) {
             log.warn("Sync failed for course {}: {}", courseId, e.getMessage());

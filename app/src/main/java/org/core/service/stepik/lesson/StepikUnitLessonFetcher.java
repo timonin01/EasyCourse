@@ -6,14 +6,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.annotation.RequiresStepikToken;
-import org.core.dto.lesson.CreateLessonDTO;
-import org.core.dto.lesson.LessonResponseDTO;
-import org.core.dto.lesson.UpdateLessonDTO;
-import org.core.dto.model.ModelResponseDTO;
-import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.exception.exceptions.StepikStepIntegrationException;
-import org.core.service.crud.LessonService;
-import org.core.service.crud.ModelService;
 import org.core.util.HeaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -25,57 +18,18 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class SyncAllSectionLessonsFromStepikService {
+public class StepikUnitLessonFetcher {
 
     @Value("${stepik.api.base-url}")
     private String baseUrl;
 
-    private final StepikLessonService stepikLessonService;
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    private final LessonService lessonService;
-    private final ModelService modelService;
-
-    public List<LessonResponseDTO> syncAllSectionLessonsFromStepik(Long modelId) {
-        ModelResponseDTO model = modelService.getModelBuModelId(modelId);
-        if (model.getStepikSectionId() == null) {
-            throw new StepikStepIntegrationException("Model " + modelId + " is not synced with Stepik (no stepikSectionId)");
-        }
-
-        Long sectionId = model.getStepikSectionId();
-        try {
-            List<Long> unitIds = getSectionUnitIds(sectionId);
-
-            List<LessonResponseDTO> syncedLessons = new ArrayList<>();
-            List<LessonResponseDTO> localLessons = lessonService.getModelLessonsByModelId(modelId);
-            for (Long unitId : unitIds) {
-                try {
-                    Long lessonId = getLessonIdByUnitID(unitId);
-                    if (lessonId != null) {
-                        log.info("Processing lesson {} from unit {}", lessonId, unitId);
-                        StepikLessonResponseData stepikLesson = stepikLessonService.getLessonByStepikId(lessonId);
-                        LessonResponseDTO syncedLesson = syncSingleLessonFromStepik(modelId, stepikLesson, localLessons);
-                        syncedLessons.add(syncedLesson);
-                        log.info("Successfully synced lesson {} from Stepik", lessonId);
-                    }
-                } catch (Exception e) {
-                    log.error("Failed to sync lesson from unit {}: {}", unitId, e.getMessage());
-                }
-            }
-
-            return syncedLessons;
-        } catch (Exception e) {
-            log.error("Error syncing lessons for section {} from Stepik: {}", sectionId, e.getMessage());
-            throw new StepikStepIntegrationException("Failed to sync lessons for section " + sectionId + 
-                " from Stepik: " + e.getMessage());
-        }
-    }
 
     @RequiresStepikToken
     public List<Long> getSectionUnitIds(Long sectionId) {
@@ -152,48 +106,5 @@ public class SyncAllSectionLessonsFromStepikService {
             throw new StepikStepIntegrationException("Failed to get unit " + unitId +
                     " from Stepik: " + e.getMessage());
         }
-    }
-
-    private LessonResponseDTO syncSingleLessonFromStepik(Long modelId, StepikLessonResponseData stepikLesson, List<LessonResponseDTO> localLessons) {
-        Optional<LessonResponseDTO> localLesson = localLessons.stream()
-                .filter(lesson -> lesson.getStepikLessonId() != null && lesson.getStepikLessonId().equals(stepikLesson.getId()))
-                .findFirst();
-
-        if (localLesson.isPresent()) {
-            log.info("Lesson {} already exists in database, updating it", stepikLesson.getId());
-            return updateExistingLessonFromStepik(localLesson.get(), stepikLesson);
-        } else {
-            log.info("Lesson {} does not exist in database, creating new one", stepikLesson.getId());
-            return createNewLessonFromStepik(modelId, stepikLesson);
-        }
-    }
-
-    private LessonResponseDTO updateExistingLessonFromStepik(LessonResponseDTO existingLesson, StepikLessonResponseData stepikLesson) {
-        UpdateLessonDTO updateDTO = new UpdateLessonDTO();
-        updateDTO.setLessonId(existingLesson.getId());
-        updateDTO.setTitle(stepikLesson.getTitle());
-        updateDTO.setDescription(stepikLesson.getDescription());
-        updateDTO.setPosition(stepikLesson.getPosition());
-
-        return lessonService.updateLesson(updateDTO);
-    }
-
-    private LessonResponseDTO createNewLessonFromStepik(Long modelId, StepikLessonResponseData stepikLesson) {
-        CreateLessonDTO createDTO = new CreateLessonDTO();
-        createDTO.setModelId(modelId);
-        createDTO.setTitle(stepikLesson.getTitle());
-        createDTO.setDescription(stepikLesson.getDescription());
-
-        LessonResponseDTO lesson = lessonService.createLesson(createDTO);
-        lessonService.updateLessonStepikLessonId(lesson.getId(), stepikLesson.getId());
-
-        if (!stepikLesson.getPosition().equals(lesson.getPosition())) {
-            UpdateLessonDTO updateDTO = new UpdateLessonDTO();
-            updateDTO.setLessonId(lesson.getId());
-            updateDTO.setPosition(stepikLesson.getPosition());
-            lesson = lessonService.updateLesson(updateDTO);
-        }
-
-        return lessonService.getLessonByLessonID(lesson.getId());
     }
 }

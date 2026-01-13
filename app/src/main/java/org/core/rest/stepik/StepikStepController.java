@@ -55,16 +55,4 @@ public class StepikStepController {
         stepikStepSyncService.deleteStepFromStepik(stepId);
         return ResponseEntity.ok().build();
     }
-
-    @PostMapping("/sync-lesson-steps")
-    public ResponseEntity<List<StepResponseDTO>> syncAllLessonStepsFromStepik(
-            @RequestParam Long lessonId,
-            @RequestHeader("User-Id") Long userId) {
-
-        log.info("Syncing all steps for lesson {} from Stepik for user {}", lessonId, userId);
-        userContextBean.setUserId(userId);
-
-        List<StepResponseDTO> syncedSteps = stepikStepSyncService.syncAllLessonStepsFromStepik(lessonId);
-        return ResponseEntity.ok(syncedSteps);
-    }
 }

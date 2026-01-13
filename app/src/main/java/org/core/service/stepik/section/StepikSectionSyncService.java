@@ -30,7 +30,6 @@ public class StepikSectionSyncService {
     private final CourseService courseService;
     private final LessonService lessonService;
     private final UpdateStepikSectionService updateStepikSectionService;
-    private final SyncAllCourseSectionsFromStepikService syncAllSectionLessonsFromStepik;
     private final StepikLessonSyncService stepikLessonSyncService;
 
     public StepikSectionResponseData syncModelWithStepik(Long modelId) {
@@ -43,7 +42,6 @@ public class StepikSectionSyncService {
             modelService.updateModelStepikSectionId(modelId, sectionData.getId());
             log.info("Model {} successfully synced with Stepik section ID: {}", modelId, sectionData.getId());
             
-            // Синхронизируем все уроки модуля
             syncAllModelLessons(modelId);
         }
         return sectionData;
@@ -132,9 +130,5 @@ public class StepikSectionSyncService {
         model.setCourse(course);
         
         return model;
-    }
-
-    public List<ModelResponseDTO> syncAllCourseSectionFromStepik(Long courseId) {
-        return syncAllSectionLessonsFromStepik.syncAllCourseSectionFromStepik(courseId);
     }
 }
