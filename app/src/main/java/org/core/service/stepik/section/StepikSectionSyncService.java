@@ -14,6 +14,8 @@ import org.core.exception.exceptions.StepikSectionIntegrationException;
 import org.core.service.crud.ModelService;
 import org.core.service.crud.CourseService;
 import org.core.service.crud.LessonService;
+import org.core.service.stepik.lesson.StepikLessonSyncService;
+import org.core.dto.lesson.LessonResponseDTO;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,6 +31,7 @@ public class StepikSectionSyncService {
     private final LessonService lessonService;
     private final UpdateStepikSectionService updateStepikSectionService;
     private final SyncAllCourseSectionsFromStepikService syncAllSectionLessonsFromStepik;
+    private final StepikLessonSyncService stepikLessonSyncService;
 
     public StepikSectionResponseData syncModelWithStepik(Long modelId) {
         ModelResponseDTO modelDTO = modelService.getModelBuModelId(modelId);
@@ -39,8 +42,30 @@ public class StepikSectionSyncService {
         if (sectionData != null) {
             modelService.updateModelStepikSectionId(modelId, sectionData.getId());
             log.info("Model {} successfully synced with Stepik section ID: {}", modelId, sectionData.getId());
+            
+            // Синхронизируем все уроки модуля
+            syncAllModelLessons(modelId);
         }
         return sectionData;
+    }
+    
+    private void syncAllModelLessons(Long modelId) {
+        List<LessonResponseDTO> lessons = lessonService.getModelLessonsByModelId(modelId);
+        log.info("Syncing {} lessons for model {}", lessons.size(), modelId);
+        
+        for (LessonResponseDTO lesson : lessons) {
+            try {
+                if (lesson.getStepikLessonId() == null) {
+                    log.info("Syncing lesson {} with Stepik", lesson.getId());
+                    stepikLessonSyncService.syncLessonWithStepik(lesson.getId(), null);
+                } else {
+                    log.info("Lesson {} already synced with Stepik (ID: {}), skipping", lesson.getId(), lesson.getStepikLessonId());
+                }
+            } catch (Exception e) {
+                log.error("Failed to sync lesson {} with Stepik: {}", lesson.getId(), e.getMessage(), e);
+                // Продолжаем синхронизацию остальных уроков даже при ошибке
+            }
+        }
     }
 
     public StepikSectionResponseData updateModelInStepik(Long modelId) {

@@ -8,6 +8,7 @@ import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.FullCourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.service.crud.CourseService;
+import org.core.service.stepik.StepikCascadeDeleteService;
 import org.core.service.stepik.course.StepikCourseSyncService;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class StepikCourseController {
     private final CourseService courseService;
     private final UserContextBean userContextBean;
 
+    private final StepikCascadeDeleteService cascadeDeleteService;
     private final SyncFullCourseForStepik syncFullCourseForStepik;
 
     @GetMapping("/unsynced-courses/{userId}")
@@ -84,7 +86,7 @@ public class StepikCourseController {
         try {
             log.info("Starting deletion for course: {}", courseId);
             userContextBean.setUserId(userId);
-            stepikCourseSyncService.deleteCourseFromStepik(courseId);
+            cascadeDeleteService.deleteFullCourseFromStepik(courseId, userId);
             return ResponseEntity.ok("Course successfully deleted from Stepik");
         } catch (IllegalStateException e) {
             log.warn("Deletion failed for course {}: {}", courseId, e.getMessage());

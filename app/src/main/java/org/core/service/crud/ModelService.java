@@ -106,12 +106,12 @@ public class ModelService {
         log.info("Deleted model with ID: {} from course: {}", modelId, courseId);
     }
 
-    public ModelResponseDTO updateModelStepikSectionId(Long modelId, Long stepikSectionId) {
+    public void updateModelStepikSectionId(Long modelId, Long stepikSectionId) {
         Model model = findModelByModelId(modelId);
         model.setStepikSectionId(stepikSectionId);
         Model savedModel = modelRepository.save(model);
         log.info("Updated model ID: {} with Stepik section ID: {}", modelId, stepikSectionId);
-        return mapToResponseDTO(savedModel);
+        mapToResponseDTO(savedModel);
     }
 
     private Model findModelByModelId(Long modelId){

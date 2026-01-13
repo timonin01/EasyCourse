@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
-import org.core.service.stepik.step.StepikStepService;
 import org.core.service.stepik.step.StepikStepSyncService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +27,7 @@ public class StepikStepController {
 
         log.info("Syncing step {} with Stepik for user {}", stepId, userId);
         userContextBean.setUserId(userId);
-        
+
         StepikStepSourceResponseData result = stepikStepSyncService.syncStepWithStepik(stepId);
         return ResponseEntity.ok(result);
     }
@@ -37,10 +36,10 @@ public class StepikStepController {
     public ResponseEntity<StepikStepSourceResponseData> updateStepInStepik(
             @PathVariable Long stepId,
             @RequestHeader("User-Id") Long userId) {
-        
+
         log.info("Updating step {} in Stepik for user {}", stepId, userId);
         userContextBean.setUserId(userId);
-        
+
         StepikStepSourceResponseData result = stepikStepSyncService.updateStepInStepik(stepId);
         return ResponseEntity.ok(result);
     }
@@ -49,10 +48,10 @@ public class StepikStepController {
     public ResponseEntity<Void> deleteStepFromStepik(
             @PathVariable Long stepId,
             @RequestHeader("User-Id") Long userId) {
-        
+
         log.info("Deleting step {} from Stepik for user {}", stepId, userId);
         userContextBean.setUserId(userId);
-        
+
         stepikStepSyncService.deleteStepFromStepik(stepId);
         return ResponseEntity.ok().build();
     }
@@ -61,10 +60,10 @@ public class StepikStepController {
     public ResponseEntity<List<StepResponseDTO>> syncAllLessonStepsFromStepik(
             @RequestParam Long lessonId,
             @RequestHeader("User-Id") Long userId) {
-        
+
         log.info("Syncing all steps for lesson {} from Stepik for user {}", lessonId, userId);
         userContextBean.setUserId(userId);
-        
+
         List<StepResponseDTO> syncedSteps = stepikStepSyncService.syncAllLessonStepsFromStepik(lessonId);
         return ResponseEntity.ok(syncedSteps);
     }

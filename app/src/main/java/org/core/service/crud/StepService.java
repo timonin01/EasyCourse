@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -129,6 +130,18 @@ public class StepService {
         reorderStepsAfterDeletion(lessonId, position);
 
         log.info("Step deleted with ID: {} from lesson: {}", stepId, lessonId);
+    }
+
+    public void updateStepStepikStepId(Long stepId, Long stepikStepId){
+        Optional<Step> optionalStep = stepRepository.findById(stepId);
+        if(optionalStep.isEmpty()){
+            log.error("Step with stepId: {} not found", stepId);
+            throw new IllegalArgumentException("Step with stepId: " + stepId +" not found");
+        }
+        Step step = optionalStep.get();
+        step.setStepikStepId(stepikStepId);
+        Step savedStep = stepRepository.save(step);
+        log.info("Step with stepID: {} saved with stepikStepId: {}", step, stepikStepId);
     }
 
     private Step getStepByStepId(Long stepId){

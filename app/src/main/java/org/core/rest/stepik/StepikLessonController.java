@@ -8,6 +8,7 @@ import org.core.dto.LessonCaptchaChallenge;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.service.crud.LessonService;
+import org.core.service.stepik.StepikCascadeDeleteService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,8 @@ public class StepikLessonController {
     private final StepikLessonSyncService stepikLessonSyncService;
     private final LessonService lessonService;
     private final UserContextBean userContextBean;
+
+    private final StepikCascadeDeleteService cascadeDeleteService;
 
     @GetMapping("/unsynced-lessons/{modelId}")
     public List<LessonResponseDTO> getUnsyncedLessonsByModelId(
@@ -77,8 +80,7 @@ public class StepikLessonController {
             @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting deletion of lesson: {}", lessonId);
-            userContextBean.setUserId(userId);
-            stepikLessonSyncService.deleteLessonFromStepik(lessonId);
+            cascadeDeleteService.deleteFullLessonFromStepikById(lessonId, userId);
             return ResponseEntity.ok().build();
         } catch (IllegalStateException e) {
             log.warn("Deletion failed for lesson {}: {}", lessonId, e.getMessage());

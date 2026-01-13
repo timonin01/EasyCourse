@@ -83,8 +83,7 @@ public class StepikStepSyncService {
         updateStepikStepService.performStepikPositionShiftAfterDeletion(lessonId, deletedPosition);
         stepikStepService.deleteStep(stepDTO.getStepikStepId());
 
-        stepService.deleteStep(stepId);
-        
+        stepService.updateStepStepikStepId(stepId, null);
         log.info("Step {} successfully deleted from Stepik with step ID: {}", stepId, stepDTO.getStepikStepId());
     }
 

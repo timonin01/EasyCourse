@@ -8,6 +8,7 @@ import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.model.ModelResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.service.crud.ModelService;
+import org.core.service.stepik.StepikCascadeDeleteService;
 import org.core.service.stepik.section.StepikSectionSyncService;
 import org.core.service.stepik.section.SyncAllCourseSectionsFromStepikService;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,8 @@ public class StepikSectionController {
     private final StepikSectionSyncService stepikSectionSyncService;
     private final ModelService modelService;
     private final UserContextBean userContextBean;
+
+    private final StepikCascadeDeleteService cascadeDeleteService;
 
     @GetMapping("/unsynced-models/{courseId}")
     public List<ModelResponseDTO> getUnsyncedModelsByCourseId(
@@ -77,8 +80,7 @@ public class StepikSectionController {
             @RequestHeader("User-Id") Long userId) {
         try {
             log.info("Starting deletion for model: {}", modelId);
-            userContextBean.setUserId(userId);
-            stepikSectionSyncService.deleteModelFromStepik(modelId);
+            cascadeDeleteService.deleteFullSectionFromStepikById(modelId, userId);
             return ResponseEntity.ok("Model section successfully deleted from Stepik");
         } catch (IllegalStateException e) {
             log.warn("Deletion failed for model {}: {}", modelId, e.getMessage());

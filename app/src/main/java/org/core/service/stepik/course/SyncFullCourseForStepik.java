@@ -49,14 +49,22 @@ public class SyncFullCourseForStepik {
 
         List<CompletableFuture<Void>> sectionFutures = new ArrayList<>();
         for (Model section : courseSections) {
-            if (section.getStepikSectionId() == null) {
-                log.info("Start sync section with sectionId: {}", section.getId());
-                sectionSyncService.syncModelWithStepik(section.getId());
-            } else {
-                log.info("Start update section in stepik with sectionId: {}", section.getId());
-                sectionSyncService.updateModelInStepik(section.getId());
-            }
-            sectionFutures.add(syncAllLessons(section.getLessons(), captchaToken, userId));
+            sectionFutures.add(CompletableFuture.runAsync(() -> {
+                        try {
+                            userContextBean.setUserId(userId);
+
+                            if (section.getStepikSectionId() == null) {
+                                log.info("Start sync section with sectionId: {}", section.getId());
+                                sectionSyncService.syncModelWithStepik(section.getId());
+                            } else {
+                                log.info("Start update section in stepik with sectionId: {}", section.getId());
+                                sectionSyncService.updateModelInStepik(section.getId());
+                            }
+                        } finally {
+                            userContextBean.clear();
+                        }
+                    })
+                    .thenCompose(s -> syncAllLessons(section.getLessons(), captchaToken, userId)));
         }
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(sectionFutures.toArray(new CompletableFuture[0]));
         allFutures.join();
