@@ -5,17 +5,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
 import org.core.domain.Lesson;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.domain.Step;
 import org.core.dto.lesson.LessonResponseDTO;
-import org.core.dto.model.ModelResponseDTO;
+import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.dto.stepik.unit.StepikUnitResponseData;
 import org.core.repository.LessonRepository;
-import org.core.repository.ModelRepository;
+import org.core.repository.SectionRepository;
 import org.core.repository.StepRepository;
 import org.core.service.stepik.lesson.StepikLessonService;
 import org.core.service.stepik.lesson.StepikUnitLessonFetcher;
@@ -52,23 +52,23 @@ public class FullCourseDataService {
     private final ConverterStepikLessonResponseDataToLessonResponseDTO lessonConverter;
     private final ConverterStepikStepSourceResponseDataToStepResponseDTO stepConverter;
 
-    private final ModelRepository modelRepository;
+    private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
     private final StepRepository stepRepository;
     private final UserContextBean userContextBean;
 
-    public List<ModelResponseDTO> getSectionsResponseDTO(Long stepikCourseId, Long userId){
+    public List<SectionResponseDTO> getSectionsResponseDTO(Long stepikCourseId, Long userId){
         List<Long> sectionsIds = stepikSectionService.getCourseSectionIds(stepikCourseId);
 
-        List<CompletableFuture<ModelResponseDTO>> modelResponseDTOS = sectionsIds.stream()
+        List<CompletableFuture<SectionResponseDTO>> modelResponseDTOS = sectionsIds.stream()
                 .map(id -> CompletableFuture.supplyAsync(() -> {
                     try {
                         userContextBean.setUserId(userId);
                         StepikSectionResponseData stepikSectionResponseData = stepikSectionService.getSectionByStepikId(id);
 
-                        Model existingModel = modelRepository.findByStepikSectionId(id);
-                        Long localModelId = existingModel != null ? existingModel.getId() : null;
-                        return sectionConverter.convert(stepikSectionResponseData, localModelId);
+                        Section existingSection = sectionRepository.findByStepikSectionId(id);
+                        Long localSectionId = existingSection != null ? existingSection.getId() : null;
+                        return sectionConverter.convert(stepikSectionResponseData, localSectionId);
                     } catch (Exception e) {
                         log.error("Failed to load section {}: {}", id, e.getMessage(), e);
                         return null;
@@ -82,12 +82,12 @@ public class FullCourseDataService {
                 .toList();
     }
 
-    public List<LessonResponseDTO> getLessonsResponseDTO(List<ModelResponseDTO> modelResponseDTOS, Long userId){
-        List<CompletableFuture<List<LessonResponseDTO>>> lessonsResponseDTOS = modelResponseDTOS.stream()
-                .map(model -> CompletableFuture.<List<LessonResponseDTO>>supplyAsync(() -> {
+    public List<LessonResponseDTO> getLessonsResponseDTO(List<SectionResponseDTO> sectionResponseDTOS, Long userId){
+        List<CompletableFuture<List<LessonResponseDTO>>> lessonsResponseDTOS = sectionResponseDTOS.stream()
+                .map(section -> CompletableFuture.<List<LessonResponseDTO>>supplyAsync(() -> {
                     try {
                         userContextBean.setUserId(userId);
-                        List<Long> unitIds = stepikUnitLessonFetcher.getSectionUnitIds(model.getStepikSectionId());
+                        List<Long> unitIds = stepikUnitLessonFetcher.getSectionUnitIds(section.getStepikSectionId());
                         return unitIds.stream()
                                 .map(id -> CompletableFuture.supplyAsync(() -> {
                                     try {
@@ -101,7 +101,7 @@ public class FullCourseDataService {
 
                                         Lesson existingLesson = lessonRepository.findByStepikLessonId(stepikLessonId);
                                         Long localLessonId = existingLesson != null ? existingLesson.getId() : null;
-                                        return lessonConverter.convert(stepikLessonResponseData, localLessonId, model.getId(), model.getStepikSectionId(), position);
+                                        return lessonConverter.convert(stepikLessonResponseData, localLessonId, section.getId(), section.getStepikSectionId(), position);
                                     } catch (Exception e) {
                                         log.error("Failed to load lesson from unit {}: {}", id, e.getMessage(), e);
                                         return null;
@@ -113,7 +113,7 @@ public class FullCourseDataService {
                                 .filter(Objects::nonNull)
                                 .toList();
                     } catch (Exception e) {
-                        log.error("Failed to load lessons for section {}: {}", model.getStepikSectionId(), e.getMessage(), e);
+                        log.error("Failed to load lessons for section {}: {}", section.getStepikSectionId(), e.getMessage(), e);
                         return new ArrayList<>();
                     } finally {
                         userContextBean.clear();

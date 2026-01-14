@@ -1,4 +1,4 @@
-package org.core.dto.model;
+package org.core.dto.section;
 
 import lombok.*;
 
@@ -6,9 +6,9 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateModelDTO {
+public class UpdateSectionDTO {
 
-    private Long modelId;
+    private Long sectionId;
     private String title;
     private String description;
     private Integer position;

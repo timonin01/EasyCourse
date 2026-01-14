@@ -64,23 +64,52 @@ public class StepikResponseParser {
     }
     
     private String extractJsonFromResponse(String response) {
+        if (response == null || response.trim().isEmpty()) {
+            throw new IllegalArgumentException("Empty response from AI");
+        }
+        
         var matcher = JSON_PATTERN.matcher(response);
         if (matcher.find()) {
-            return matcher.group(1).trim();
+            return cleanJsonString(matcher.group(1).trim());
         }
         
         String trimmed = response.trim();
+        if (trimmed.length() < 10 || !trimmed.contains("\"text\"") && !trimmed.contains("\"source\"")) {
+            log.warn("Response appears to be invalid JSON: {}", trimmed.length() > 100 ? trimmed.substring(0, 100) + "..." : trimmed);
+            throw new IllegalArgumentException("Invalid JSON structure in AI response");
+        }
+        
         if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-            return trimmed;
+            return cleanJsonString(trimmed);
         }
         
         int start = trimmed.indexOf('{');
         int end = trimmed.lastIndexOf('}');
         if (start != -1 && end != -1 && end > start) {
-            return trimmed.substring(start, end + 1);
+            String extracted = trimmed.substring(start, end + 1);
+            if (extracted.length() < 10 || (!extracted.contains("\"text\"") && !extracted.contains("\"source\""))) {
+                log.warn("Extracted JSON appears to be invalid: {}", extracted.length() > 100 ? extracted.substring(0, 100) + "..." : extracted);
+                throw new IllegalArgumentException("Invalid JSON structure in extracted response");
+            }
+            return cleanJsonString(extracted);
         }
         
         throw new IllegalArgumentException("No valid JSON found in response");
+    }
+    
+    private String cleanJsonString(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+        
+        String cleaned = json.trim();
+        if (cleaned.startsWith("\"") && cleaned.endsWith("\"")) {
+            cleaned = cleaned.substring(1, cleaned.length() - 1);
+            cleaned = cleaned.replace("\\\"", "\"");
+        }
+        
+        cleaned = cleaned.trim();
+        return cleaned;
     }
 
 }

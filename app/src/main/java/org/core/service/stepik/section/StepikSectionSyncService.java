@@ -3,15 +3,15 @@ package org.core.service.stepik.section;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.domain.Course;
-import org.core.dto.model.ModelResponseDTO;
+import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponse;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.exception.exceptions.StepikSectionIntegrationException;
-import org.core.service.crud.ModelService;
+import org.core.service.crud.SectionService;
 import org.core.service.crud.CourseService;
 import org.core.service.crud.LessonService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
@@ -26,30 +26,30 @@ import java.util.List;
 public class StepikSectionSyncService {
 
     private final StepikSectionService stepikSectionService;
-    private final ModelService modelService;
+    private final SectionService sectionService;
     private final CourseService courseService;
     private final LessonService lessonService;
     private final UpdateStepikSectionService updateStepikSectionService;
     private final StepikLessonSyncService stepikLessonSyncService;
 
-    public StepikSectionResponseData syncModelWithStepik(Long modelId) {
-        ModelResponseDTO modelDTO = modelService.getModelBuModelId(modelId);
-        Model model = mapToModel(modelDTO);
+    public StepikSectionResponseData syncSectionWithStepik(Long sectionId) {
+        SectionResponseDTO sectionDTO = sectionService.getSectionBySectionId(sectionId);
+        Section section = mapToSection(sectionDTO);
 
-        StepikSectionResponse response = stepikSectionService.createSection(model);
+        StepikSectionResponse response = stepikSectionService.createSection(section);
         StepikSectionResponseData sectionData = response.getSection();
         if (sectionData != null) {
-            modelService.updateModelStepikSectionId(modelId, sectionData.getId());
-            log.info("Model {} successfully synced with Stepik section ID: {}", modelId, sectionData.getId());
+            sectionService.updateSectionStepikSectionId(sectionId, sectionData.getId());
+            log.info("Section {} successfully synced with Stepik section ID: {}", sectionId, sectionData.getId());
             
-            syncAllModelLessons(modelId);
+            syncAllSectionLessons(sectionId);
         }
         return sectionData;
     }
     
-    private void syncAllModelLessons(Long modelId) {
-        List<LessonResponseDTO> lessons = lessonService.getModelLessonsByModelId(modelId);
-        log.info("Syncing {} lessons for model {}", lessons.size(), modelId);
+    private void syncAllSectionLessons(Long sectionId) {
+        List<LessonResponseDTO> lessons = lessonService.getSectionLessonsBySectionId(sectionId);
+        log.info("Syncing {} lessons for section {}", lessons.size(), sectionId);
         
         for (LessonResponseDTO lesson : lessons) {
             try {
@@ -66,69 +66,69 @@ public class StepikSectionSyncService {
         }
     }
 
-    public StepikSectionResponseData updateModelInStepik(Long modelId) {
-        ModelResponseDTO modelDTO = modelService.getModelBuModelId(modelId);
-        if (modelDTO.getStepikSectionId() == null) {
-            throw new IllegalStateException("Model is not synced with Stepik. Model ID: " + modelId);
+    public StepikSectionResponseData updateSectionInStepik(Long sectionId) {
+        SectionResponseDTO sectionDTO = sectionService.getSectionBySectionId(sectionId);
+        if (sectionDTO.getStepikSectionId() == null) {
+            throw new IllegalStateException("Section is not synced with Stepik. Section ID: " + sectionId);
         }
 
-        StepikSectionResponseData sectionData = stepikSectionService.getSectionByStepikId(modelDTO.getStepikSectionId());
-        Integer currentDbPosition = modelDTO.getPosition();
+        StepikSectionResponseData sectionData = stepikSectionService.getSectionByStepikId(sectionDTO.getStepikSectionId());
+        Integer currentDbPosition = sectionDTO.getPosition();
         Integer currentStepikPosition = sectionData.getPosition();
 
         if(currentDbPosition.equals(currentStepikPosition)){
             log.info("Positions match, performing simple update");
-            Model model = mapToModel(modelDTO);
-            stepikSectionService.updateSection(model.getStepikSectionId());
-            return stepikSectionService.getSectionByStepikId(modelDTO.getStepikSectionId());
+            Section section = mapToSection(sectionDTO);
+            stepikSectionService.updateSection(section.getStepikSectionId());
+            return stepikSectionService.getSectionByStepikId(sectionDTO.getStepikSectionId());
         }
 
-        Model model = mapToModel(modelDTO);
-        model.setPosition(currentStepikPosition);
+        Section section = mapToSection(sectionDTO);
+        section.setPosition(currentStepikPosition);
 
         try{
-            updateStepikSectionService.performStepikPositionShift(model,modelDTO.getCourseId(),currentDbPosition);
+            updateStepikSectionService.performStepikPositionShift(section,sectionDTO.getCourseId(),currentDbPosition);
         }catch (StepikSectionIntegrationException e){
             log.error("Error updating section in Stepik : {}", e.getMessage());
             throw new StepikLessonIntegrationException("Failed to update section in Stepik: " + e.getMessage());
         }
 
-        log.info("Model {} successfully updated in Stepik with section ID: {}", modelId, sectionData.getId());
+        log.info("Section {} successfully updated in Stepik with section ID: {}", sectionId, sectionData.getId());
         return sectionData;
     }
 
-    public void deleteModelFromStepik(Long modelId) {
-        ModelResponseDTO modelDTO = modelService.getModelBuModelId(modelId);
-        if (modelDTO.getStepikSectionId() == null) {
-            throw new IllegalStateException("Model is not synced with Stepik. Model ID: " + modelId);
+    public void deleteSectionFromStepik(Long sectionId) {
+        SectionResponseDTO sectionDTO = sectionService.getSectionBySectionId(sectionId);
+        if (sectionDTO.getStepikSectionId() == null) {
+            throw new IllegalStateException("Section is not synced with Stepik. Section ID: " + sectionId);
         }
-        lessonService.clearStepikLessonIdsByModelId(modelId);
+        lessonService.clearStepikLessonIdsBySectionId(sectionId);
 
-        updateStepikSectionService.performStepikPositionShiftAfterDeletion(modelDTO.getCourseId(),modelDTO.getPosition());
+        updateStepikSectionService.performStepikPositionShiftAfterDeletion(sectionDTO.getCourseId(),sectionDTO.getPosition());
+
+        stepikSectionService.deleteSection(sectionDTO.getStepikSectionId());
+        sectionService.updateSectionStepikSectionId(sectionId, null);
         
-        stepikSectionService.deleteSection(modelDTO.getStepikSectionId());
-        modelService.updateModelStepikSectionId(modelId, null);
-        
-        log.info("Model {} successfully deleted from Stepik and unlinked", modelId);
+        log.info("Section {} successfully deleted from Stepik and unlinked", sectionId);
     }
 
-    private Model mapToModel(ModelResponseDTO modelDTO) {
-        Model model = new Model();
-        model.setId(modelDTO.getId());
-        model.setTitle(modelDTO.getTitle());
-        model.setDescription(modelDTO.getDescription());
-        model.setPosition(modelDTO.getPosition());
-        model.setStepikSectionId(modelDTO.getStepikSectionId());
+    private Section mapToSection(SectionResponseDTO sectionDTO) {
+        Section section = new Section();
+        section.setId(sectionDTO.getId());
+        section.setTitle(sectionDTO.getTitle());
+        section.setDescription(sectionDTO.getDescription());
+        section.setPosition(sectionDTO.getPosition());
+        section.setStepikSectionId(sectionDTO.getStepikSectionId());
 
-        CourseResponseDTO courseDTO = courseService.getCourseByCourseId(modelDTO.getCourseId());
+        CourseResponseDTO courseDTO = courseService.getCourseByCourseId(sectionDTO.getCourseId());
         if (courseDTO.getStepikCourseId() == null) {
-            throw new IllegalStateException("Course must be synced with Stepik before syncing models. Course ID: " + courseDTO.getId());
+            throw new IllegalStateException("Course must be synced with Stepik before syncing sections. Course ID: " + courseDTO.getId());
         }
         Course course = new Course();
         course.setId(courseDTO.getStepikCourseId());
         course.setStepikCourseId(courseDTO.getStepikCourseId());
-        model.setCourse(course);
+        section.setCourse(course);
         
-        return model;
+        return section;
     }
 }

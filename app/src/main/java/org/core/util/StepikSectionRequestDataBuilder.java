@@ -3,7 +3,7 @@ package org.core.util;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.dto.stepik.section.StepikSectionRequestData;
 import org.springframework.stereotype.Component;
 
@@ -12,12 +12,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class StepikSectionRequestDataBuilder {
 
-    public StepikSectionRequestData createRequestDataForCreation(Model model){
+    public StepikSectionRequestData createRequestDataForCreation(Section section){
         StepikSectionRequestData requestData = new StepikSectionRequestData();
-        requestData.setCourse(String.valueOf(model.getCourse().getStepikCourseId()));
-        requestData.setTitle(model.getTitle());
-        requestData.setDescription(model.getDescription() != null ? model.getDescription() : "");
-        requestData.setPosition(model.getPosition());
+        requestData.setCourse(String.valueOf(section.getCourse().getStepikCourseId()));
+        requestData.setTitle(section.getTitle());
+        requestData.setDescription(section.getDescription() != null ? section.getDescription() : "");
+        requestData.setPosition(section.getPosition());
 
         log.info("Created request data for creation: StepikCourseId={}, Title='{}', Description='{}', Position={}",
                 requestData.getCourse(), requestData.getTitle(), requestData.getDescription(), requestData.getPosition());
@@ -25,24 +25,23 @@ public class StepikSectionRequestDataBuilder {
         return requestData;
     }
 
-    public StepikSectionRequestData createRequestDataForUpdate(Model model){
+    public StepikSectionRequestData createRequestDataForUpdate(Section section){
         StepikSectionRequestData requestData = new StepikSectionRequestData();
         
-        // ВАЖНО: Проверяем, что stepikSectionId не null
-        if (model.getStepikSectionId() == null) {
-            log.error("Model {} does not have stepikSectionId! Cannot update section in Stepik.", model.getId());
-            throw new IllegalArgumentException("Model does not have stepikSectionId");
+        if (section.getStepikSectionId() == null) {
+            log.error("Section {} does not have stepikSectionId! Cannot update section in Stepik.", section.getId());
+            throw new IllegalArgumentException("Section does not have stepikSectionId");
         }
         
-        requestData.setId(model.getStepikSectionId());
-        requestData.setCourse(String.valueOf(model.getCourse().getStepikCourseId()));
-        requestData.setTitle(model.getTitle());
-        requestData.setDescription(model.getDescription() != null ? model.getDescription() : "");
-        requestData.setPosition(model.getPosition());
+        requestData.setId(section.getStepikSectionId());
+        requestData.setCourse(String.valueOf(section.getCourse().getStepikCourseId()));
+        requestData.setTitle(section.getTitle());
+        requestData.setDescription(section.getDescription() != null ? section.getDescription() : "");
+        requestData.setPosition(section.getPosition());
 
-        String slug = model.getTitle() != null ?
-                model.getTitle().toLowerCase().replaceAll("[^a-z0-9]+", "-") + "-" + model.getId() :
-                "section-" + model.getId();
+        String slug = section.getTitle() != null ?
+                section.getTitle().toLowerCase().replaceAll("[^a-z0-9]+", "-") + "-" + section.getId() :
+                "section-" + section.getId();
         requestData.setSlug(slug);
 
         requestData.setGradingPolicy("halved");

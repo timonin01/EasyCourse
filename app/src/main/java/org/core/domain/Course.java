@@ -33,7 +33,7 @@ public class Course {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     @Builder.Default
-    private List<Model> models = new ArrayList<>();
+    private List<Section> sections = new ArrayList<>();
 
     @Column(name = "stepik_CourseId")
     private Long stepikCourseId;

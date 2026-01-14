@@ -4,14 +4,14 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.lesson.UpdateLessonDTO;
 import org.core.exception.exceptions.LessonNotFoundException;
-import org.core.exception.exceptions.ModelNotFoundException;
+import org.core.exception.exceptions.SectionNotFoundException;
 import org.core.repository.LessonRepository;
-import org.core.repository.ModelRepository;
+import org.core.repository.SectionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,29 +25,29 @@ import java.util.stream.Collectors;
 public class LessonService {
 
     private final LessonRepository lessonRepository;
-    private final ModelRepository modelRepository;
+    private final SectionRepository sectionRepository;
 
     public LessonResponseDTO createLesson(CreateLessonDTO createDTO) {
-        Model model = modelRepository.findById(createDTO.getModelId())
-            .orElseThrow(() -> new ModelNotFoundException("Model not found"));
+        Section section = sectionRepository.findById(createDTO.getSectionId())
+            .orElseThrow(() -> new SectionNotFoundException("Section not found"));
         
-        Integer position = getNextPosition(model.getId());
+        Integer position = getNextPosition(section.getId());
 
         Lesson lesson = new Lesson();
-        lesson.setModel(model);
+        lesson.setSection(section);
         lesson.setTitle(createDTO.getTitle());
         lesson.setPosition(position);
 
-        log.info("Created new lesson with ID: {} in model: {} at position {}", lesson.getId(), model.getId(), position);
+        log.info("Created new lesson with ID: {} in section: {} at position {}", lesson.getId(), section.getId(), position);
         return mapToResponseDTO(lessonRepository.save(lesson));
     }
 
     public Lesson createLessonFromDTO(LessonResponseDTO lessonResponseDTO){
-        Model model = modelRepository.findById(lessonResponseDTO.getModelId())
-                .orElseThrow(() -> new ModelNotFoundException("Model not found"));
+        Section section = sectionRepository.findById(lessonResponseDTO.getSectionId())
+                .orElseThrow(() -> new SectionNotFoundException("Section not found"));
 
         Lesson lesson = Lesson.builder()
-                .model(model)
+                .section(section)
                 .title(lessonResponseDTO.getTitle())
                 .position(lessonResponseDTO.getPosition())
                 .stepikLessonId(lessonResponseDTO.getStepikLessonId())
@@ -62,8 +62,8 @@ public class LessonService {
         return mapToResponseDTO(lesson);
     }
 
-    public List<LessonResponseDTO> getModelLessonsByModelId(Long modelId) {
-        List<Lesson> lessons = lessonRepository.findByModelIdOrderByPositionAsc(modelId);
+    public List<LessonResponseDTO> getSectionLessonsBySectionId(Long sectionId) {
+        List<Lesson> lessons = lessonRepository.findByModelIdOrderByPositionAsc(sectionId);
         return lessons.stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
@@ -84,13 +84,13 @@ public class LessonService {
 
     public void deleteLesson(Long lessonId) {
         Lesson lesson = findLessonById(lessonId);
-        Long modelId = lesson.getModel().getId();
+        Long sectionId = lesson.getSection().getId();
         Integer position = lesson.getPosition();
 
         lessonRepository.delete(lesson);
-        reorderLessonsAfterDeletion(modelId, position);
+        reorderLessonsAfterDeletion(sectionId, position);
         
-        log.info("Deleted lesson with ID: {} from model: {}", lessonId, modelId);
+        log.info("Deleted lesson with ID: {} from section: {}", lessonId, sectionId);
     }
 
     private Lesson findLessonById(Long lessonId) {
@@ -98,33 +98,33 @@ public class LessonService {
             .orElseThrow(() -> new LessonNotFoundException("Lesson not found"));
     }
 
-    private Integer getNextPosition(Long modelId) {
-        return lessonRepository.findMaxPositionByModelId(modelId)
+    private Integer getNextPosition(Long sectionId) {
+        return lessonRepository.findMaxPositionByModelId(sectionId)
             .map(pos -> pos + 1)
             .orElse(1);
     }
 
-    private void shiftLessonsPositions(Long modelId, Integer fromPosition) {
-        lessonRepository.incrementPositionsFromPosition(modelId, fromPosition);
+    private void shiftLessonsPositions(Long sectionId, Integer fromPosition) {
+        lessonRepository.incrementPositionsFromPosition(sectionId, fromPosition);
     }
 
     private void changeLessonPosition(Lesson lesson, Integer newPosition) {
-        Long modelId = lesson.getModel().getId();
+        Long sectionId = lesson.getSection().getId();
         Integer oldPosition = lesson.getPosition();
         if (newPosition < oldPosition) {
-            lessonRepository.incrementPositionsRange(modelId, newPosition, oldPosition - 1);
+            lessonRepository.incrementPositionsRange(sectionId, newPosition, oldPosition - 1);
         } else {
-            lessonRepository.decrementPositionsRange(modelId, oldPosition + 1, newPosition);
+            lessonRepository.decrementPositionsRange(sectionId, oldPosition + 1, newPosition);
         }
         lesson.setPosition(newPosition);
     }
 
-    private void reorderLessonsAfterDeletion(Long modelId, Integer deletedPosition) {
-        lessonRepository.decrementPositionsFromPosition(modelId, deletedPosition);
+    private void reorderLessonsAfterDeletion(Long sectionId, Integer deletedPosition) {
+        lessonRepository.decrementPositionsFromPosition(sectionId, deletedPosition);
     }
 
-    public List<LessonResponseDTO> getUnsyncedLessonsByModelId(Long modelId) {
-        List<Lesson> lessons = lessonRepository.findByModelIdAndStepikLessonIdIsNullOrderByPositionAsc(modelId);
+    public List<LessonResponseDTO> getUnsyncedLessonsBySectionId(Long sectionId) {
+        List<Lesson> lessons = lessonRepository.findByModelIdAndStepikLessonIdIsNullOrderByPositionAsc(sectionId);
         return lessons.stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
@@ -140,10 +140,10 @@ public class LessonService {
         log.info("Updated lesson {} set NULL value", lessonId);
     }
 
-    public void clearStepikLessonIdsByModelId(Long modelId) {
-        log.info("Clearing stepikLessonId for all lessons in model {}", modelId);
-        int updatedCount = lessonRepository.clearStepikLessonIdsByModelId(modelId);
-        log.info("Cleared stepikLessonId for {} lessons in model {}", updatedCount, modelId);
+    public void clearStepikLessonIdsBySectionId(Long sectionId) {
+        log.info("Clearing stepikLessonId for all lessons in section {}", sectionId);
+        int updatedCount = lessonRepository.clearStepikLessonIdsByModelId(sectionId);
+        log.info("Cleared stepikLessonId for {} lessons in section {}", updatedCount, sectionId);
     }
 
     private LessonResponseDTO mapToResponseDTO(Lesson lesson) {
@@ -152,7 +152,7 @@ public class LessonService {
                 .title(lesson.getTitle())
                 .position(lesson.getPosition())
                 .stepikLessonId(lesson.getStepikLessonId())
-                .modelId(lesson.getModel().getId())
+                .sectionId(lesson.getSection().getId())
                 .createdAt(lesson.getCreatedAt())
                 .updatedAt(lesson.getUpdatedAt())
                 .build();

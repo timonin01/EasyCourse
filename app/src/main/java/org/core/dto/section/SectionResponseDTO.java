@@ -1,4 +1,4 @@
-package org.core.dto.model;
+package org.core.dto.section;
 
 import lombok.*;
 
@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ModelResponseDTO {
+public class SectionResponseDTO {
 
     private Long id;
     private String title;

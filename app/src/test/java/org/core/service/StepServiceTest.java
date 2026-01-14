@@ -37,7 +37,7 @@ class StepServiceTest {
 
     private User testUser;
     private Course testCourse;
-    private Model testModel;
+    private Section testSection;
     private Lesson testLesson;
     private Step testStep;
 
@@ -45,7 +45,7 @@ class StepServiceTest {
     void setUp() {
         testUser = createTestUser();
         testCourse = createTestCourse();
-        testModel = createTestModel();
+        testSection = createTestModel();
         testLesson = createTestLesson();
         testStep = createTestStep();
     }
@@ -71,8 +71,8 @@ class StepServiceTest {
                 .build();
     }
 
-    private Model createTestModel() {
-        return Model.builder()
+    private Section createTestModel() {
+        return Section.builder()
                 .id(1L)
                 .title("Test Model")
                 .description("Test Description")
@@ -88,7 +88,7 @@ class StepServiceTest {
                 .id(1L)
                 .title("Test Lesson")
                 .description("Test Description")
-                .model(testModel)
+                .model(testSection)
                 .position(1)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

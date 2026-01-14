@@ -14,8 +14,8 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateLessonDTO {
     
-    @NotNull(message = "Model ID is required")
-    private Long modelId;
+    @NotNull(message = "Section ID is required")
+    private Long sectionId;
     
     @NotBlank(message = "Title is required")
     @Size(min = 3, max = 64)

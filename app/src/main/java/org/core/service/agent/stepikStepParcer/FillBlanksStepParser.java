@@ -32,6 +32,8 @@ public class FillBlanksStepParser {
             }
             String jsonWithName = objectMapper.writeValueAsString(node);
             StepikBlockFillBlanksRequest request = objectMapper.readValue(jsonWithName, StepikBlockFillBlanksRequest.class);
+            
+            fixMissingIsCorrect(request);
             if (!validateFillBlanksRequest(request)) {
                 throw new IllegalArgumentException("Invalid fill-blanks request structure");
             }
@@ -40,6 +42,77 @@ public class FillBlanksStepParser {
             log.error("Failed to parse fill-blanks request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid fill-blanks request format", e);
         }
+    }
+    
+    private void fixMissingIsCorrect(StepikBlockFillBlanksRequest request) {
+        if (request == null || request.getSource() == null || request.getSource().getComponents() == null) {
+            return;
+        }
+        
+        for (StepikFillBlanksComponentRequest component : request.getSource().getComponents()) {
+            if ("blank".equalsIgnoreCase(component.getType()) && component.getOptions() != null) {
+                boolean hasAnyCorrect = component.getOptions().stream()
+                        .anyMatch(o -> Boolean.TRUE.equals(o.getIs_correct()));
+                
+                if (!hasAnyCorrect) {
+                    log.warn("Blank component has no correct options, attempting to auto-fix based on text patterns");
+                    boolean foundCorrect = false;
+                    
+                    for (int i = 0; i < component.getOptions().size(); i++) {
+                        StepikFillBlanksOptionRequest option = component.getOptions().get(i);
+                        String text = option.getText() != null ? option.getText().toLowerCase() : "";
+                        
+                        boolean isCorrect = text.startsWith("правильн") || 
+                                           text.contains("правильный вариант") ||
+                                           (i == 0 && !text.startsWith("неверн") && !text.contains("неверный"));
+                        
+                        if (isCorrect && !foundCorrect) {
+                            option.setIs_correct(true);
+                            foundCorrect = true;
+                            log.info("Auto-set is_correct=true for option: '{}'", option.getText());
+                            
+                            String cleanedText = cleanOptionText(option.getText());
+                            if (!cleanedText.equals(option.getText())) {
+                                option.setText(cleanedText);
+                                log.info("Cleaned option text to: '{}'", cleanedText);
+                            }
+                        } else {
+                            option.setIs_correct(false);
+                            String cleanedText = cleanOptionText(option.getText());
+                            if (!cleanedText.equals(option.getText())) {
+                                option.setText(cleanedText);
+                                log.info("Cleaned option text to: '{}'", cleanedText);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private String cleanOptionText(String text) {
+        if (text == null) return "";
+        
+        String[] prefixes = {
+            "Правильный вариант:", "Неверный вариант:",
+            "правильный вариант:", "неверный вариант:",
+            "Правильный вариант", "Неверный вариант",
+            "правильный вариант", "неверный вариант"
+        };
+        
+        String result = text.trim();
+        for (String prefix : prefixes) {
+            if (result.toLowerCase().startsWith(prefix.toLowerCase())) {
+                result = result.substring(prefix.length()).trim();
+                // Remove leading comma or colon if present
+                if (result.startsWith(",") || result.startsWith(":")) {
+                    result = result.substring(1).trim();
+                }
+                break;
+            }
+        }
+        
+        return result;
     }
 
     private boolean validateFillBlanksRequest(StepikBlockFillBlanksRequest request) {

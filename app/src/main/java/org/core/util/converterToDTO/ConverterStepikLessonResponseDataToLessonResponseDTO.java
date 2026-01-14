@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Component
 public class ConverterStepikLessonResponseDataToLessonResponseDTO {
 
-    public LessonResponseDTO convert(StepikLessonResponseData stepikLesson, Long localLessonId, Long modelId, Long stepikSectionId, Integer position) {
+    public LessonResponseDTO convert(StepikLessonResponseData stepikLesson, Long localLessonId, Long sectionId, Long stepikSectionId, Integer position) {
         if (stepikLesson == null) {
             return null;
         }
@@ -19,7 +19,7 @@ public class ConverterStepikLessonResponseDataToLessonResponseDTO {
                 .title(stepikLesson.getTitle())
                 .position(position)
                 .stepikLessonId(stepikLesson.getId())
-                .modelId(modelId)
+                .sectionId(sectionId)
                 .stepikSectionId(stepikSectionId)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

@@ -30,13 +30,13 @@ public class StepikLessonController {
     private final StepikCascadeSyncService cascadeSyncService;
     private final StepikCascadeDeleteService cascadeDeleteService;
 
-    @GetMapping("/unsynced-lessons/{modelId}")
-    public List<LessonResponseDTO> getUnsyncedLessonsByModelId(
-            @PathVariable Long modelId,
+    @GetMapping("/unsynced-lessons/{sectionId}")
+    public List<LessonResponseDTO> getUnsyncedLessonsBySectionId(
+            @PathVariable Long sectionId,
             @RequestHeader("User-Id") Long userId) {
-        log.info("Getting unsynced lessons for model: {}", modelId);
+        log.info("Getting unsynced lessons for section: {}", sectionId);
         userContextBean.setUserId(userId);
-        return lessonService.getUnsyncedLessonsByModelId(modelId);
+        return lessonService.getUnsyncedLessonsBySectionId(sectionId);
     }
 
     @PostMapping("/sync-lesson")

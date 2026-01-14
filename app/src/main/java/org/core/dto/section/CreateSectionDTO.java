@@ -1,4 +1,4 @@
-package org.core.dto.model;
+package org.core.dto.section;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +9,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateModelDTO {
+public class CreateSectionDTO {
 
     @NotNull(message = "Course ID is required")
     private Long courseId;

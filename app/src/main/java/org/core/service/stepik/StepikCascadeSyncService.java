@@ -6,15 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
 import org.core.domain.Course;
 import org.core.domain.Lesson;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.domain.Step;
 import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.LessonCaptchaChallenge;
-import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.repository.CourseRepository;
 import org.core.repository.LessonRepository;
-import org.core.repository.ModelRepository;
+import org.core.repository.SectionRepository;
 import org.core.service.stepik.course.StepikCourseSyncService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.core.service.stepik.section.StepikSectionSyncService;
@@ -44,7 +43,7 @@ public class StepikCascadeSyncService {
     private final UserContextBean userContextBean;
 
     private final LessonRepository lessonRepository;
-    private final ModelRepository modelRepository;
+    private final SectionRepository sectionRepository;
 
     public CourseCaptchaChallenge syncFullCourseForStepik(Long courseId, String captchaToken, Long userId){
         CourseCaptchaChallenge result = courseSyncService.syncCourseWithStepik(courseId, captchaToken);
@@ -54,19 +53,19 @@ public class StepikCascadeSyncService {
             log.error("Course with course id: {} not found", courseId);
             throw new IllegalArgumentException("Course with course id" + courseId + "not found");
         }
-        List<Model> courseSections = course.get().getModels();
+        List<Section> courseSections = course.get().getSections();
 
         List<CompletableFuture<Void>> sectionFutures = new ArrayList<>();
-        for (Model section : courseSections) {
+        for (Section section : courseSections) {
             sectionFutures.add(CompletableFuture.runAsync(() -> {
                         try {
                             userContextBean.setUserId(userId);
                             if (section.getStepikSectionId() == null) {
                                 log.info("Start sync section with sectionId: {}", section.getId());
-                                sectionSyncService.syncModelWithStepik(section.getId());
+                                sectionSyncService.syncSectionWithStepik(section.getId());
                             } else {
                                 log.info("Start update section in stepik with sectionId: {}", section.getId());
-                                sectionSyncService.updateModelInStepik(section.getId());
+                                sectionSyncService.updateSectionInStepik(section.getId());
                             }
                         } finally {
                             userContextBean.clear();
@@ -124,25 +123,25 @@ public class StepikCascadeSyncService {
         return CompletableFuture.allOf(stepFutures.toArray(new CompletableFuture[0]));
     }
 
-    public StepikSectionResponseData syncFullSectionById(Long modelId, String captchaToken, Long userId){
+    public StepikSectionResponseData syncFullSectionById(Long sectionId, String captchaToken, Long userId){
         userContextBean.setUserId(userId);
         try{
-            Model model = modelRepository.findById(modelId)
-                    .orElseThrow(() -> new IllegalArgumentException("Model with id " + modelId + " not found"));
-            sectionSyncService.syncModelWithStepik(modelId);
+            Section section = sectionRepository.findById(sectionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Section with id " + sectionId + " not found"));
+            sectionSyncService.syncSectionWithStepik(sectionId);
 
             StepikSectionResponseData sectionResponseData;
-            if (model.getStepikSectionId() == null) {
-                log.info("Start sync section with sectionId: {}", model.getId());
-                sectionResponseData = sectionSyncService.syncModelWithStepik(model.getId());
+            if (section.getStepikSectionId() == null) {
+                log.info("Start sync section with sectionId: {}", section.getId());
+                sectionResponseData = sectionSyncService.syncSectionWithStepik(section.getId());
             } else {
-                log.info("Start update section in stepik with sectionId: {}", model.getId());
-                sectionResponseData = sectionSyncService.updateModelInStepik(model.getId());
+                log.info("Start update section in stepik with sectionId: {}", section.getId());
+                sectionResponseData = sectionSyncService.updateSectionInStepik(section.getId());
             }
 
-            syncAllLessons(model.getLessons(), captchaToken, userId)
+            syncAllLessons(section.getLessons(), captchaToken, userId)
                     .exceptionally(ex -> {
-                        log.error("Error during lesson sync for model {}: {}", modelId, ex.getMessage(), ex);
+                        log.error("Error during lesson sync for section {}: {}", sectionId, ex.getMessage(), ex);
                         return null;
                     })
                     .join();

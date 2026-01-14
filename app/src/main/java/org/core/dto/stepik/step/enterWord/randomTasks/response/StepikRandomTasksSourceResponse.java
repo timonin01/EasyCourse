@@ -7,8 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @AllArgsConstructor
@@ -20,7 +18,7 @@ public class StepikRandomTasksSourceResponse {
     private String solve;
     @JsonProperty("max_error")
     private String maxError;
-    private List<Object> ranges;
+    private Object ranges;
     private Integer combinations;
 
 }

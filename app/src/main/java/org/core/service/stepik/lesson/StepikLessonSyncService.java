@@ -4,19 +4,17 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.dto.LessonCaptchaChallenge;
 import org.core.dto.lesson.LessonResponseDTO;
-import org.core.dto.model.ModelResponseDTO;
+import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.dto.stepik.unit.StepikUnitResponseData;
 import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.service.crud.LessonService;
-import org.core.service.crud.ModelService;
+import org.core.service.crud.SectionService;
 import org.core.service.stepik.unit.StepikUnitService;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @Slf4j
@@ -25,7 +23,7 @@ public class StepikLessonSyncService {
 
     private final StepikLessonService stepikLessonService;
     private final LessonService lessonService;
-    private final ModelService modelService;
+    private final SectionService sectionService;
     private final StepikUnitService stepikUnitService;
     private final UpdateStepikLessonService updateStepikLessonService;
 
@@ -74,7 +72,7 @@ public class StepikLessonSyncService {
         lesson.setPosition(currentStepikPosition);
 
         try {
-            return updateStepikLessonService.performStepikPositionShift(lesson, lessonDTO.getModelId(), currentDbPosition);
+            return updateStepikLessonService.performStepikPositionShift(lesson, lessonDTO.getSectionId(), currentDbPosition);
         } catch (StepikLessonIntegrationException e) {
             log.error("Error updating lesson in Stepik : {}", e.getMessage());
             throw new StepikLessonIntegrationException("Failed to update lesson in Stepik: " + e.getMessage());
@@ -89,7 +87,7 @@ public class StepikLessonSyncService {
         if (lessonDTO.getStepikLessonId() == null) {
             throw new IllegalStateException("Lesson is not synced with Stepik. Lesson ID: " + lessonId);
         }
-        updateStepikLessonService.performStepikPositionShiftAfterDeletion(lessonDTO.getModelId(),lessonDTO.getPosition());
+        updateStepikLessonService.performStepikPositionShiftAfterDeletion(lessonDTO.getSectionId(),lessonDTO.getPosition());
         lessonService.updateLessonStepikLessonIdSetNull(lessonId);
 
         stepikLessonService.deleteLesson(lessonDTO.getStepikLessonId());
@@ -103,17 +101,17 @@ public class StepikLessonSyncService {
         lesson.setPosition(lessonDTO.getPosition());
         lesson.setStepikLessonId(lessonDTO.getStepikLessonId());
         
-        if (lessonDTO.getModelId() != null) {
+        if (lessonDTO.getSectionId() != null) {
             try {
-                ModelResponseDTO modelDTO = modelService.getModelBuModelId(lessonDTO.getModelId());
-                Model model = new Model();
-                model.setId(modelDTO.getId());
-                model.setStepikSectionId(modelDTO.getStepikSectionId());
-                lesson.setModel(model);
-                log.info("Mapped lesson {} to model {} with stepikSectionId: {}", 
-                        lessonDTO.getId(), modelDTO.getId(), modelDTO.getStepikSectionId());
+                SectionResponseDTO sectionDTO = sectionService.getSectionBySectionId(lessonDTO.getSectionId());
+                Section section = new Section();
+                section.setId(sectionDTO.getId());
+                section.setStepikSectionId(sectionDTO.getStepikSectionId());
+                lesson.setSection(section);
+                log.info("Mapped lesson {} to section {} with stepikSectionId: {}", 
+                        lessonDTO.getId(), sectionDTO.getId(), sectionDTO.getStepikSectionId());
             } catch (Exception e) {
-                log.error("Failed to get model data for lesson {}: {}", lessonDTO.getId(), e.getMessage());
+                log.error("Failed to get section data for lesson {}: {}", lessonDTO.getId(), e.getMessage());
             }
         }
         
@@ -140,13 +138,13 @@ public class StepikLessonSyncService {
         LessonResponseDTO lessonDTO = lessonService.getLessonByLessonID(lessonId);
         Lesson lesson = mapToLesson(lessonDTO);
         
-        if (lesson.getModel() != null && lesson.getModel().getStepikSectionId() != null) {
+        if (lesson.getSection() != null && lesson.getSection().getStepikSectionId() != null) {
             try {
-                stepikUnitService.createUnit(stepikLessonId, lesson.getModel().getStepikSectionId(), lesson.getPosition());
-                log.info("Successfully created unit for lesson {} in section {}", stepikLessonId, lesson.getModel().getStepikSectionId());
+                stepikUnitService.createUnit(stepikLessonId, lesson.getSection().getStepikSectionId(), lesson.getPosition());
+                log.info("Successfully created unit for lesson {} in section {}", stepikLessonId, lesson.getSection().getStepikSectionId());
             } catch (Exception e) {
                 log.error("Failed to create unit for lesson {} in section {}: {}", 
-                        stepikLessonId, lesson.getModel().getStepikSectionId(), e.getMessage());
+                        stepikLessonId, lesson.getSection().getStepikSectionId(), e.getMessage());
             }
         }
 

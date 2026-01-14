@@ -1,5 +1,7 @@
 package org.core.service.agent.stepikStepParcer;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -22,15 +24,23 @@ public class NumberStepParser {
 
     public StepikBlockRequest parseNumberRequest(String json) {
         try {
-            JsonNode node = objectMapper.readTree(json);
+            JsonFactory jsonFactory = JsonFactory.builder()
+                    .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
+                    .build();
+            
+            ObjectMapper lenientMapper = new ObjectMapper(jsonFactory);
+            lenientMapper.setConfig(objectMapper.getDeserializationConfig());
+            lenientMapper.setConfig(objectMapper.getSerializationConfig());
+            
+            JsonNode node = lenientMapper.readTree(json);
             if (node.isObject()) {
                 ObjectNode objectNode = (ObjectNode) node;
                 if (!objectNode.has("name") || objectNode.get("name").isNull()) {
                     objectNode.put("name", "number");
                 }
             }
-            String jsonWithName = objectMapper.writeValueAsString(node);
-            StepikBlockNumberRequest request = objectMapper.readValue(jsonWithName, StepikBlockNumberRequest.class);
+            String jsonWithName = lenientMapper.writeValueAsString(node);
+            StepikBlockNumberRequest request = lenientMapper.readValue(jsonWithName, StepikBlockNumberRequest.class);
             if (!validateNumberRequest(request)) {
                 throw new IllegalArgumentException("Invalid number request structure");
             }

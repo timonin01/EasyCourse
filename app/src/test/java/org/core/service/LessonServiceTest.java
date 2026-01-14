@@ -7,7 +7,7 @@ import org.core.dto.lesson.UpdateLessonDTO;
 import org.core.exception.exceptions.LessonNotFoundException;
 import org.core.exception.exceptions.ModelNotFoundException;
 import org.core.repository.LessonRepository;
-import org.core.repository.ModelRepository;
+import org.core.repository.SectionRepository;
 import org.core.service.crud.LessonService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,21 +33,21 @@ class LessonServiceTest {
     private LessonRepository lessonRepository;
 
     @Mock
-    private ModelRepository modelRepository;
+    private SectionRepository sectionRepository;
 
     @InjectMocks
     private LessonService lessonService;
 
     private User testUser;
     private Course testCourse;
-    private Model testModel;
+    private Section testSection;
     private Lesson testLesson;
 
     @BeforeEach
     void setUp() {
         testUser = createTestUser();
         testCourse = createTestCourse();
-        testModel = createTestModel();
+        testSection = createTestModel();
         testLesson = createTestLesson();
     }
 
@@ -72,8 +72,8 @@ class LessonServiceTest {
                 .build();
     }
 
-    private Model createTestModel() {
-        return Model.builder()
+    private Section createTestModel() {
+        return Section.builder()
                 .id(1L)
                 .title("Test Model")
                 .description("Test Description")
@@ -93,7 +93,7 @@ class LessonServiceTest {
                 .id(id)
                 .title("Test Lesson")
                 .description("Test Description")
-                .model(testModel)
+                .model(testSection)
                 .position(position)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -102,7 +102,7 @@ class LessonServiceTest {
 
     @Test
     void createLessonCorrect() {
-        when(modelRepository.findById(1L)).thenReturn(Optional.of(testModel));
+        when(sectionRepository.findById(1L)).thenReturn(Optional.of(testSection));
         when(lessonRepository.save(any(Lesson.class))).thenReturn(testLesson);
 
         CreateLessonDTO createDTO = new CreateLessonDTO(1L, "Test Lesson", "Test Description", 1);
@@ -113,14 +113,14 @@ class LessonServiceTest {
         assertThat(result.getModelId()).isEqualTo(1L);
         assertThat(result.getPosition()).isEqualTo(1);
 
-        verify(modelRepository).findById(1L);
+        verify(sectionRepository).findById(1L);
         verify(lessonRepository).save(any(Lesson.class));
         verify(lessonRepository).incrementPositionsFromPosition(1L, 1);
     }
 
     @Test
     void createLessonWithNullPosition() {
-        when(modelRepository.findById(1L)).thenReturn(Optional.of(testModel));
+        when(sectionRepository.findById(1L)).thenReturn(Optional.of(testSection));
         when(lessonRepository.findMaxPositionByModelId(1L)).thenReturn(Optional.of(2));
         
         Lesson lessonWithAutoPosition = createTestLesson(1L, 3);
@@ -136,7 +136,7 @@ class LessonServiceTest {
 
     @Test
     void createLessonModelNotExists() {
-        when(modelRepository.findById(999L)).thenReturn(Optional.empty());
+        when(sectionRepository.findById(999L)).thenReturn(Optional.empty());
 
         CreateLessonDTO createDTO = new CreateLessonDTO(999L, "Test Lesson", "Test Description", 1);
 
@@ -144,7 +144,7 @@ class LessonServiceTest {
                 .isInstanceOf(ModelNotFoundException.class)
                 .hasMessage("Model not found");
 
-        verify(modelRepository).findById(999L);
+        verify(sectionRepository).findById(999L);
         verify(lessonRepository, never()).save(any(Lesson.class));
     }
 
@@ -174,11 +174,11 @@ class LessonServiceTest {
     }
 
     @Test
-    void getModelLessonsByModelIdSuccessful() {
+    void getSectionLessonsBySectionIdSuccessful() {
         List<Lesson> lessons = Arrays.asList(testLesson);
         when(lessonRepository.findByModelIdOrderByPositionAsc(1L)).thenReturn(lessons);
 
-        List<LessonResponseDTO> result = lessonService.getModelLessonsByModelId(1L);
+        List<LessonResponseDTO> result = lessonService.getSectionLessonsBySectionId(1L);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getTitle()).isEqualTo("Test Lesson");
@@ -188,10 +188,10 @@ class LessonServiceTest {
     }
 
     @Test
-    void getModelLessonsByModelIdEmptyList() {
+    void getSectionLessonsBySectionIdEmptyList() {
         when(lessonRepository.findByModelIdOrderByPositionAsc(1L)).thenReturn(Arrays.asList());
 
-        List<LessonResponseDTO> result = lessonService.getModelLessonsByModelId(1L);
+        List<LessonResponseDTO> result = lessonService.getSectionLessonsBySectionId(1L);
 
         assertThat(result).isEmpty();
         verify(lessonRepository).findByModelIdOrderByPositionAsc(1L);

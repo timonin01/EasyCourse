@@ -52,13 +52,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
-    @ExceptionHandler(ModelNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleModelNotFoundException(ModelNotFoundException ex) {
-        log.error("Model not found: {}", ex.getMessage());
+    @ExceptionHandler(SectionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleSectionNotFoundException(SectionNotFoundException ex) {
+        log.error("Section not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.NOT_FOUND.value(),
-                "Model not found",
+                "Section not found",
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);

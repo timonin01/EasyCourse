@@ -23,9 +23,9 @@ public class LessonController {
         return lessonService.getLessonByLessonID(lessonId);
     }
 
-    @GetMapping("/all_lessons/{modelId}")
-    public List<LessonResponseDTO> getModelLessonsByModelId(@PathVariable Long modelId) {
-        return lessonService.getModelLessonsByModelId(modelId);
+    @GetMapping("/all_lessons/{sectionId}")
+    public List<LessonResponseDTO> getSectionLessonsBySectionId(@PathVariable Long sectionId) {
+        return lessonService.getSectionLessonsBySectionId(sectionId);
     }
 
     @PostMapping

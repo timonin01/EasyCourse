@@ -7,11 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
 import org.core.domain.Course;
 import org.core.domain.Lesson;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.domain.Step;
 import org.core.repository.CourseRepository;
 import org.core.repository.LessonRepository;
-import org.core.repository.ModelRepository;
+import org.core.repository.SectionRepository;
 import org.core.service.stepik.course.StepikCourseSyncService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.core.service.stepik.section.StepikSectionSyncService;
@@ -41,7 +41,7 @@ public class StepikCascadeDeleteService {
     private final UserContextBean userContextBean;
     
     private final CourseRepository courseRepository;
-    private final ModelRepository modelRepository;
+    private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
 
     public void deleteFullCourseFromStepik(Long courseId, Long userId){
@@ -58,8 +58,8 @@ public class StepikCascadeDeleteService {
             }
 
             List<CompletableFuture<Void>> sectionFutures = new ArrayList<>();
-            List<Model> courseModels = course.get().getModels();
-            for (Model section : courseModels) {
+            List<Section> courseSections = course.get().getSections();
+            for (Section section : courseSections) {
                 if (section.getStepikSectionId() != null) {
                     log.info("Start async deleting section from stepik with sectionId: {}", section.getId());
                     sectionFutures.add(CompletableFuture.runAsync(() -> {
@@ -89,7 +89,7 @@ public class StepikCascadeDeleteService {
         }
     }
 
-    public CompletableFuture<Void> deleteFullSectionFromStepik(Model section, Long userId) {
+    public CompletableFuture<Void> deleteFullSectionFromStepik(Section section, Long userId) {
         if(section.getStepikSectionId() == null){
             log.error("Section with id: {} not synchronized with stepik", section.getId());
             return CompletableFuture.completedFuture(null);
@@ -121,7 +121,7 @@ public class StepikCascadeDeleteService {
                 .thenRun(() -> {
                     userContextBean.setUserId(userId);
                     try {
-                        sectionSyncService.deleteModelFromStepik(section.getId());
+                        sectionSyncService.deleteSectionFromStepik(section.getId());
                         log.info("Section {} cascade deletion success", section.getId());
                     } finally {
                         userContextBean.clear();
@@ -169,12 +169,12 @@ public class StepikCascadeDeleteService {
                 });
     }
 
-    public void deleteFullSectionFromStepikById(Long modelId, Long userId) {
+    public void deleteFullSectionFromStepikById(Long sectionId, Long userId) {
         userContextBean.setUserId(userId);
         try {
-            Model model = modelRepository.findById(modelId)
-                    .orElseThrow(() -> new IllegalArgumentException("Model with id " + modelId + " not found"));
-            deleteFullSectionFromStepik(model, userId).join();
+            Section section = sectionRepository.findById(sectionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Section with id " + sectionId + " not found"));
+            deleteFullSectionFromStepik(section, userId).join();
         } finally {
             userContextBean.clear();
         }

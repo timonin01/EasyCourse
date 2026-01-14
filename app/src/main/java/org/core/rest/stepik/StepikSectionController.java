@@ -4,9 +4,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
-import org.core.dto.model.ModelResponseDTO;
+import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
-import org.core.service.crud.ModelService;
+import org.core.service.crud.SectionService;
 import org.core.service.stepik.StepikCascadeDeleteService;
 import org.core.service.stepik.StepikCascadeSyncService;
 import org.core.service.stepik.section.StepikSectionSyncService;
@@ -23,70 +23,70 @@ import java.util.List;
 public class StepikSectionController {
 
     private final StepikSectionSyncService stepikSectionSyncService;
-    private final ModelService modelService;
+    private final SectionService sectionService;
     private final UserContextBean userContextBean;
 
     private final StepikCascadeSyncService cascadeSyncService;
     private final StepikCascadeDeleteService cascadeDeleteService;
 
-    @GetMapping("/unsynced-models/{courseId}")
-    public List<ModelResponseDTO> getUnsyncedModelsByCourseId(
+    @GetMapping("/unsynced-sections/{courseId}")
+    public List<SectionResponseDTO> getUnsyncedSectionsByCourseId(
             @PathVariable Long courseId,
             @RequestHeader("User-Id") Long userId) {
-        log.info("Getting unsynced models for course: {}", courseId);
+        log.info("Getting unsynced sections for course: {}", courseId);
         userContextBean.setUserId(userId);
-        return modelService.getUnsyncedModelsByCourseId(courseId);
+        return sectionService.getUnsyncedSectionsByCourseId(courseId);
     }
 
-    @PostMapping("/sync-model")
-    public ResponseEntity<StepikSectionResponseData> syncModel(
-            @RequestParam Long modelId,
+    @PostMapping("/sync-section")
+    public ResponseEntity<StepikSectionResponseData> syncSection(
+            @RequestParam("sectionId") Long sectionId,
             @RequestHeader("User-Id") Long userId) {
         try {
-            log.info("Starting sync for model: {}", modelId);
-            StepikSectionResponseData responseData = cascadeSyncService.syncFullSectionById(modelId, null, userId);
+            log.info("Starting sync section: {}", sectionId);
+            StepikSectionResponseData responseData = cascadeSyncService.syncFullSectionById(sectionId, null, userId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
-            log.warn("Sync failed for model {}: {}", modelId, e.getMessage());
+            log.warn("Sync failed for section {}: {}", sectionId, e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            log.error("Failed to sync model {} with Stepik: {}", modelId, e.getMessage());
+            log.error("Failed to sync section {} with Stepik: {}", sectionId, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    @PutMapping("/update-model/{modelId}")
-    public ResponseEntity<StepikSectionResponseData> updateModelInStepik(
-            @PathVariable Long modelId,
+    @PutMapping("/update-section/{sectionId}")
+    public ResponseEntity<StepikSectionResponseData> updateSectionInStepik(
+            @PathVariable Long sectionId,
             @RequestHeader("User-Id") Long userId) {
         try {
-            log.info("Starting update for model: {}", modelId);
+            log.info("Starting update section: {}", sectionId);
             userContextBean.setUserId(userId);
-            StepikSectionResponseData responseData = stepikSectionSyncService.updateModelInStepik(modelId);
+            StepikSectionResponseData responseData = stepikSectionSyncService.updateSectionInStepik(sectionId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
-            log.warn("Update failed for model {}: {}", modelId, e.getMessage());
+            log.warn("Update failed for section {}: {}", sectionId, e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            log.error("Failed to update model {} in Stepik: {}", modelId, e.getMessage());
+            log.error("Failed to update section {} in Stepik: {}", sectionId, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    @DeleteMapping("/delete-model/{modelId}")
-    public ResponseEntity<String> deleteModelFromStepik(
-            @PathVariable Long modelId,
+    @DeleteMapping("/delete-section/{sectionId}")
+    public ResponseEntity<String> deleteSectionFromStepik(
+            @PathVariable Long sectionId,
             @RequestHeader("User-Id") Long userId) {
         try {
-            log.info("Starting deletion for model: {}", modelId);
-            cascadeDeleteService.deleteFullSectionFromStepikById(modelId, userId);
-            return ResponseEntity.ok("Model section successfully deleted from Stepik");
+            log.info("Starting deletion section: {}", sectionId);
+            cascadeDeleteService.deleteFullSectionFromStepikById(sectionId, userId);
+            return ResponseEntity.ok("Section successfully deleted from Stepik");
         } catch (IllegalStateException e) {
-            log.warn("Deletion failed for model {}: {}", modelId, e.getMessage());
+            log.warn("Deletion failed for section {}: {}", sectionId, e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            log.error("Failed to delete model {} from Stepik: {}", modelId, e.getMessage());
-            return ResponseEntity.internalServerError().body("Failed to delete model from Stepik: " + e.getMessage());
+            log.error("Failed to delete section {} from Stepik: {}", sectionId, e.getMessage());
+            return ResponseEntity.internalServerError().body("Failed to delete section from Stepik: " + e.getMessage());
         }
     }
 }

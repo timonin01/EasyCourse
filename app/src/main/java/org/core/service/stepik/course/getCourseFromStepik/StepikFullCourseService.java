@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
 import org.core.dto.lesson.LessonResponseDTO;
-import org.core.dto.model.ModelResponseDTO;
+import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.FullCourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
@@ -33,8 +33,8 @@ public class StepikFullCourseService {
             throw new CourseNotFoundException("Not found course with stepikCourseId: " + stepikCourseId);
         }
 
-        List<ModelResponseDTO> modelResponseDTOS = dataService.getSectionsResponseDTO(stepikCourseId, userId);
-        List<LessonResponseDTO> lessonsResponseDTOS = dataService.getLessonsResponseDTO(modelResponseDTOS, userId);
+        List<SectionResponseDTO> sectionResponseDTOS = dataService.getSectionsResponseDTO(stepikCourseId, userId);
+        List<LessonResponseDTO> lessonsResponseDTOS = dataService.getLessonsResponseDTO(sectionResponseDTOS, userId);
         List<StepResponseDTO> stepResponseDTOS = dataService.getStepResponseDTO(lessonsResponseDTOS, userId);
 
         Course existingCourse = courseRepository.findByStepikCourseId(stepikCourseId);
@@ -50,7 +50,7 @@ public class StepikFullCourseService {
                 .stepikCourseId(stepikCourseResponseData.getId())
                 .createdAt(existingCreatedAt)
                 .updatedAt(existingUpdatedAt)
-                .models(modelResponseDTOS)
+                .models(sectionResponseDTOS)
                 .lessons(lessonsResponseDTOS)
                 .steps(stepResponseDTOS)
                 .build();

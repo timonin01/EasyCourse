@@ -28,12 +28,12 @@ public class UpdateStepikLessonService {
     private final LessonRepository lessonRepository;
 
     @Transactional
-    public StepikLessonResponseData performStepikPositionShift(Lesson lesson, Long modelId, Integer newPosition){
+    public StepikLessonResponseData performStepikPositionShift(Lesson lesson, Long sectionId, Integer newPosition){
         if(lesson.getStepikLessonId() == null){
             throw new StepikLessonIntegrationException("Lesson must have stepikLessonId for position shift");
         }
 
-        List<LessonResponseDTO> lessonsByModel = lessonService.getModelLessonsByModelId(modelId).stream()
+        List<LessonResponseDTO> lessonsBySection = lessonService.getSectionLessonsBySectionId(sectionId).stream()
                 .filter(l -> l.getStepikLessonId() != null && !l.getId().equals(lesson.getId()))
                 .toList();
 
@@ -41,15 +41,15 @@ public class UpdateStepikLessonService {
         Integer oldPosition = currentUnitData.getPosition();
 
         if (newPosition < oldPosition) {
-            lessonRepository.incrementPositionsRange(modelId, newPosition, oldPosition - 1);
+            lessonRepository.incrementPositionsRange(sectionId, newPosition, oldPosition - 1);
             lessonRepository.flush();
-            shiftLessonsDownInStepik(lessonsByModel, newPosition, oldPosition - 1);
+            shiftLessonsDownInStepik(lessonsBySection, newPosition, oldPosition - 1);
             lessonService.updateLesson(createUpdateDTO(lesson.getId(), newPosition));
             stepikUnitService.updateUnitPosition(currentUnitData.getId(), newPosition, currentUnitData);
         } else if (newPosition > oldPosition) {
-            lessonRepository.decrementPositionsRange(modelId, oldPosition + 1, newPosition);
+            lessonRepository.decrementPositionsRange(sectionId, oldPosition + 1, newPosition);
             lessonRepository.flush();
-            shiftLessonsUpInStepik(lessonsByModel, oldPosition + 1, newPosition);
+            shiftLessonsUpInStepik(lessonsBySection, oldPosition + 1, newPosition);
             lessonService.updateLesson(createUpdateDTO(lesson.getId(), newPosition));
             stepikUnitService.updateUnitPosition(currentUnitData.getId(), newPosition, currentUnitData);
         } else {
@@ -103,13 +103,13 @@ public class UpdateStepikLessonService {
     }
 
     @Transactional
-    public void performStepikPositionShiftAfterDeletion(Long modelId, Integer deletedPosition) {
-        List<LessonResponseDTO> lessonsByModel = lessonService.getModelLessonsByModelId(modelId).stream()
+    public void performStepikPositionShiftAfterDeletion(Long sectionId, Integer deletedPosition) {
+        List<LessonResponseDTO> lessonsBySection = lessonService.getSectionLessonsBySectionId(sectionId).stream()
                 .filter(l -> l.getStepikLessonId() != null)
                 .filter(l -> l.getPosition() > deletedPosition)
                 .toList();
 
-        for(LessonResponseDTO lessonResponseDTO : lessonsByModel){
+        for(LessonResponseDTO lessonResponseDTO : lessonsBySection){
             try {
                 StepikUnitResponseData unitData = stepikUnitService.getUnitByLessonId(lessonResponseDTO.getStepikLessonId());
                 Integer currentPosition = unitData.getPosition();

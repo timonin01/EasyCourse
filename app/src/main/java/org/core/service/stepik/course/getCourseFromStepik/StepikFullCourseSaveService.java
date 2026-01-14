@@ -5,19 +5,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
 import org.core.domain.Lesson;
-import org.core.domain.Model;
+import org.core.domain.Section;
 import org.core.domain.Step;
 import org.core.dto.lesson.LessonResponseDTO;
-import org.core.dto.model.ModelResponseDTO;
+import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.FullCourseResponseDTO;
 import org.core.repository.CourseRepository;
 import org.core.repository.LessonRepository;
-import org.core.repository.ModelRepository;
+import org.core.repository.SectionRepository;
 import org.core.repository.StepRepository;
 import org.core.service.crud.CourseService;
 import org.core.service.crud.LessonService;
-import org.core.service.crud.ModelService;
+import org.core.service.crud.SectionService;
 import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;
 
@@ -30,11 +30,11 @@ import java.time.LocalDateTime;
 public class StepikFullCourseSaveService {
 
     private final CourseRepository courseRepository;
-    private final ModelRepository modelRepository;
+    private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
     private final StepRepository stepRepository;
     private final CourseService courseService;
-    private final ModelService modelService;
+    private final SectionService sectionService;
     private final LessonService lessonService;
     private final StepService stepService;
 
@@ -49,19 +49,19 @@ public class StepikFullCourseSaveService {
             Course course = getOrCreateCourse(courseResponseDTO);
             log.info("Course created/updated with ID: {}", course.getId());
 
-            course.getModels().clear();
-            for(ModelResponseDTO modelDTO : courseResponseDTO.getModels()) {
-                modelDTO.setCourseId(course.getId());
-                Model model = getOrCreateModel(modelDTO);
-                log.debug("Processing model: {} (ID: {})", model.getTitle(), model.getId());
-                model.getLessons().clear();
+            course.getSections().clear();
+            for(SectionResponseDTO sectionDTO : courseResponseDTO.getModels()) {
+                sectionDTO.setCourseId(course.getId());
+                Section section = getOrCreateSection(sectionDTO);
+                log.debug("Processing section: {} (ID: {})", section.getTitle(), section.getId());
+                section.getLessons().clear();
 
                 for (LessonResponseDTO lessonDTO : courseResponseDTO.getLessons()) {
-                    if (lessonDTO.getStepikSectionId() == null || !lessonDTO.getStepikSectionId().equals(modelDTO.getStepikSectionId())) {
+                    if (lessonDTO.getStepikSectionId() == null || !lessonDTO.getStepikSectionId().equals(sectionDTO.getStepikSectionId())) {
                         continue;
                     }
                     
-                    lessonDTO.setModelId(model.getId());
+                    lessonDTO.setSectionId(section.getId());
                     Lesson lesson = getOrCreateLesson(lessonDTO);
                     log.debug("Processing lesson: {} (ID: {})", lesson.getTitle(), lesson.getId());
                     lesson.getSteps().clear();
@@ -72,11 +72,11 @@ public class StepikFullCourseSaveService {
                             lesson.getSteps().add(step);
                         }
                     }
-                    model.getLessons().add(lesson);
+                    section.getLessons().add(lesson);
                 }
-                course.getModels().add(model);
+                course.getSections().add(section);
             }
-            log.info("Saving course with {} models", course.getModels().size());
+            log.info("Saving course with {} sections", course.getSections().size());
             courseRepository.save(course);
             log.info("Course successfully saved with ID: {}", course.getId());
         } catch (Exception e) {
@@ -98,22 +98,22 @@ public class StepikFullCourseSaveService {
         else return courseService.createCourseFromDTO(courseResponseDTO);
     }
 
-    private Model getOrCreateModel(ModelResponseDTO modelDTO) {
-        Model existingModel = modelDTO.getStepikSectionId() != null
-                ? modelRepository.findByStepikSectionId(modelDTO.getStepikSectionId()) : null;
+    private Section getOrCreateSection(SectionResponseDTO sectionDTO) {
+        Section existingSection = sectionDTO.getStepikSectionId() != null
+                ? sectionRepository.findByStepikSectionId(sectionDTO.getStepikSectionId()) : null;
 
-        if (existingModel != null) {
-            existingModel.setTitle(modelDTO.getTitle());
-            existingModel.setDescription(modelDTO.getDescription());
-            existingModel.setPosition(modelDTO.getPosition());
-            if (existingModel.getCourse().getId() != modelDTO.getCourseId()) {
-                existingModel.setCourse(courseRepository.findById(modelDTO.getCourseId())
+        if (existingSection != null) {
+            existingSection.setTitle(sectionDTO.getTitle());
+            existingSection.setDescription(sectionDTO.getDescription());
+            existingSection.setPosition(sectionDTO.getPosition());
+            if (existingSection.getCourse().getId() != sectionDTO.getCourseId()) {
+                existingSection.setCourse(courseRepository.findById(sectionDTO.getCourseId())
                         .orElseThrow(() -> new org.core.exception.exceptions.CourseNotFoundException("Course not found")));
             }
-            existingModel.setUpdatedAt(modelDTO.getUpdatedAt() != null ? modelDTO.getUpdatedAt() : LocalDateTime.now());
-            return modelRepository.save(existingModel);
+            existingSection.setUpdatedAt(sectionDTO.getUpdatedAt() != null ? sectionDTO.getUpdatedAt() : LocalDateTime.now());
+            return sectionRepository.save(existingSection);
         }
-        else return modelService.createModuleFromDTO(modelDTO);
+        else return sectionService.createSectionFromDTO(sectionDTO);
     }
 
     private Lesson getOrCreateLesson(LessonResponseDTO lessonDTO) {
@@ -123,9 +123,9 @@ public class StepikFullCourseSaveService {
         if (existingLesson != null) {
             existingLesson.setTitle(lessonDTO.getTitle());
             existingLesson.setPosition(lessonDTO.getPosition());
-            if (existingLesson.getModel().getId() != lessonDTO.getModelId()) {
-                existingLesson.setModel(modelRepository.findById(lessonDTO.getModelId())
-                        .orElseThrow(() -> new org.core.exception.exceptions.ModelNotFoundException("Model not found")));
+            if (existingLesson.getSection().getId() != lessonDTO.getSectionId()) {
+                existingLesson.setSection(sectionRepository.findById(lessonDTO.getSectionId())
+                        .orElseThrow(() -> new org.core.exception.exceptions.SectionNotFoundException("Section not found")));
             }
             existingLesson.setUpdatedAt(lessonDTO.getUpdatedAt() != null ? lessonDTO.getUpdatedAt() : LocalDateTime.now());
             return lessonRepository.save(existingLesson);
