@@ -122,7 +122,6 @@ public class StepikFullCourseSaveService {
 
         if (existingLesson != null) {
             existingLesson.setTitle(lessonDTO.getTitle());
-            existingLesson.setDescription(lessonDTO.getDescription());
             existingLesson.setPosition(lessonDTO.getPosition());
             if (existingLesson.getModel().getId() != lessonDTO.getModelId()) {
                 existingLesson.setModel(modelRepository.findById(lessonDTO.getModelId())

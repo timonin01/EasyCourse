@@ -100,7 +100,6 @@ public class StepikLessonSyncService {
         Lesson lesson = new Lesson();
         lesson.setId(lessonDTO.getId());
         lesson.setTitle(lessonDTO.getTitle());
-        lesson.setDescription(lessonDTO.getDescription());
         lesson.setPosition(lessonDTO.getPosition());
         lesson.setStepikLessonId(lessonDTO.getStepikLessonId());
         

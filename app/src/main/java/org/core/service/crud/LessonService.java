@@ -36,7 +36,6 @@ public class LessonService {
         Lesson lesson = new Lesson();
         lesson.setModel(model);
         lesson.setTitle(createDTO.getTitle());
-        lesson.setDescription(createDTO.getDescription() != null ? createDTO.getDescription() : "");
         lesson.setPosition(position);
 
         log.info("Created new lesson with ID: {} in model: {} at position {}", lesson.getId(), model.getId(), position);
@@ -50,7 +49,6 @@ public class LessonService {
         Lesson lesson = Lesson.builder()
                 .model(model)
                 .title(lessonResponseDTO.getTitle())
-                .description(lessonResponseDTO.getDescription() != null ? lessonResponseDTO.getDescription() : model.getDescription())
                 .position(lessonResponseDTO.getPosition())
                 .stepikLessonId(lessonResponseDTO.getStepikLessonId())
                 .createdAt(lessonResponseDTO.getCreatedAt())
@@ -75,9 +73,6 @@ public class LessonService {
         Lesson lesson = findLessonById(updateDTO.getLessonId());
         if (updateDTO.getTitle() != null) {
             lesson.setTitle(updateDTO.getTitle());
-        }
-        if (updateDTO.getDescription() != null) {
-            lesson.setDescription(updateDTO.getDescription());
         }
         if (updateDTO.getPosition() != null && !updateDTO.getPosition().equals(lesson.getPosition())) {
             changeLessonPosition(lesson, updateDTO.getPosition());
@@ -155,7 +150,6 @@ public class LessonService {
         return LessonResponseDTO.builder()
                 .id(lesson.getId())
                 .title(lesson.getTitle())
-                .description(lesson.getDescription())
                 .position(lesson.getPosition())
                 .stepikLessonId(lesson.getStepikLessonId())
                 .modelId(lesson.getModel().getId())

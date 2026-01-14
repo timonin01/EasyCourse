@@ -23,9 +23,6 @@ public class Lesson {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "description", nullable = false, columnDefinition = "LONGTEXT")
-    private String description;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_id", nullable = false)
     private Model model;

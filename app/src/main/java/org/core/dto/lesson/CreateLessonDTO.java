@@ -20,6 +20,4 @@ public class CreateLessonDTO {
     @NotBlank(message = "Title is required")
     @Size(min = 3, max = 64)
     private String title;
-
-    private String description;
 }
