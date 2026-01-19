@@ -8,11 +8,14 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.core.dto.stepik.step.code.response.StepikBlockCodeResponse;
 import org.core.dto.stepik.step.test.choise.response.StepikBlockChoiceResponse;
 import org.core.dto.stepik.step.test.matching.response.StepikBlockMatchingResponse;
 import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse;
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -31,7 +34,8 @@ public class StepikStepSourceResponseData {
             @JsonSubTypes.Type(value = StepikBlockChoiceResponse.class, name = "choice"),
             @JsonSubTypes.Type(value = StepikBlockSortingResponse.class, name = "sorting"),
             @JsonSubTypes.Type(value = StepikBlockMatchingResponse.class, name = "matching"),
-            @JsonSubTypes.Type(value = StepikBlockTableResponse.class, name = "table")
+            @JsonSubTypes.Type(value = StepikBlockTableResponse.class, name = "table"),
+            @JsonSubTypes.Type(value = StepikBlockCodeResponse.class, name = "code")
     })
     private StepikBlockResponse block;
 
@@ -88,6 +92,27 @@ public class StepikStepSourceResponseData {
     private Object actions;
     private String progress;
     private Object subscriptions;
+    private String instruction;
+    private Object session;
+
+    @JsonProperty("instruction_type")
+    private String instructionType;
+
+    @JsonProperty("needs_plan")
+    private Boolean needsPlan;
+
+    @JsonProperty("num_grades")
+    private List<Integer> numGrades;
+
+    @JsonProperty("user_step_grade")
+    private Object userStepGrade;
+
+    @JsonProperty("user_step_vote")
+    private Object userStepVote;
+
+    @JsonProperty("discussion_threads")
+    private List<String> discussionThreads;
+
     private Object error;
     private Object warnings;
 
