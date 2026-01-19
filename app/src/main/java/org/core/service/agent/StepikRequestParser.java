@@ -15,6 +15,7 @@ import org.core.service.agent.stepikStepParcer.MathStepParser;
 import org.core.service.agent.stepikStepParcer.StringStepParser;
 import org.core.service.agent.stepikStepParcer.RandomTasksStepParser;
 import org.core.service.agent.stepikStepParcer.NumberStepParser;
+import org.core.service.agent.stepikStepParcer.CodeStepParser;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,6 +34,7 @@ public class StepikRequestParser {
     private final StringStepParser stringStepParser;
     private final RandomTasksStepParser randomTasksStepParser;
     private final NumberStepParser numberStepParser;
+    private final CodeStepParser codeStepParser;
 
     public StepikBlockRequest parseRequest(String json, String stepType) {
         try {
@@ -48,6 +50,7 @@ public class StepikRequestParser {
                 case "string" -> stringStepParser.parseStringRequest(json);
                 case "random-tasks" -> randomTasksStepParser.parseRandomTasksRequest(json);
                 case "number" -> numberStepParser.parseNumberRequest(json);
+                case "code" -> codeStepParser.parseCodeRequest(json);
                 default -> throw new IllegalArgumentException("Unsupported step type: " + stepType);
             };
         } catch (Exception e) {

@@ -15,6 +15,7 @@ import org.core.service.agent.stepikStepParcer.MathStepParser;
 import org.core.service.agent.stepikStepParcer.StringStepParser;
 import org.core.service.agent.stepikStepParcer.RandomTasksStepParser;
 import org.core.service.agent.stepikStepParcer.NumberStepParser;
+import org.core.service.agent.stepikStepParcer.CodeStepParser;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Pattern;
@@ -37,6 +38,7 @@ public class StepikResponseParser {
     private final StringStepParser stringStepParser;
     private final RandomTasksStepParser randomTasksStepParser;
     private final NumberStepParser numberStepParser;
+    private final CodeStepParser codeStepParser;
 
     public StepikBlockRequest parseResponse(String aiResponse, String stepType) {
         try {
@@ -54,6 +56,7 @@ public class StepikResponseParser {
                 case "string" -> stringStepParser.parseStringRequest(cleanJson);
                 case "random-tasks" -> randomTasksStepParser.parseRandomTasksRequest(cleanJson);
                 case "number" -> numberStepParser.parseNumberRequest(cleanJson);
+                case "code" -> codeStepParser.parseCodeRequest(cleanJson);
                 default -> throw new IllegalArgumentException("Unsupported step type: " + stepType);
             };
             

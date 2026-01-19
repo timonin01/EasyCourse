@@ -99,6 +99,7 @@ public class StepTypeChangeService {
             case FREE_ANSWER -> "free-answer";
             case MATH -> "math";
             case RANDOM_TASKS -> "random-tasks";
+            case CODE -> "code";
             default -> throw new IllegalArgumentException("Unknow stepType" + stepType);
         };
     }

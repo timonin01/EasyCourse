@@ -13,6 +13,7 @@ import org.core.dto.stepik.step.enterWord.number.request.StepikBlockNumberReques
 import org.core.dto.stepik.step.enterWord.math.request.StepikBlockMathRequest;
 import org.core.dto.stepik.step.enterWord.freeAnswer.request.StepikBlockFreeAnswerRequest;
 import org.core.dto.stepik.step.enterWord.randomTasks.request.StepikBlockRandomTasksRequest;
+import org.core.dto.stepik.step.code.request.StepikBlockCodeRequest;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -30,7 +31,8 @@ import org.core.dto.stepik.step.enterWord.randomTasks.request.StepikBlockRandomT
         @JsonSubTypes.Type(value = StepikBlockNumberRequest.class, name = "number"),
         @JsonSubTypes.Type(value = StepikBlockMathRequest.class, name = "math"),
         @JsonSubTypes.Type(value = StepikBlockFreeAnswerRequest.class, name = "free-answer"),
-        @JsonSubTypes.Type(value = StepikBlockRandomTasksRequest.class, name = "random-tasks")
+        @JsonSubTypes.Type(value = StepikBlockRandomTasksRequest.class, name = "random-tasks"),
+        @JsonSubTypes.Type(value = StepikBlockCodeRequest.class, name = "code")
 })
 public interface StepikBlockRequest {
 }

@@ -85,7 +85,6 @@ public class StepikSectionSyncService {
 
         Section section = mapToSection(sectionDTO);
         section.setPosition(currentStepikPosition);
-
         try{
             updateStepikSectionService.performStepikPositionShift(section,sectionDTO.getCourseId(),currentDbPosition);
         }catch (StepikSectionIntegrationException e){
