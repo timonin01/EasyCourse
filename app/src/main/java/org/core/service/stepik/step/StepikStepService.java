@@ -71,6 +71,7 @@ public class StepikStepService {
             }
         } catch (HttpClientErrorException e) {
             String errorBody = e.getResponseBodyAsString();
+            log.error("Step {} Stepik API ERROR RESPONSE (full body): {}", step.getId(), errorBody);
             String errorMessage = parseStepikError(errorBody);
             log.error("HTTP error creating step in Stepik for step ID: {}. Status: {}, Error: {}", 
                 step.getId(), e.getStatusCode(), errorMessage);
