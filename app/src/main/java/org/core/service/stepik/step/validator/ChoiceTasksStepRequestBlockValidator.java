@@ -22,21 +22,10 @@ public class ChoiceTasksStepRequestBlockValidator {
                         .filter(option -> option.getIsCorrect() != null && option.getIsCorrect())
                         .count();
 
-                if ((isMultipleChoice == null || !isMultipleChoice) && correctCount > 1) {
-                    log.error("Step {} has choice step with {} correct answers but is_multiple_choice is false. " +
-                            "Stepik API doesn't allow multiple correct answers in single-choice mode. " +
-                            "Keeping only the first correct answer.", stepId, correctCount);
-
-                    boolean firstCorrectFound = false;
-                    for (StepikChoiceOptionRequest option : options) {
-                        if (option.getIsCorrect() != null && option.getIsCorrect()) {
-                            if (!firstCorrectFound) {
-                                firstCorrectFound = true;
-                            } else {
-                                option.setIsCorrect(false);
-                            }
-                        }
-                    }
+                if (correctCount > 1 && (isMultipleChoice == null || !isMultipleChoice)) {
+                    log.warn("Step {} choice: {} correct answers but is_multiple_choice was false. Setting is_multiple_choice=true.",
+                            stepId, correctCount);
+                    choiceRequest.getSource().setIsMultipleChoice(true);
                 }
             }
         }
