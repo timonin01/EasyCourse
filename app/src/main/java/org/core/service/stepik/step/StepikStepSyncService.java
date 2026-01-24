@@ -11,6 +11,7 @@ import org.core.dto.stepik.step.StepikStepSourceResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
+import org.core.repository.StepRepository;
 import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +40,19 @@ public class StepikStepSyncService {
             log.info("Step {} successfully synced with Stepik step ID: {}", stepId, stepData.getId());
         }
         return stepData;
+    }
+
+    public StepikStepSourceResponseData getStepFromStepikByLocalStepId(Long stepId){
+        StepResponseDTO stepDTO = stepService.getStepById(stepId);
+        if (stepDTO.getStepikStepId() == null) {
+            throw new IllegalStateException("Step is not synced with Stepik. Step ID: " + stepId);
+        }
+
+        StepikStepSourceResponseData stepikStepSourceResponseData = stepikStepService.getStepikStepById(stepDTO.getStepikStepId());
+        if(stepikStepSourceResponseData == null){
+            throw new IllegalArgumentException("Failed to upload step from stepik");
+        }
+        return stepikStepSourceResponseData;
     }
 
     public StepikStepSourceResponseData updateStepInStepik(Long stepId) {
@@ -70,9 +84,9 @@ public class StepikStepSyncService {
 
     public void deleteStepFromStepik(Long stepId) {
         StepResponseDTO stepDTO = stepService.getStepById(stepId);
-        log.info("Step data: ID={}, Type='{}', StepikStepId={}, Position={}", 
+        log.info("Step data: ID={}, Type='{}', StepikStepId={}, Position={}",
                 stepDTO.getId(), stepDTO.getType(), stepDTO.getStepikStepId(), stepDTO.getPosition());
-        
+
         if (stepDTO.getStepikStepId() == null) {
             throw new StepikStepIntegrationException("Step is not synced with Stepik. Step ID: " + stepId);
         }
