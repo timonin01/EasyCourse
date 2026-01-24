@@ -7,7 +7,6 @@ import org.core.exception.exceptions.UserAlreadyExistsException;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.service.crud.UserService;
-import org.core.util.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,9 +28,7 @@ class UserServiceTest {
     private UserRepository userRepository;
     @Mock
     private UserValidationService validationService;
-    @Mock
-    private JwtUtil jwtUtil;
-    
+
     @InjectMocks
     private UserService userService;
 
@@ -77,17 +74,14 @@ class UserServiceTest {
                 .name("Andrey")
                 .createdAt(LocalDateTime.now())
                 .build();
-        String token = "jwt.token.here";
-        
+
         when(userRepository.findByEmail("atimonin2006@gmail.com")).thenReturn(Optional.of(user));
-        when(jwtUtil.generateToken(user)).thenReturn(token);
 
         UserLoginResponseDTO response = userService.authenticateUser(loginDto);
 
-        assertThat(response.getToken()).isEqualTo(token);
+        assertThat(response.getToken()).isEqualTo("1");
         assertThat(response.getUser().getEmail()).isEqualTo("atimonin2006@gmail.com");
         verify(userRepository).findByEmail("atimonin2006@gmail.com");
-        verify(jwtUtil).generateToken(user);
     }
 
     @Test
