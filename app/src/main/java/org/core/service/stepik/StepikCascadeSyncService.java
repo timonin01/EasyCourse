@@ -128,7 +128,6 @@ public class StepikCascadeSyncService {
         try{
             Section section = sectionRepository.findById(sectionId)
                     .orElseThrow(() -> new IllegalArgumentException("Section with id " + sectionId + " not found"));
-            sectionSyncService.syncSectionWithStepik(sectionId);
 
             StepikSectionResponseData sectionResponseData;
             if (section.getStepikSectionId() == null) {
@@ -156,7 +155,6 @@ public class StepikCascadeSyncService {
         try{
             Lesson lesson = lessonRepository.findById(lessonId)
                     .orElseThrow(() -> new IllegalArgumentException("Lesson with id " + lessonId + " not found"));
-            lessonSyncService.syncLessonWithStepik(lessonId, captchaToken);
 
             LessonCaptchaChallenge lessonCaptchaChallenge;
             if(lesson.getStepikLessonId() == null) {
