@@ -3,13 +3,10 @@ package org.core.rest.stepik;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
-import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.service.stepik.step.StepikStepSyncService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/stepik/steps")
@@ -29,6 +26,17 @@ public class StepikStepController {
         userContextBean.setUserId(userId);
 
         StepikStepSourceResponseData result = stepikStepSyncService.syncStepWithStepik(stepId);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/get-sync-step")
+    public ResponseEntity<StepikStepSourceResponseData> getVoid(
+            @RequestParam Long stepId,
+            @RequestHeader("User-Id") Long userId) {
+        log.info("Start getting information about step from stepik for stepId: {}", stepId);
+        userContextBean.setUserId(userId);
+
+        StepikStepSourceResponseData result = stepikStepSyncService.getStepFromStepikByLocalStepId(stepId);
         return ResponseEntity.ok(result);
     }
 
