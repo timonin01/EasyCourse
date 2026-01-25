@@ -43,6 +43,7 @@ public class StepikStepSourceDataRequestBuilder {
     private final TableTasksStepRequestBlockValidator tableValidator;
     private final CodeTasksStepRequestBlockValidator codeValidator;
     private final MatchingTasksStepRequestBlockValidator matchingValidator;
+    private final MathStepRequestBlockValidator mathValidator;
 
     public StepikStepSourceRequestData createRequestDataForCreate(Step step) {
         StepikStepSourceRequestData requestData = new StepikStepSourceRequestData();
@@ -64,6 +65,7 @@ public class StepikStepSourceDataRequestBuilder {
                 tableValidator.validateAndFixTableBlock(stepikBlockRequest, step.getId());
                 codeValidator.validateAndFixCodeBlock(stepikBlockRequest, step.getId());
                 matchingValidator.validateAndFixMatchingBlock(stepikBlockRequest, step.getId());
+                mathValidator.validateAndFixMathBlock(stepikBlockRequest, step.getId());
 
                 if (stepikBlockRequest instanceof StepikBlockFillBlanksRequest fillBlanks) {
                     if (fillBlanks.getSource() != null && fillBlanks.getSource().getComponents() != null) {
@@ -111,6 +113,7 @@ public class StepikStepSourceDataRequestBuilder {
                 tableValidator.validateAndFixTableBlock(stepikBlockRequest, step.getId());
                 codeValidator.validateAndFixCodeBlock(stepikBlockRequest, step.getId());
                 matchingValidator.validateAndFixMatchingBlock(stepikBlockRequest, step.getId());
+                mathValidator.validateAndFixMathBlock(stepikBlockRequest, step.getId());
 
                 requestData.setBlock(stepikBlockRequest);
             } else {
