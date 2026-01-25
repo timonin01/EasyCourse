@@ -7,88 +7,72 @@ import org.core.dto.stepik.step.enterWord.fillBlanks.request.StepikFillBlanksCom
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Component
 @Slf4j
 public class FillBlanksStepRequestBlockValidator {
 
     public void validateAndFixFillBlanksBlock(StepikBlockRequest blockRequest, Long stepId) {
-        if (blockRequest instanceof StepikBlockFillBlanksRequest fillBlanksRequest) {
-            if (fillBlanksRequest.getSource() != null && fillBlanksRequest.getSource().getComponents() != null) {
-                for (int i = 0; i < fillBlanksRequest.getSource().getComponents().size(); i++) {
-                    StepikFillBlanksComponentRequest component = fillBlanksRequest.getSource().getComponents().get(i);
-                    if (component.getOptions() == null) {
-                        component.setOptions(new ArrayList<>());
-                    }
-
-                    String originalType = component.getType();
-                    String componentType = originalType;
-                    if (componentType != null) {
-                        componentType = componentType.trim().toLowerCase();
-                    }
-
-                    if ("input".equals(componentType)) {
-                        log.error("Step {} has fill-blanks component[{}] with type 'input'. " +
-                                        "Stepik API uses 'blank' instead. Converting 'input' to 'blank'.",
-                                stepId, i);
-                        componentType = "blank";
-                    }
-                    if (componentType == null || componentType.isEmpty()) {
-                        if (!component.getOptions().isEmpty()) {
-                            componentType = "blank";
-                        } else {
-                            componentType = "text";
-                        }
-                        log.error("Step {} has fill-blanks component[{}] with missing or empty type (original='{}'). " +
-                                        "Stepik API requires this field. Setting type to '{}' based on component structure.",
-                                stepId, i, originalType, componentType);
-                        component.setType(componentType);
-                    } else if (!componentType.equals("text") && !componentType.equals("blank")) {
-                        String correctType = !component.getOptions().isEmpty() ? "blank" : "text";
-                        log.error("Step {} has fill-blanks component[{}] with invalid type '{}' (normalized='{}'). " +
-                                        "Stepik API only accepts 'text' or 'blank'. Setting type to '{}'.",
-                                stepId, i, originalType, componentType, correctType);
-                        component.setType(correctType);
-                    } else {
-                        component.setType(componentType);
-                    }
-
-                    if ("text".equals(component.getType())) {
-                        if (component.getText() == null || component.getText().trim().isEmpty()) {
-                            log.error("Step {} has fill-blanks component[{}] of type 'text' with missing or empty text. " +
-                                    "Stepik API requires this field. Setting default empty string.", stepId, i);
-                            component.setText("");
-                        }
-                    } else if ("blank".equals(component.getType())) {
-                        if (component.getText() == null) {
-                            component.setText("");
-                        }
-
-                        if (component.getOptions().isEmpty()) {
-                            log.error("Step {} has fill-blanks component[{}] with type 'blank' but empty options. " +
-                                    "Stepik API requires at least one option for 'blank' type. Changing type to 'text'.", stepId, i);
-                            component.setType("text");
-                        }
-                    }
-
-                    String finalType = component.getType();
-                    if (finalType == null || finalType.trim().isEmpty()) {
-                        log.error("Step {} component[{}] has null or empty type after all validations. " +
-                                "This should not happen. Forcing type to 'text'.", stepId, i);
-                        component.setType("text");
-                    } else if (!"text".equals(finalType) && !"blank".equals(finalType)) {
-                        log.error("Step {} component[{}] has invalid final type '{}' after all validations. " +
-                                        "This should not happen. Forcing type to 'text'. Original type was '{}'.",
-                                stepId, i, finalType, originalType);
-                        component.setType("text");
-                    } else {
-                        component.setType(finalType.toLowerCase());
-                        log.error("Step {} component[{}] validated: originalType='{}', finalType='{}', hasOptions={}",
-                                stepId, i, originalType, component.getType(), !component.getOptions().isEmpty());
-                    }
-                }
-            }
+        if (!(blockRequest instanceof StepikBlockFillBlanksRequest fillBlanksRequest)) {
+            return;
         }
+        if (fillBlanksRequest.getSource() == null || fillBlanksRequest.getSource().getComponents() == null) {
+            return;
+        }
+        List<StepikFillBlanksComponentRequest> inputList = fillBlanksRequest.getSource().getComponents();
+        List<StepikFillBlanksComponentRequest> out = new ArrayList<>();
+
+        for (int i = 0; i < inputList.size(); i++) {
+            StepikFillBlanksComponentRequest c = inputList.get(i);
+            if (c.getOptions() == null) {
+                c.setOptions(new ArrayList<>());
+            }
+
+            String type = c.getType() != null ? c.getType().trim().toLowerCase() : "";
+            boolean isBlankOrInput = "blank".equals(type) || "input".equals(type);
+            if (type.isEmpty() || (!"text".equals(type) && !isBlankOrInput)) {
+                type = !c.getOptions().isEmpty() ? "input" : "text";
+            }
+            if ("blank".equals(type)) {
+                type = "input";
+            }
+
+            if ("text".equals(type)) {
+                StepikFillBlanksComponentRequest textComp = new StepikFillBlanksComponentRequest();
+                textComp.setType("text");
+                textComp.setText(c.getText() == null || c.getText().trim().isEmpty() ? "" : c.getText().trim());
+                textComp.setOptions(new ArrayList<>());
+                out.add(textComp);
+                continue;
+            }
+
+            if (c.getOptions().isEmpty()) {
+                log.warn("Step {} fill-blanks component[{}] input with empty options. Adding as text.", stepId, i);
+                StepikFillBlanksComponentRequest textComp = new StepikFillBlanksComponentRequest();
+                textComp.setType("text");
+                textComp.setText(c.getText() != null ? c.getText().trim() : "");
+                textComp.setOptions(new ArrayList<>());
+                out.add(textComp);
+                continue;
+            }
+
+            String prefix = c.getText() != null && !c.getText().trim().isEmpty() ? c.getText().trim() : null;
+            if (prefix != null) {
+                StepikFillBlanksComponentRequest textComp = new StepikFillBlanksComponentRequest();
+                textComp.setType("text");
+                textComp.setText(prefix);
+                textComp.setOptions(new ArrayList<>());
+                out.add(textComp);
+            }
+            StepikFillBlanksComponentRequest inputComp = new StepikFillBlanksComponentRequest();
+            inputComp.setType("input");
+            inputComp.setText("");
+            inputComp.setOptions(c.getOptions());
+            out.add(inputComp);
+        }
+
+        fillBlanksRequest.getSource().setComponents(out);
     }
 
 }
