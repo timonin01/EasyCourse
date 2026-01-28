@@ -5,6 +5,10 @@ build/
 !**/src/test/**/build/
 application.properties
 
+# Деплой: секреты не коммитить
+deploy/.env
+.env
+
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml
