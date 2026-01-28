@@ -66,7 +66,22 @@ public class StepikResponseParser {
         }
     }
     
+    private String fixEscapedHtmlTags(String text) {
+        if (text == null) {
+            return text;
+        }
+        text = text.replace("\\u007f", "");
+        text = text.replace("\\u003c", "<");
+        text = text.replace("\\u003e", ">");
+        text = text.replace("\\\\u007f", "");
+        text = text.replace("\\\\u003c", "<");
+        text = text.replace("\\\\u003e", ">");
+        return text;
+    }
+
     private String extractJsonFromResponse(String response) {
+        // Исправляем экранированные HTML теги перед парсингом
+        response = fixEscapedHtmlTags(response);
         if (response == null || response.trim().isEmpty()) {
             throw new IllegalArgumentException("Empty response from AI");
         }

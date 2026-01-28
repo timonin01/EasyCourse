@@ -83,8 +83,7 @@ public class StepikLessonService {
     public StepikLessonResponse updateLesson(Long stepikLessonId) {
         Lesson lesson = lessonRepository.findByStepikLessonId(stepikLessonId);
 
-        StepikLessonRequest request = new StepikLessonRequest(stepikLessonRequestDataBuilder
-                .createRequestDataForUpdate(lesson));
+        StepikLessonRequest request = new StepikLessonRequest(stepikLessonRequestDataBuilder.createRequestDataForUpdate(lesson));
         try {
             String url = baseUrl +"/lessons/" + stepikLessonId;
 
