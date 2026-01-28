@@ -19,8 +19,8 @@ public class SystemPromptService {
     private final ResourceLoader resourceLoader;
     private final Map<String, String> promptCache = new ConcurrentHashMap<>();
     
-    public String getPromptForStepType(String stepType) {
-        return promptCache.computeIfAbsent(stepType, type -> {
+    public String getPromptForQuery(String query) {
+        return promptCache.computeIfAbsent(query, type -> {
             try {
                 Resource resource = resourceLoader.getResource("classpath:prompts/stepik/" + type + ".txt");
                 return resource.getContentAsString(StandardCharsets.UTF_8);
