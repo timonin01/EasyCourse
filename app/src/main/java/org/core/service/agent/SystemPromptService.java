@@ -30,4 +30,17 @@ public class SystemPromptService {
         });
     }
 
+    public String getBatchPromptByQuery(String query){
+        String cacheKey = "batch-creator-" + query;
+        return promptCache.computeIfAbsent(cacheKey, type -> {
+            try{
+                Resource resource = resourceLoader.getResource("classpath:prompts/stepik/batch-creator/" + query + ".txt");
+                return resource.getContentAsString(StandardCharsets.UTF_8);
+            }catch (IOException e) {
+                log.error("Batch prompt not found for type: {}, will use fallback", query);
+                return null;
+            }
+        });
+    }
+
 }
