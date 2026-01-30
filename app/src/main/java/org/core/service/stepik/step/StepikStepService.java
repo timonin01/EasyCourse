@@ -47,6 +47,13 @@ public class StepikStepService {
 
             HttpHeaders headers = headerBuilder.createHeaders();
             HttpEntity<StepikStepSourceRequest> entity = new HttpEntity<>(request, headers);
+            
+            try {
+                String requestBody = objectMapper.writeValueAsString(request);
+                log.info("Step {} Stepik API REQUEST BODY: {}", step.getId(), requestBody);
+            } catch (Exception e) {
+                log.error("Failed to log request body for step {}: {}", step.getId(), e.getMessage());
+            }
 
             ResponseEntity<String> rawResponse = restTemplate.exchange(
                 url, HttpMethod.POST, entity, String.class);

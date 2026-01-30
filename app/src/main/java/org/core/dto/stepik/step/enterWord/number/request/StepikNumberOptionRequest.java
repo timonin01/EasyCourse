@@ -11,18 +11,21 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.ALWAYS)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StepikNumberOptionRequest {
 
     private String answer;
 
     @JsonProperty("max_error")
-    private String maxError = "";
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private String maxError;
 
     @JsonProperty("z_re_min")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     private String zReMin = "";
 
     @JsonProperty("integer_only")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     private Boolean integerOnly = false;
 
 }

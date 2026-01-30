@@ -36,10 +36,10 @@ public class NumberStepRequestBlockValidator {
                         option.setIntegerOnly(false);
                     }
 
-                    if (option.getMaxError() == null) {
-                        log.warn("Step {} has number option[{}] with null max_error field. " +
-                                "Stepik API REQUIRES this field. Setting to empty string.", stepId, i);
-                        option.setMaxError("");
+                    if (option.getMaxError() == null || option.getMaxError().trim().isEmpty()) {
+                        log.warn("Step {} has number option[{}] with null or empty max_error field. " +
+                                "Stepik API requires this field to be a number. Setting to '0' for exact match.", stepId, i);
+                        option.setMaxError("0");
                     }
 
                     log.info("Step {} number option[{}] after validation: answer='{}', max_error='{}', z_re_min='{}', integer_only={}",

@@ -3,8 +3,11 @@ package org.core.rest.ai;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
+import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.service.agent.AgentService;
+import org.core.service.agent.batch.BatchAnalyzerService;
+import org.core.service.agent.batch.BatchGeneratorService;
 import org.core.service.agent.StepikRequestParser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,15 +19,17 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class AgentController {
-    
+
     private final AgentService agentService;
     private final StepikRequestParser stepikRequestParser;
-    
+    private final BatchGeneratorService batchGeneratorService;
+    private final BatchAnalyzerService batchAnalyzerService;
+
     @PostMapping("/chat")
     public ResponseEntity<String> chat(
             @RequestParam String sessionId,
             @RequestBody String userInput) {
-        
+
         try {
             String response = agentService.handleUserMessage(sessionId, userInput);
             return ResponseEntity.ok(response);
@@ -33,7 +38,7 @@ public class AgentController {
             return ResponseEntity.internalServerError().body("Ошибка при обработке запроса");
         }
     }
-    
+
     @GetMapping("/history/{sessionId}")
     public ResponseEntity<List<ChatMessage>> getHistory(@PathVariable String sessionId) {
         try {
@@ -60,6 +65,29 @@ public class AgentController {
             return ResponseEntity.ok(stepikRequest);
         } catch (Exception e) {
             log.error("Error in generateStep endpoint: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/generate-batch-steps")
+    public ResponseEntity<List<StepikBlockRequest>> generateBatchSteps(
+            @RequestParam String sessionId,
+            @RequestBody BatchStepDTO batchStepDTO){
+
+        log.info("Start generating batch steps with plan: {}", batchStepDTO);
+        return ResponseEntity.ok(batchGeneratorService.generateBatchRequests(sessionId, batchStepDTO));
+    }
+
+    @PostMapping("/analyze-batch-request")
+    public ResponseEntity<BatchStepDTO> analyzeBatchRequest(
+            @RequestBody String userInput) {
+
+        try {
+            log.info("Analyzing batch request: {}", userInput);
+            BatchStepDTO plan = batchAnalyzerService.analyzeUserInput(userInput);
+            return ResponseEntity.ok(plan);
+        } catch (Exception e) {
+            log.error("Error analyzing batch request: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,7 +71,7 @@ public class AgentService {
 
             Optional<String> existingStepType = extractStepTypeFromHistory(contextStore.getHistory(sessionId));
             if(existingStepType.isEmpty() || !existingStepType.get().equals(stepType)) {
-                String systemPrompt = systemPromptService.getPromptForStepType(stepType);
+                String systemPrompt = systemPromptService.getPromptForQuery(stepType);
                 ChatMessage systemMessage = ChatMessage.builder()
                         .role("system")
                         .content(systemPrompt)
@@ -124,7 +123,7 @@ public class AgentService {
 
             Optional<String> existingStepType = extractStepTypeFromHistory(contextStore.getHistory(sessionId));
             if(existingStepType.isEmpty() || !existingStepType.get().equals(stepType)) {
-                String systemPrompt = systemPromptService.getPromptForStepType(stepType);
+                String systemPrompt = systemPromptService.getPromptForQuery(stepType);
                 ChatMessage systemMessage = ChatMessage.builder()
                         .role("system")
                         .content(systemPrompt)
