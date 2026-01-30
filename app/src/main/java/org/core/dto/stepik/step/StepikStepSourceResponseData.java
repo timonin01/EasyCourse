@@ -99,7 +99,7 @@ public class StepikStepSourceResponseData {
     private String instructionType;
 
     @JsonProperty("needs_plan")
-    private Boolean needsPlan;
+    private String needsPlan;
 
     @JsonProperty("num_grades")
     private List<Integer> numGrades;
