@@ -13,13 +13,10 @@ import org.core.service.AiService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -35,11 +32,29 @@ public class YandexGptService implements AiService {
     @Value("${yandex.gpt.api.model-uri}")
     private String modelUri;
 
+    @Value("${max.tokens.default}")
+    private Integer maxTokensDefault;
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     @SneakyThrows
     public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt){
+        return generateResponse(messages, hasSystemPrompt, maxTokensDefault);
+    }
+
+    @SneakyThrows
+    public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt, int maxTokens){
+        return generateResponse(messages, hasSystemPrompt, maxTokens, modelUri);
+    }
+
+    @SneakyThrows
+    public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt, int maxTokens, String customModelUri){
+        return generateResponse(messages, hasSystemPrompt, maxTokens, customModelUri, false);
+    }
+
+    @SneakyThrows
+    public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt, int maxTokens, String customModelUri, boolean jsonObject){
         if (messages == null || messages.isEmpty()) {
             throw new YandexGptException("Messages cannot be empty");
         }
@@ -47,8 +62,10 @@ public class YandexGptService implements AiService {
             List<Message> yandexMessages = messages.stream()
                     .map(chatMessage -> new Message(chatMessage.getRole(), chatMessage.getContent()))
                     .toList();
-            YandexGptRequest yandexGptRequest = new YandexGptRequest(modelUri, yandexMessages, hasSystemPrompt);
-            log.info("Sending request to Yandex GPT: {}", objectMapper.writeValueAsString(yandexGptRequest));
+            String uriToUse = customModelUri != null ? customModelUri : modelUri;
+            YandexGptRequest yandexGptRequest = new YandexGptRequest(uriToUse, yandexMessages, jsonObject);
+            yandexGptRequest.setMaxTokens(maxTokens);
+            log.info("Sending request to Yandex GPT (model: {}): {}", uriToUse, objectMapper.writeValueAsString(yandexGptRequest));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
