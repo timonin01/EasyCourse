@@ -49,6 +49,11 @@ public class YandexGptService implements AiService {
     }
 
     @SneakyThrows
+    public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt, String modelUri){
+        return generateResponse(messages, hasSystemPrompt, maxTokensDefault, modelUri, false);
+    }
+
+    @SneakyThrows
     public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt, int maxTokens, String customModelUri){
         return generateResponse(messages, hasSystemPrompt, maxTokens, customModelUri, false);
     }

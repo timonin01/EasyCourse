@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
+import org.core.enums.LlmModel;
 import org.core.service.agent.AgentService;
+import org.core.service.agent.StepContentModifier;
 import org.core.service.agent.batch.BatchAnalyzerService;
 import org.core.service.agent.batch.BatchGeneratorService;
 import org.core.service.agent.StepikRequestParser;
@@ -24,15 +26,23 @@ public class AgentController {
     private final StepikRequestParser stepikRequestParser;
     private final BatchGeneratorService batchGeneratorService;
     private final BatchAnalyzerService batchAnalyzerService;
+    private final StepContentModifier stepContentModifier;
 
     @PostMapping("/chat")
     public ResponseEntity<String> chat(
             @RequestParam String sessionId,
-            @RequestBody String userInput) {
+            @RequestBody String userInput,
+            @RequestParam(required = false) String llmModel) {
 
         try {
-            String response = agentService.handleUserMessage(sessionId, userInput);
+            LlmModel model = llmModel != null && !llmModel.trim().isEmpty() 
+                    ? LlmModel.valueOf(llmModel.toUpperCase()) 
+                    : null;
+            String response = agentService.handleUserMessage(sessionId, userInput, model);
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid LLM model: {}", llmModel);
+            return ResponseEntity.badRequest().body("Неверная модель LLM: " + llmModel);
         } catch (Exception e) {
             log.error("Error in chat endpoint: {}", e.getMessage());
             return ResponseEntity.internalServerError().body("Ошибка при обработке запроса");
@@ -54,15 +64,22 @@ public class AgentController {
     public ResponseEntity<StepikBlockRequest> generateStep(
             @RequestParam String sessionId,
             @RequestParam(required = false) String stepType,
-            @RequestBody String userInput) {
+            @RequestBody String userInput,
+            @RequestParam(required = false) String llmModel) {
 
         try {
             if(stepType == null || stepType.isEmpty()){
                 stepType = agentService.classifyStepTypeFromUserInput(userInput);
             }
-            StepikBlockRequest stepikRequest = agentService.generateStep(sessionId, userInput, stepType);
-            log.info("Generated step of type {} for session {}", stepType, sessionId);
+            LlmModel model = llmModel != null && !llmModel.trim().isEmpty() 
+                    ? LlmModel.valueOf(llmModel.toUpperCase()) 
+                    : null;
+            StepikBlockRequest stepikRequest = agentService.generateStep(sessionId, userInput, stepType, model);
+            log.info("Generated step of type {} for session {} with model {}", stepType, sessionId, model);
             return ResponseEntity.ok(stepikRequest);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid LLM model: {}", llmModel);
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             log.error("Error in generateStep endpoint: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
@@ -97,14 +114,21 @@ public class AgentController {
             @RequestParam String sessionId,
             @RequestParam String stepType,
             @RequestParam String userInput,
-            @RequestBody String previousStepikBlockRequestJson) {
+            @RequestBody String previousStepikBlockRequestJson,
+            @RequestParam(required = false) String llmModel) {
 
         try {
             StepikBlockRequest previousStepikBlockRequest = stepikRequestParser.parseRequest(previousStepikBlockRequestJson, stepType);
             
-            StepikBlockRequest stepikRequest = agentService.modifyStepContent(sessionId, userInput, stepType, previousStepikBlockRequest);
-            log.info("Modified step content of type {} for session {}", stepType, sessionId);
+            LlmModel model = llmModel != null && !llmModel.trim().isEmpty() 
+                    ? LlmModel.valueOf(llmModel.toUpperCase()) 
+                    : null;
+            StepikBlockRequest stepikRequest = stepContentModifier.modifyStepContent(sessionId, userInput, stepType, previousStepikBlockRequest, model);
+            log.info("Modified step content of type {} for session {} with model {}", stepType, sessionId, model);
             return ResponseEntity.ok(stepikRequest);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid LLM model: {}", llmModel);
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             log.error("Error in modifyStepContent endpoint: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
