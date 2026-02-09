@@ -1,6 +1,7 @@
 package org.core.service.agent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.config.LlmModelConfig;
 import org.core.dto.agent.ChatMessage;
@@ -8,73 +9,38 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.enums.LlmModel;
 import org.core.service.agent.llmProvider.LlmProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@Service
+@Component
 @Slf4j
-public class AgentService {
+public class StepContentModifier {
 
+    private final ObjectMapper objectMapper;
     private final ContextStore contextStore;
-    private final LlmProvider llmProvider;
     private final SystemPromptService systemPromptService;
     private final StepikResponseParser responseParser;
-    private final StepTypeClassifier stepTypeClassifier;
+    private final LlmProvider llmProvider;
     private final LlmModelConfig llmModelConfig;
 
-    public AgentService(ContextStore contextStore,
-                        SystemPromptService systemPromptService,
-                        StepikResponseParser responseParser,
-                        StepTypeClassifier stepTypeClassifier,
-                        LlmModelConfig llmModelConfig,
-                        @Value("${default.llm.provider}") String defaultProvider,
-                        @Qualifier("yandexProvider") LlmProvider yandexProvider,
-                        @Qualifier("deepseekProvider") LlmProvider deepseekProvider){
+    public StepContentModifier(ObjectMapper objectMapper,
+                               ContextStore contextStore,
+                               SystemPromptService systemPromptService,
+                               StepikResponseParser responseParser,
+                               @Qualifier("yandexProvider") LlmProvider yandexProvider,
+                               LlmModelConfig llmModelConfig){
+        this.objectMapper = objectMapper;
+        this.contextStore = contextStore;
         this.systemPromptService = systemPromptService;
         this.responseParser = responseParser;
-        this.contextStore = contextStore;
-        this.stepTypeClassifier = stepTypeClassifier;
+        this.llmProvider = yandexProvider;
         this.llmModelConfig = llmModelConfig;
-        this.llmProvider = "yandex".equalsIgnoreCase(defaultProvider) ? yandexProvider : deepseekProvider;
     }
 
-    public String handleUserMessage(String sessionId, String userInput, LlmModel llmModel) {
-        try {
-            ChatMessage userMessage = ChatMessage.builder()
-                    .role("user")
-                    .content(userInput)
-                    .build();
-            contextStore.addMessage(sessionId, userMessage);
-            
-            List<ChatMessage> historyForLLM = processHistoryMessage(sessionId);
-            
-            String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
-            String assistantReply = modelUri != null && !modelUri.trim().isEmpty()
-                    ? llmProvider.chat(historyForLLM, modelUri)
-                    : llmProvider.chat(historyForLLM);
-            ChatMessage assistantMessage = ChatMessage.builder()
-                    .role("assistant")
-                    .content(assistantReply)
-                    .build();
-            contextStore.addMessage(sessionId, assistantMessage);
-            
-            log.info("Agent response for session {} with model {}: {}", sessionId, llmModel, assistantReply);
-            return assistantReply;
-        } catch (Exception e) {
-            log.error("Error handling user message for session {}: {}", sessionId, e.getMessage());
-            return "Error handling user message for session. Try again.";
-        }
-    }
-
-    public StepikBlockRequest generateStep(String sessionId, String userInput, String stepType) {
-        return generateStep(sessionId, userInput, stepType, null);
-    }
-
-    public StepikBlockRequest generateStep(String sessionId, String userInput, String stepType, LlmModel llmModel) {
+    public StepikBlockRequest modifyStepContent(String sessionId, String userInput, String stepType, StepikBlockRequest stepikBlockRequest, LlmModel llmModel) {
         try {
             List<ChatMessage> history = contextStore.getHistory(sessionId);
             List<ChatMessage> historyForLLM = new ArrayList<>();
@@ -101,9 +67,15 @@ public class AgentService {
                 }
             }
 
+            String messageWithPrevBlockRequestAndNewUserInput = String.format(
+                    "Текущий контент шага (JSON):\n%s\n\nЗапрос пользователя: %s",
+                    objectMapper.writeValueAsString(stepikBlockRequest),
+                    userInput
+            );
+
             ChatMessage userMessage = ChatMessage.builder()
                     .role("user")
-                    .content(userInput)
+                    .content(messageWithPrevBlockRequestAndNewUserInput)
                     .build();
             contextStore.addMessage(sessionId, userMessage);
             historyForLLM.addAll(processHistoryMessage(sessionId));
@@ -117,7 +89,7 @@ public class AgentService {
                     .content(aiResponse)
                     .build();
             contextStore.addMessage(sessionId, assistantMessage);
-            
+
             StepikBlockRequest stepikRequest = responseParser.parseResponse(aiResponse, stepType);
             log.info("Successfully generated step for session {}, step type: {}, model: {}", sessionId, stepType, llmModel);
             return stepikRequest;
@@ -141,10 +113,6 @@ public class AgentService {
                 .toList();
     }
 
-    public String classifyStepTypeFromUserInput(String userInput){
-        return stepTypeClassifier.detectStepType(userInput);
-    }
-
     private Optional<String> extractStepTypeFromHistory(List<ChatMessage> history) {
         return history.stream()
                 .filter(msg -> "system".equals(msg.getRole()))
@@ -152,12 +120,4 @@ public class AgentService {
                 .map(ChatMessage::getStepType);
     }
 
-    public List<ChatMessage> getSessionHistory(String sessionId) {
-        return contextStore.getHistory(sessionId);
-    }
-    
-    public void clearSession(String sessionId) {
-        contextStore.clearSession(sessionId);
-        log.info("Cleared session: {}", sessionId);
-    }
 }
