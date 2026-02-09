@@ -5,4 +5,6 @@ import java.util.List;
 
 public interface LlmProvider {
     String chat(List<ChatMessage> messages);
+
+    String chat(List<ChatMessage> messages, String modelUri);
 }

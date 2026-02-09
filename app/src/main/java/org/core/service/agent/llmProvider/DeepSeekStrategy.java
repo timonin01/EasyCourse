@@ -26,6 +26,14 @@ public class DeepSeekStrategy implements LlmProvider {
             throw new RuntimeException("Failed to get response from DeepSeek: " + e.getMessage());
         }
     }
+
+    @Override
+    public String chat(List<ChatMessage> messages, String modelUri){
+        if(modelUri != null && !modelUri.trim().isEmpty()) {
+            log.warn("DeepSeek does not support custom model selection. Ignoring modelUri: {}", modelUri);
+        }
+        return chat(messages);
+    }
     
     private String buildPrompt(List<ChatMessage> messages) {
         StringBuilder prompt = new StringBuilder();

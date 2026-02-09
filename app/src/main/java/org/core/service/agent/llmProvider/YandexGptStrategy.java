@@ -28,4 +28,18 @@ public class YandexGptStrategy implements LlmProvider {
             throw new RuntimeException("Failed to get response from YandexGPT: " + e.getMessage());
         }
     }
+
+    @Override
+    public String chat(List<ChatMessage> messages, String modelUri){
+        if(modelUri == null || modelUri.trim().isEmpty()) return chat(messages);
+        try {
+            boolean hasSystemPrompt = messages.stream()
+                    .anyMatch(chatMessage -> chatMessage.getRole().equals("system"));
+
+            return yandexGptService.generateResponse(messages, hasSystemPrompt, modelUri);
+        } catch (Exception e) {
+            log.error("Error in YandexGPT adapter: {}, with modelUri: {}", e.getMessage(), modelUri);
+            throw new RuntimeException("Failed to get response from YandexGPT: " + e.getMessage());
+        }
+    }
 }
