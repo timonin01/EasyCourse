@@ -3,11 +3,10 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-application.properties
 
 # Деплой: секреты не коммитить
 deploy/.env
-.env
+*.env
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

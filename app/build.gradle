@@ -8,8 +8,9 @@ plugins {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
 }
 
 configurations {
@@ -51,11 +52,11 @@ dependencies {
 
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
-    compileOnly('org.projectlombok:lombok:1.18.32')
-    annotationProcessor('org.projectlombok:lombok:1.18.32')
+    compileOnly('org.projectlombok:lombok:1.18.42')
+    annotationProcessor('org.projectlombok:lombok:1.18.42')
 
-    testCompileOnly('org.projectlombok:lombok:1.18.32')
-    testAnnotationProcessor('org.projectlombok:lombok:1.18.32')
+    testCompileOnly('org.projectlombok:lombok:1.18.42')
+    testAnnotationProcessor('org.projectlombok:lombok:1.18.42')
 
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion")
 

@@ -35,6 +35,8 @@ services:
   easy-course-app:
     build: .
     container_name: easy-course-app
+    env_file:
+      - enviroment.env
     ports:
       - "8080:8080"
     environment:

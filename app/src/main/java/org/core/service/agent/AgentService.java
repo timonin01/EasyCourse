@@ -119,7 +119,7 @@ public class AgentService {
             contextStore.addMessage(sessionId, assistantMessage);
             
             StepikBlockRequest stepikRequest = responseParser.parseResponse(aiResponse, stepType);
-            log.info("Successfully generated step for session {}, step type: {}, model: {}", sessionId, stepType, llmModel);
+          log.info("Successfully generated step for session {}, step type: {}, model: {}", sessionId, stepType, llmModel);
             return stepikRequest;
         } catch (RuntimeException e) {
             throw e;
