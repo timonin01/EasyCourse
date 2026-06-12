@@ -9,7 +9,7 @@ application.properties
 .env
 .env.*
 *.env
-environment.env
+app/environment.env
 **/environment.env
 
 ### IntelliJ IDEA ###

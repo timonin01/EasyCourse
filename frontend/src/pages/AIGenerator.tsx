@@ -2,14 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, Textarea, Select, Badge, Spinner } from '../components/ui';
+import { Button, Card, Textarea, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
 import { agentApi, stepsApi, coursesApi, sectionsApi, lessonsApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
 import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikBlockRequest } from '../types';
 import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
-import { LLM_MODEL_OPTIONS } from '../constants/llmModels';
 
 // Простая функция для обработки базового markdown
 const renderMarkdown = (text: string): string => {
@@ -512,7 +511,7 @@ export function AIGenerator() {
 
   return (
     <MainLayout>
-      <div className="flex gap-6 h-[calc(100vh-8rem)]">
+      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)] min-h-0 overflow-x-hidden">
         {/* Chat Section */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header */}
@@ -537,7 +536,7 @@ export function AIGenerator() {
           </div>
 
           {/* Mode Toggle */}
-          <div className="mb-4 flex gap-2 flex-shrink-0">
+          <div className="mb-4 flex gap-2 flex-shrink-0 min-w-0 overflow-x-hidden">
             <button
               onClick={() => handleModeChange('chat')}
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
@@ -690,9 +689,9 @@ export function AIGenerator() {
           {/* Messages - only in chat and generate modes */}
           {mode !== 'batch' && (
             <Card className="flex-1 overflow-hidden flex flex-col min-h-0" padding="none">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-w-0">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="flex flex-col items-center justify-center h-full text-center px-2">
                   <div className="p-4 bg-primary-600/20 rounded-2xl mb-4">
                     <Bot className="w-12 h-12 text-primary-400" />
                   </div>
@@ -710,7 +709,7 @@ export function AIGenerator() {
                 messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}
+                    className={`flex gap-3 min-w-0 ${message.role === 'user' ? 'justify-end' : ''}`}
                   >
                     {message.role === 'assistant' && (
                       <div className="w-8 h-8 bg-primary-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -718,7 +717,7 @@ export function AIGenerator() {
                       </div>
                     )}
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      className={`max-w-[80%] min-w-0 break-words rounded-2xl px-4 py-3 ${
                         message.role === 'user'
                           ? 'bg-primary-600 text-white'
                           : 'bg-dark-800 text-dark-200'
@@ -758,8 +757,8 @@ export function AIGenerator() {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-dark-700 flex-shrink-0">
-              <div className="flex gap-2 items-end">
+            <div className="p-4 border-t border-dark-700 flex-shrink-0 min-w-0 overflow-x-hidden">
+              <div className="flex gap-2 items-end min-w-0">
                 <Textarea
                   placeholder={mode === 'chat' 
                     ? "Напишите сообщение..." 
@@ -769,20 +768,24 @@ export function AIGenerator() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
                   rows={2}
-                  className="flex-1 resize-none"
+                  className="flex-1 min-w-0 resize-none"
                 />
                 {/* LLM Model Selection - visible in chat and generate modes */}
                 {(mode === 'chat' || mode === 'generate') && (
-                  <div className="w-48">
-                    <Select
-                      label={mode === 'chat' ? 'Модель' : 'Модель'}
-                      options={LLM_MODEL_OPTIONS}
+                  <div className="w-52 flex-shrink-0">
+                    <LlmModelSelect
+                      label="Модель"
                       value={selectedLlmModel}
-                      onChange={(e) => setSelectedLlmModel(e.target.value)}
+                      onChange={setSelectedLlmModel}
+                      className="h-11"
                     />
                   </div>
                 )}
-                <Button onClick={handleSend} disabled={!input.trim() || isLoading}>
+                <Button
+                  onClick={handleSend}
+                  disabled={!input.trim() || isLoading}
+                  className="h-11 w-11 flex-shrink-0"
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -794,7 +797,7 @@ export function AIGenerator() {
 
         {/* Preview Section - only in generate mode */}
         {mode === 'generate' && (
-          <div className="w-96 flex-shrink-0 flex flex-col">
+          <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
             <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">Предпросмотр</h2>
             <Card className="flex-1 overflow-auto min-h-0">
               {generatedStep ? (
@@ -901,7 +904,7 @@ export function AIGenerator() {
 
         {/* Batch Settings Section - only in batch mode */}
         {mode === 'batch' && (
-          <div className="w-96 flex-shrink-0 flex flex-col">
+          <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
             <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0 flex items-center justify-between">
               <span>Настройки</span>
               {getBatchHistory().length > 0 && (

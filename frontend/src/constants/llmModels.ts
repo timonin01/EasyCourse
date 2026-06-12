@@ -5,9 +5,15 @@ export enum LlmModel {
   GEMMA = 'GEMMA',
 }
 
-export const LLM_MODEL_OPTIONS = [
-  { value: '', label: 'Auto (Yandex GPT Lite)' },
-  { value: LlmModel.YANDEX_GPT_PRO, label: '🧠 Yandex GPT Pro' },
-  { value: LlmModel.QWEN, label: '🤖 Qwen' },
-  { value: LlmModel.GEMMA, label: '💎 Gemma' },
+export interface LlmModelOption {
+  value: string;
+  label: string;
+  icon?: string;
+}
+
+export const LLM_MODEL_OPTIONS: LlmModelOption[] = [
+  { value: '', label: 'Auto' },
+  { value: LlmModel.YANDEX_GPT_PRO, label: 'Yandex GPT Pro', icon: '/logos/yandex.svg' },
+  { value: LlmModel.QWEN, label: 'Qwen', icon: '/logos/qwen.svg' },
+  { value: LlmModel.GEMMA, label: 'Gemma', icon: '/logos/gemma.svg' },
 ];
