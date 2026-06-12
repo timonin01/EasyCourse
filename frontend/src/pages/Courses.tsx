@@ -1,0 +1,481 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, BookOpen, Trash2, Edit, Upload, Search, CheckCircle, RefreshCw, ExternalLink, Eye } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { MainLayout } from '../components/Layout';
+import { Card, Button, Input, Modal, Textarea, Badge, PageLoader } from '../components/ui';
+import { StepView } from '../components/StepView';
+import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
+import { useAuthStore, useCourseStore } from '../store';
+import type { Course, Model, Lesson, Step } from '../types';
+import { getStepDisplayType } from '../types';
+
+export function Courses() {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const { courses, setCourses, addCourse, removeCourse, updateCourse } = useCourseStore();
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [formData, setFormData] = useState({ title: '', description: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const [isCourseDetailsModalOpen, setIsCourseDetailsModalOpen] = useState(false);
+  const [courseDetails, setCourseDetails] = useState<{
+    course: Course;
+    sections: Model[];
+    lessons: Lesson[];
+    steps: Step[];
+  } | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  
+  const [isStepViewModalOpen, setIsStepViewModalOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<Step | null>(null);
+
+  useEffect(() => {
+    const loadCourses = async () => {
+      if (!user?.id) return;
+      try {
+        const data = await coursesApi.getUserCourses(user.id);
+        setCourses(data);
+      } catch (error) {
+        toast.error('Не удалось загрузить курсы');
+        console.error('Failed to load courses:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadCourses();
+  }, [user?.id, setCourses]);
+
+  const filteredCourses = courses.filter(
+    (course) =>
+      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleCreateCourse = async () => {
+    if (!user?.id || !formData.title.trim()) return;
+    setIsSaving(true);
+
+    try {
+      const newCourse = await coursesApi.createCourse({
+        userId: user.id,
+        title: formData.title,
+        description: formData.description,
+      });
+      addCourse(newCourse);
+      toast.success('Курс создан!');
+      setIsCreateModalOpen(false);
+      setFormData({ title: '', description: '' });
+    } catch (error) {
+      toast.error('Не удалось создать курс');
+      console.error('Failed to create course:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateCourse = async () => {
+    if (!selectedCourse || !formData.title.trim()) return;
+    setIsSaving(true);
+
+    try {
+      const updated = await coursesApi.updateCourse({
+        id: selectedCourse.id,
+        title: formData.title,
+        description: formData.description,
+      });
+      updateCourse(updated);
+      toast.success('Курс обновлен!');
+      setIsEditModalOpen(false);
+      setSelectedCourse(null);
+    } catch (error) {
+      toast.error('Не удалось обновить курс');
+      console.error('Failed to update course:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: number) => {
+    if (!confirm('Вы уверены, что хотите удалить этот курс?')) return;
+
+    try {
+      await coursesApi.deleteCourse(courseId);
+      removeCourse(courseId);
+      toast.success('Курс удален!');
+    } catch (error) {
+      toast.error('Не удалось удалить курс');
+      console.error('Failed to delete course:', error);
+    }
+  };
+
+  const handleSyncCourse = async (courseId: number) => {
+    try {
+      toast.loading('Синхронизация...', { id: 'sync' });
+      await coursesApi.syncCourse(courseId);
+      const updatedCourse = await coursesApi.getCourse(courseId);
+      updateCourse(updatedCourse);
+      toast.success('Курс синхронизирован с Stepik!', { id: 'sync' });
+    } catch (error) {
+      toast.error('Ошибка синхронизации', { id: 'sync' });
+      console.error('Failed to sync course:', error);
+    }
+  };
+
+  const openEditModal = (course: Course) => {
+    setSelectedCourse(course);
+    setFormData({ title: course.title, description: course.description });
+    setIsEditModalOpen(true);
+  };
+
+  const loadCourseDetails = async (course: Course) => {
+    setIsLoadingDetails(true);
+    try {
+      const sections = await sectionsApi.getCourseSections(course.id);
+      const allLessons: Lesson[] = [];
+      const allSteps: Step[] = [];
+
+      for (const section of sections) {
+        const lessons = await lessonsApi.getSectionLessons(section.id);
+        allLessons.push(...lessons);
+        
+        for (const lesson of lessons) {
+          const steps = await stepsApi.getLessonSteps(lesson.id);
+          allSteps.push(...steps);
+        }
+      }
+
+      setCourseDetails({
+        course,
+        sections,
+        lessons: allLessons,
+        steps: allSteps
+      });
+      setIsCourseDetailsModalOpen(true);
+    } catch (error) {
+      toast.error('Не удалось загрузить детали курса');
+      console.error('Failed to load course details:', error);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  const openStepView = (step: Step) => {
+    setSelectedStep(step);
+    setIsStepViewModalOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <PageLoader />
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-dark-100">Мои курсы</h1>
+          <p className="text-dark-400 mt-1">Управляйте своими курсами</p>
+        </div>
+        <Button
+          icon={<Plus className="w-4 h-4" />}
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          Создать курс
+        </Button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6 max-w-md">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
+          <Input
+            placeholder="Поиск курсов..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12"
+          />
+        </div>
+      </div>
+
+      {/* Courses Grid */}
+      {filteredCourses.length === 0 ? (
+        <Card className="text-center py-12">
+          <BookOpen className="w-12 h-12 text-dark-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-dark-300 mb-2">
+            {searchQuery ? 'Курсы не найдены' : 'У вас пока нет курсов'}
+          </h3>
+          <p className="text-dark-500 mb-4">
+            {searchQuery ? 'Попробуйте изменить запрос' : 'Создайте свой первый курс'}
+          </p>
+          {!searchQuery && (
+            <Button
+              icon={<Plus className="w-4 h-4" />}
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              Создать курс
+            </Button>
+          )}
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses.map((course) => (
+            <Card key={course.id} className="flex flex-col">
+              <div className="flex items-start justify-between mb-3">
+                <div className={`p-2 rounded-lg ${course.stepikCourseId ? 'bg-green-500/20' : 'bg-primary-600/20'}`}>
+                  {course.stepikCourseId ? (
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <BookOpen className="w-5 h-5 text-primary-400" />
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  {course.stepikCourseId ? (
+                    <a 
+                      href={`https://stepik.org/course/${course.stepikCourseId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Badge variant="success" className="flex items-center gap-1 cursor-pointer hover:bg-green-500/30">
+                        <CheckCircle className="w-3 h-3" />
+                        #{course.stepikCourseId}
+                        <ExternalLink className="w-3 h-3" />
+                      </Badge>
+                    </a>
+                  ) : (
+                    <Badge variant="warning">
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Не синхр.
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              <h3 className="font-semibold text-dark-100 mb-1 line-clamp-1">{course.title}</h3>
+              <p className="text-sm text-dark-400 line-clamp-2 flex-1">{course.description}</p>
+              
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-dark-700">
+                <p className="text-xs text-dark-500">
+                  {new Date(course.updatedAt).toLocaleDateString('ru-RU')}
+                </p>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/courses/${course.id}`)}
+                  >
+                    Открыть
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => loadCourseDetails(course)}
+                    title="Просмотреть детали курса"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openEditModal(course)}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSyncCourse(course.id)}
+                    title={course.stepikCourseId ? 'Обновить в Stepik' : 'Синхронизировать с Stepik'}
+                    className={course.stepikCourseId ? 'text-green-400 hover:text-green-300' : ''}
+                  >
+                    <Upload className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteCourse(course.id)}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Create Modal */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Создать курс"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Название курса"
+            placeholder="Введите название"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          />
+          <Textarea
+            label="Описание"
+            placeholder="Опишите курс"
+            rows={4}
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleCreateCourse} isLoading={isSaving}>
+              Создать
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Редактировать курс"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Название курса"
+            placeholder="Введите название"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          />
+          <Textarea
+            label="Описание"
+            placeholder="Опишите курс"
+            rows={4}
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleUpdateCourse} isLoading={isSaving}>
+              Сохранить
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Course Details Modal */}
+      <Modal
+        isOpen={isCourseDetailsModalOpen}
+        onClose={() => {
+          setIsCourseDetailsModalOpen(false);
+          setCourseDetails(null);
+        }}
+        title={courseDetails ? `Детали курса: ${courseDetails.course.title}` : 'Детали курса'}
+      >
+        {isLoadingDetails ? (
+          <div className="flex justify-center py-8">
+            <PageLoader />
+          </div>
+        ) : courseDetails ? (
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 bg-dark-800 rounded-xl text-center">
+                <p className="text-2xl font-bold text-primary-400">{courseDetails.sections.length}</p>
+                <p className="text-sm text-dark-400">Модулей</p>
+              </div>
+              <div className="p-4 bg-dark-800 rounded-xl text-center">
+                <p className="text-2xl font-bold text-primary-400">{courseDetails.lessons.length}</p>
+                <p className="text-sm text-dark-400">Уроков</p>
+              </div>
+              <div className="p-4 bg-dark-800 rounded-xl text-center">
+                <p className="text-2xl font-bold text-primary-400">{courseDetails.steps.length}</p>
+                <p className="text-sm text-dark-400">Шагов</p>
+              </div>
+            </div>
+
+            {courseDetails.steps.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-dark-100 mb-3">Шаги курса</h3>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {courseDetails.steps.map((step) => (
+                    <div
+                      key={step.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-dark-700 hover:border-dark-600 hover:bg-dark-800/50 transition-colors cursor-pointer"
+                      onClick={() => openStepView(step)}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
+                        step.stepikStepId ? 'bg-green-500/20 text-green-400' : 'bg-dark-700 text-dark-400'
+                      }`}>
+                        {step.stepikStepId ? <CheckCircle className="w-4 h-4" /> : step.position}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={step.stepikStepId ? 'success' : 'info'}>{getStepDisplayType(step)}</Badge>
+                          {step.stepikStepId && (
+                            <span className="text-xs text-green-400">Stepik ID: {step.stepikStepId}</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-dark-300 truncate">
+                          {step.content?.substring(0, 50) || 'Без контента'}...
+                        </p>
+                      </div>
+                      <Eye className="w-4 h-4 text-primary-400 flex-shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {courseDetails.steps.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-dark-400">В этом курсе пока нет шагов</p>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Step View Modal */}
+      <Modal 
+        isOpen={isStepViewModalOpen} 
+        onClose={() => {
+          setIsStepViewModalOpen(false);
+          setSelectedStep(null);
+        }} 
+        title={`Просмотр шага - ${selectedStep?.type || ''}`}
+        size="lg"
+      >
+        {selectedStep ? (
+          <div className="space-y-4">
+            <StepView step={selectedStep} />
+            <div className="flex justify-end gap-3 pt-4 border-t border-dark-700">
+              <Button 
+                variant="secondary" 
+                onClick={() => {
+                  setIsStepViewModalOpen(false);
+                  setSelectedStep(null);
+                }}
+              >
+                Закрыть
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+    </MainLayout>
+  );
+}
+
