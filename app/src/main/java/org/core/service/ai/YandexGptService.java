@@ -29,6 +29,9 @@ public class YandexGptService implements AiService {
     @Value("${yandex.gpt.api.url}")
     private String url;
 
+    @Value("${yandex.gpt.api.folder-id:}")
+    private String folderId;
+
     @Value("${yandex.gpt.api.model-uri}")
     private String modelUri;
 
@@ -37,6 +40,7 @@ public class YandexGptService implements AiService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final YandexAiStudioService yandexAiStudioService;
 
     @SneakyThrows
     public String generateResponse(List<ChatMessage> messages, boolean hasSystemPrompt){
@@ -63,22 +67,21 @@ public class YandexGptService implements AiService {
         if (messages == null || messages.isEmpty()) {
             throw new YandexGptException("Messages cannot be empty");
         }
+
+        String uriToUse = customModelUri != null && !customModelUri.isBlank() ? customModelUri : modelUri;
+        if (YandexAiStudioService.requiresAiStudioApi(uriToUse)) {
+            return yandexAiStudioService.generateResponse(messages, maxTokens, uriToUse);
+        }
+
         try{
             List<Message> yandexMessages = messages.stream()
                     .map(chatMessage -> new Message(chatMessage.getRole(), chatMessage.getContent()))
                     .toList();
-            String uriToUse = customModelUri != null ? customModelUri : modelUri;
             YandexGptRequest yandexGptRequest = new YandexGptRequest(uriToUse, yandexMessages, jsonObject);
             yandexGptRequest.setMaxTokens(maxTokens);
             log.info("Sending request to Yandex GPT (model: {}): {}", uriToUse, objectMapper.writeValueAsString(yandexGptRequest));
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-            headers.set("Authorization", "Api-Key " + apiKey);
-            headers.set("x-folder-id", "b1grl0e87ma0oc0sae8c");
-
-            HttpEntity<YandexGptRequest> entity = new HttpEntity<>(yandexGptRequest, headers);
+            HttpEntity<YandexGptRequest> entity = new HttpEntity<>(yandexGptRequest, createHeaders());
             ResponseEntity<String> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
@@ -105,5 +108,16 @@ public class YandexGptService implements AiService {
             throw new YandexGptException("Sorry, I couldn't generate a response at the moment.");
         }
         return "Sorry, I couldn't generate a response at the moment.";
+    }
+
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        headers.set("Authorization", "Api-Key " + apiKey);
+        if (folderId != null && !folderId.isBlank()) {
+            headers.set("x-folder-id", folderId);
+        }
+        return headers;
     }
 }

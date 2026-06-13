@@ -38,7 +38,7 @@ export function Textarea({ label, error, hint, showCount, maxLength, className, 
         value={value}
         maxLength={maxLength}
         className={clsx(
-          'w-full px-4 py-3 bg-dark-800/80 border border-dark-600 rounded-xl text-dark-100 placeholder-dark-500',
+          'block w-full px-4 py-3 bg-dark-800/80 border border-dark-600 rounded-xl text-dark-100 placeholder-dark-500',
           'focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 focus:bg-dark-800',
           'hover:border-dark-500 hover:bg-dark-800',
           'transition-all duration-200 resize-none',

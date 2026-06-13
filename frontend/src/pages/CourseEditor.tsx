@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Input, Textarea, Modal, Badge, PageLoader, Toggle, FormSection, OptionCard, AddButton, Checkbox, Select } from '../components/ui';
+import { Button, Input, Textarea, Modal, Badge, PageLoader, Toggle, FormSection, OptionCard, AddButton, Checkbox, LlmModelSelect } from '../components/ui';
 import { StepikIcon } from '../components/StepikIcon';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi, agentApi, stepikApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
@@ -46,8 +46,6 @@ import { stepTypeToAIString, EDIT_TASK_BLOCK_NAMES } from './CourseEditor/types'
 import { CreateModelModal, CreateLessonModal, CreateStepModal, StepViewModal, StepTypeChangeModal, StepDiffModal } from './CourseEditor/modals';
 import { ModelsColumn, LessonsColumn, StepsColumn } from './CourseEditor/columns';
 import { SortableList } from '../components/ui';
-import { LLM_MODEL_OPTIONS } from '../constants/llmModels';
-
 export function CourseEditor() {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
@@ -2342,11 +2340,11 @@ export function CourseEditor() {
                   disabled={isGeneratingContent}
                 />
               </div>
-              <Select
+              <LlmModelSelect
                 label="Модель LLM (опционально)"
-                options={LLM_MODEL_OPTIONS}
                 value={selectedLlmModel}
-                onChange={(e) => setSelectedLlmModel(e.target.value)}
+                onChange={setSelectedLlmModel}
+                menuPlacement="bottom"
               />
             </div>
 

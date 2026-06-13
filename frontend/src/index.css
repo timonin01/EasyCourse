@@ -91,6 +91,8 @@ input:focus, textarea:focus, select:focus {
 /* Markdown content styles */
 .markdown-content {
   line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown-content strong {

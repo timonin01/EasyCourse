@@ -4,6 +4,7 @@ export { Textarea } from './Textarea';
 export { Modal } from './Modal';
 export { Card } from './Card';
 export { Select } from './Select';
+export { LlmModelSelect } from './LlmModelSelect';
 export { Badge } from './Badge';
 export { Spinner, PageLoader } from './Spinner';
 export { SortableList, SortableItem } from './SortableList';
