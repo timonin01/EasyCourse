@@ -87,12 +87,17 @@ public class AgentController {
     }
 
     @PostMapping("/generate-batch-steps")
-    public ResponseEntity<List<StepikBlockRequest>> generateBatchSteps(
+    public ResponseEntity<?> generateBatchSteps(
             @RequestParam String sessionId,
             @RequestBody BatchStepDTO batchStepDTO){
 
-        log.info("Start generating batch steps with plan: {}", batchStepDTO);
-        return ResponseEntity.ok(batchGeneratorService.generateBatchRequests(sessionId, batchStepDTO));
+        try {
+            log.info("Start generating batch steps with plan: {}", batchStepDTO);
+            return ResponseEntity.ok(batchGeneratorService.generateBatchRequests(sessionId, batchStepDTO));
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid batch plan: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/analyze-batch-request")

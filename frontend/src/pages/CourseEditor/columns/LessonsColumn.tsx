@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Upload, Loader2, FileText, CheckCircle, AlertTriangle, Pencil } from 'lucide-react';
-import { Button, Card, SortableList } from '../../../components/ui';
+import { Button, Card, SortableList, Tooltip } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { EditTitleModal } from '../modals/EditTitleModal';
 import type { Lesson } from '../../../types';
@@ -113,16 +113,19 @@ export function LessonsColumn({
                     {syncingItems.has(lesson.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
                   </Button>
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="p-1 text-red-400"
-                      disabled={deletingItems.has(lesson.id) || !!lesson.stepikLessonId}
-                      onClick={() => onDeleteLocal(lesson.id)}
-                      title={lesson.stepikLessonId ? 'Сначала удалите урок со Stepik' : 'Удалить локально'}
+                    <Tooltip
+                      label={lesson.stepikLessonId ? 'Сначала удалите урок со Stepik' : 'Удалить локально'}
                     >
-                      {deletingItems.has(lesson.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 text-red-400"
+                        disabled={deletingItems.has(lesson.id) || !!lesson.stepikLessonId}
+                        onClick={() => onDeleteLocal(lesson.id)}
+                      >
+                        {deletingItems.has(lesson.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      </Button>
+                    </Tooltip>
                     {lesson.stepikLessonId && (
                       <Button
                         variant="ghost"

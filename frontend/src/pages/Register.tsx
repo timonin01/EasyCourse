@@ -56,55 +56,43 @@ export function Register() {
         {/* Form */}
         <div className="glass rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 mt-3" />
-              <Input
-                type="text"
-                placeholder="Имя"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="pl-12"
-                required
-              />
-            </div>
+            <Input
+              type="text"
+              placeholder="Имя"
+              icon={<User className="w-5 h-5" />}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
 
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 mt-3" />
-              <Input
-                type="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="pl-12"
-                required
-              />
-            </div>
+            <Input
+              type="email"
+              placeholder="Email"
+              icon={<Mail className="w-5 h-5" />}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+            />
 
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 mt-3" />
-              <Input
-                type="password"
-                placeholder="Пароль"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="pl-12"
-                required
-                minLength={6}
-              />
-            </div>
+            <Input
+              type="password"
+              placeholder="Пароль"
+              icon={<Lock className="w-5 h-5" />}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+              minLength={6}
+            />
 
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 mt-3" />
-              <Input
-                type="password"
-                placeholder="Подтвердите пароль"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="pl-12"
-                required
-                minLength={6}
-              />
-            </div>
+            <Input
+              type="password"
+              placeholder="Подтвердите пароль"
+              icon={<Lock className="w-5 h-5" />}
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              required
+              minLength={6}
+            />
 
             <Button
               type="submit"

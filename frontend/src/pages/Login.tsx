@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Input } from '../components/ui';
+import { ProductIntro } from '../components/auth/ProductIntro';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
 
@@ -33,66 +34,71 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4 pulse-glow">
-            <GraduationCap className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold gradient-text">EasyCourse</h1>
-          <p className="text-dark-400 mt-2">Войдите в свой аккаунт</p>
-        </div>
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Описание продукта — десктоп */}
+      <div className="hidden lg:flex lg:w-1/2 border-r border-dark-700 bg-dark-900/50">
+        <ProductIntro />
+      </div>
 
-        {/* Form */}
-        <div className="glass rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 mt-3" />
+      {/* Форма входа */}
+      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
+        <div className="w-full max-w-md">
+          {/* Logo — мобильная версия */}
+          <div className="text-center mb-8 lg:mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4 pulse-glow">
+              <GraduationCap className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold gradient-text">EasyCourse</h1>
+            <p className="text-dark-400 mt-2">Войдите в свой аккаунт</p>
+          </div>
+
+          {/* Краткое описание — только мобильная */}
+          <div className="lg:hidden mb-6">
+            <ProductIntro compact />
+          </div>
+
+          <div className="glass rounded-2xl p-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <Input
                 type="email"
                 placeholder="Email"
+                icon={<Mail className="w-5 h-5" />}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="pl-12"
                 required
               />
-            </div>
 
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 mt-3" />
               <Input
                 type="password"
                 placeholder="Пароль"
+                icon={<Lock className="w-5 h-5" />}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="pl-12"
                 required
               />
+
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                isLoading={isLoading}
+                icon={<ArrowRight className="w-5 h-5" />}
+              >
+                Войти
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-dark-400">
+                Нет аккаунта?{' '}
+                <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
+                  Зарегистрируйтесь
+                </Link>
+              </p>
             </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              isLoading={isLoading}
-              icon={<ArrowRight className="w-5 h-5" />}
-            >
-              Войти
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-dark-400">
-              Нет аккаунта?{' '}
-              <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
-                Зарегистрируйтесь
-              </Link>
-            </p>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, Input, Toggle } from '../../../components/ui';
+import toast from 'react-hot-toast';
+import { Modal, Button, Input, Toggle, Textarea } from '../../../components/ui';
 import { Plus, X, CheckCircle } from 'lucide-react';
 import type { BatchStepDTO, CountStepDTO } from '../../../types';
+import { BATCH_STEP_LIMIT_MESSAGE, MAX_BATCH_STEPS } from '../../../constants/batchLimits';
+import { countTotalBatchSteps } from '../../../utils/batchSteps';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -70,19 +73,36 @@ export function BatchPlanModal({
   };
 
   const handleConfirm = () => {
+    if (totalSteps > MAX_BATCH_STEPS) {
+      toast.error(BATCH_STEP_LIMIT_MESSAGE);
+      return;
+    }
     onPlanChange(localPlan);
     onConfirm(localPlan);
   };
 
-  const totalSteps = localPlan.steps.reduce((sum, step) => sum + (step.count || 1), 0);
+  const totalSteps = countTotalBatchSteps(localPlan.steps);
+  const exceedsLimit = totalSteps > MAX_BATCH_STEPS;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="План генерации шагов">
       <div className="space-y-4">
-        <div className="p-3 bg-primary-600/10 rounded-lg border border-primary-600/20">
+        <div className={`p-3 rounded-lg border ${exceedsLimit ? 'bg-red-500/10 border-red-500/30' : 'bg-primary-600/10 border-primary-600/20'}`}>
           <p className="text-sm text-dark-200">
-            Всего будет сгенерировано: <strong>{totalSteps}</strong> шагов
+            Всего будет сгенерировано:{' '}
+            <strong className={exceedsLimit ? 'text-red-400' : ''}>
+              {totalSteps} / {MAX_BATCH_STEPS}
+            </strong>{' '}
+            шагов
           </p>
+          {exceedsLimit && (
+            <p className="text-sm text-red-400 mt-2">{BATCH_STEP_LIMIT_MESSAGE}</p>
+          )}
+          {!exceedsLimit && (
+            <p className="text-xs text-dark-500 mt-1">
+              Максимум {MAX_BATCH_STEPS} шагов за одну batch-генерацию
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -97,7 +117,7 @@ export function BatchPlanModal({
                 className="flex gap-2 items-start p-3 bg-dark-800 rounded-lg border border-dark-600"
               >
                 <div className="flex-1 space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <select
                       className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-dark-200 text-sm"
                       value={step.type}
@@ -120,14 +140,15 @@ export function BatchPlanModal({
                       }
                       className="text-sm"
                     />
-
-                    <Input
-                      placeholder="Специфичный запрос"
-                      value={step.specificInput || ''}
-                      onChange={(e) => handleUpdateStep(index, 'specificInput', e.target.value)}
-                      className="text-sm"
-                    />
                   </div>
+
+                  <Textarea
+                    placeholder="Описание шага (опционально) — тема, сложность, примеры..."
+                    value={step.specificInput || ''}
+                    onChange={(e) => handleUpdateStep(index, 'specificInput', e.target.value)}
+                    rows={3}
+                    className="text-sm resize-y min-h-[5.5rem]"
+                  />
 
                   {step.type !== 'text' && (
                     <div className="pt-1 border-t border-dark-700/60 mt-2">
@@ -172,7 +193,7 @@ export function BatchPlanModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={localPlan.steps.length === 0}
+            disabled={localPlan.steps.length === 0 || exceedsLimit}
           >
             <CheckCircle className="w-4 h-4 mr-2" />
             Подтвердить и сгенерировать

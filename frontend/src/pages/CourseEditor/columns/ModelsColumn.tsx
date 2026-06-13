@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Upload, Loader2, Layers, CheckCircle, AlertTriangle, Pencil } from 'lucide-react';
-import { Button, Card, SortableList } from '../../../components/ui';
+import { Button, Card, SortableList, Tooltip } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { EditTitleModal } from '../modals/EditTitleModal';
 import type { Model } from '../../../types';
@@ -108,16 +108,19 @@ export function ModelsColumn({
                     <Upload className="w-3 h-3" />
                   </Button>
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="p-1 text-red-400"
-                      disabled={deletingItems.has(section.id) || !!section.stepikSectionId}
-                      onClick={() => onDeleteLocal(section.id)}
-                      title={section.stepikSectionId ? 'Сначала удалите модуль со Stepik' : 'Удалить локально'}
+                    <Tooltip
+                      label={section.stepikSectionId ? 'Сначала удалите модуль со Stepik' : 'Удалить локально'}
                     >
-                      {deletingItems.has(section.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 text-red-400"
+                        disabled={deletingItems.has(section.id) || !!section.stepikSectionId}
+                        onClick={() => onDeleteLocal(section.id)}
+                      >
+                        {deletingItems.has(section.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      </Button>
+                    </Tooltip>
                     {section.stepikSectionId && (
                       <Button
                         variant="ghost"
