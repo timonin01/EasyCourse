@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '../types';
+import { useSubscriptionStore } from './subscriptionStore';
 
 interface AuthState {
   user: User | null;
@@ -28,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('token');
         localStorage.removeItem('userId');
+        useSubscriptionStore.getState().clear();
         set({ user: null, token: null, isAuthenticated: false });
       },
 

@@ -30,6 +30,7 @@ public class UserService {
         user.setName(createDto.getName());
         user.setEmail(createDto.getEmail());
         user.setPassword(createDto.getPassword());
+        user.setRole(org.core.enums.UserRole.DEFAULT);
 
         log.info("Create user with name - {} and email - {}", user.getName(),user.getEmail());
         return mapToResponseDto(userRepository.save(user));
@@ -92,6 +93,7 @@ public class UserService {
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

@@ -3,8 +3,10 @@ import toast from 'react-hot-toast';
 import { Modal, Button, Input, Toggle, Textarea } from '../../../components/ui';
 import { Plus, X, CheckCircle } from 'lucide-react';
 import type { BatchStepDTO, CountStepDTO } from '../../../types';
-import { BATCH_STEP_LIMIT_MESSAGE, MAX_BATCH_STEPS } from '../../../constants/batchLimits';
 import { countTotalBatchSteps } from '../../../utils/batchSteps';
+import { getBatchStepLimitMessage } from '../../../constants/batchLimits';
+import { useSubscription } from '../../../hooks/useSubscription';
+import { PRO_MAX_BATCH_STEPS } from '../../../constants/subscription';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -37,6 +39,7 @@ export function BatchPlanModal({
   onConfirm,
 }: BatchPlanModalProps) {
   const [localPlan, setLocalPlan] = useState<BatchStepDTO>({ steps: [] });
+  const { isPro, maxBatchSteps } = useSubscription();
 
   useEffect(() => {
     if (plan) {
@@ -72,17 +75,18 @@ export function BatchPlanModal({
     setLocalPlan({ steps: newSteps });
   };
 
+  const totalSteps = countTotalBatchSteps(localPlan.steps);
+  const exceedsLimit = totalSteps > maxBatchSteps;
+  const limitMessage = getBatchStepLimitMessage(isPro, totalSteps, maxBatchSteps);
+
   const handleConfirm = () => {
-    if (totalSteps > MAX_BATCH_STEPS) {
-      toast.error(BATCH_STEP_LIMIT_MESSAGE);
+    if (exceedsLimit) {
+      toast.error(limitMessage);
       return;
     }
     onPlanChange(localPlan);
     onConfirm(localPlan);
   };
-
-  const totalSteps = countTotalBatchSteps(localPlan.steps);
-  const exceedsLimit = totalSteps > MAX_BATCH_STEPS;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="План генерации шагов">
@@ -91,16 +95,16 @@ export function BatchPlanModal({
           <p className="text-sm text-dark-200">
             Всего будет сгенерировано:{' '}
             <strong className={exceedsLimit ? 'text-red-400' : ''}>
-              {totalSteps} / {MAX_BATCH_STEPS}
+              {totalSteps} / {maxBatchSteps}
             </strong>{' '}
             шагов
           </p>
           {exceedsLimit && (
-            <p className="text-sm text-red-400 mt-2">{BATCH_STEP_LIMIT_MESSAGE}</p>
+            <p className="text-sm text-red-400 mt-2">{limitMessage}</p>
           )}
-          {!exceedsLimit && (
+          {!exceedsLimit && !isPro && (
             <p className="text-xs text-dark-500 mt-1">
-              Максимум {MAX_BATCH_STEPS} шагов за одну batch-генерацию
+              Бесплатный тариф: до {maxBatchSteps} шагов. Pro: до {PRO_MAX_BATCH_STEPS}.
             </p>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Lock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LLM_MODEL_OPTIONS } from '../../constants/llmModels';
@@ -11,6 +11,8 @@ interface LlmModelSelectProps {
   className?: string;
   id?: string;
   menuPlacement?: 'top' | 'bottom';
+  canSelectModel?: boolean;
+  onProModelAttempt?: () => void;
 }
 
 interface MenuPosition {
@@ -40,6 +42,8 @@ export function LlmModelSelect({
   className,
   id,
   menuPlacement = 'bottom',
+  canSelectModel = true,
+  onProModelAttempt,
 }: LlmModelSelectProps) {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
@@ -110,25 +114,38 @@ export function LlmModelSelect({
           }}
           className="fixed z-[100] overflow-hidden rounded-xl border border-dark-600 bg-dark-800 py-1 shadow-2xl shadow-black/40"
         >
-          {LLM_MODEL_OPTIONS.map((option) => (
+          {LLM_MODEL_OPTIONS.map((option) => {
+            const isLocked = !canSelectModel && option.value !== '';
+            return (
             <li key={option.value || 'auto'} role="option" aria-selected={option.value === value}>
               <button
                 type="button"
                 onClick={() => {
+                  if (isLocked) {
+                    onProModelAttempt?.();
+                    return;
+                  }
                   onChange(option.value);
                   setOpen(false);
                 }}
                 className={clsx(
                   'flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors',
-                  'hover:bg-dark-700',
+                  isLocked ? 'opacity-60 cursor-not-allowed hover:bg-dark-800' : 'hover:bg-dark-700',
                   option.value === value ? 'bg-primary-500/10 text-primary-300' : 'text-dark-100'
                 )}
               >
                 <ModelIcon src={option.icon} alt={option.label} />
-                <span className="leading-tight">{option.label}</span>
+                <span className="leading-tight flex-1">{option.label}</span>
+                {isLocked && (
+                  <span className="flex items-center gap-1 flex-shrink-0">
+                    <Lock className="w-3.5 h-3.5 text-amber-400" aria-hidden />
+                    <span className="text-xs text-amber-400/90 font-medium">Pro</span>
+                  </span>
+                )}
               </button>
             </li>
-          ))}
+          );
+          })}
         </ul>,
         document.body
       )

@@ -39,6 +39,9 @@ import { Button, Input, Textarea, Modal, Badge, PageLoader, Toggle, FormSection,
 import { StepikIcon } from '../components/StepikIcon';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi, agentApi, stepikApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
+import { useSubscription } from '../hooks/useSubscription';
+import { MODEL_PRO_MESSAGE, STEP_TYPE_CHANGE_PRO_MESSAGE } from '../constants/subscription';
+import { extractApiErrorMessage } from '../utils/apiError';
 import type { Model, Lesson, Step, StepType, UpdateStepDTO, StepikBlockRequest } from '../types';
 import { getStepDisplayType, getStepBlockName } from '../types';
 import { stepMatchesStepik, getStepDiff, type StepDiffInfo } from '../utils/stepikCompare';
@@ -90,6 +93,7 @@ export function CourseEditor() {
     checkAndMarkPositionChanges,
   } = useCourseStore();
   const { setSelectedLessonId, setMode, getOrCreateGenerateSession } = useAIGeneratorStore();
+  const { canChangeStepType, canSelectModel, refresh: refreshSubscription } = useSubscription();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
@@ -105,6 +109,13 @@ export function CourseEditor() {
   const [stepTypeChangeData, setStepTypeChangeData] = useState({ newType: 'TEXT' as StepType });
   const [selectedLlmModel, setSelectedLlmModel] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!canSelectModel && selectedLlmModel) {
+      setSelectedLlmModel('');
+    }
+  }, [canSelectModel, selectedLlmModel]);
+
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [isDeleteCourseModalOpen, setIsDeleteCourseModalOpen] = useState(false);
   const [isDeleteResultModalOpen, setIsDeleteResultModalOpen] = useState(false);
@@ -770,9 +781,11 @@ export function CourseEditor() {
       
       setContentEditData(prev => ({ ...prev, generatedContent }));
       toast.success('Контент сгенерирован!', { id: 'generate-content' });
+      void refreshSubscription();
     } catch (error) {
-      toast.error('Не удалось сгенерировать контент', { id: 'generate-content' });
+      toast.error(extractApiErrorMessage(error, 'Не удалось сгенерировать контент'), { id: 'generate-content' });
       console.error('Failed to generate content:', error);
+      void refreshSubscription();
     } finally {
       setIsGeneratingContent(false);
     }
@@ -1971,6 +1984,10 @@ export function CourseEditor() {
   };
 
   const handleOpenStepTypeChange = (step: Step) => {
+    if (!canChangeStepType) {
+      toast.error(STEP_TYPE_CHANGE_PRO_MESSAGE);
+      return;
+    }
     setSelectedStep(step);
     setStepTypeChangeData({ newType: step.type });
     setIsStepTypeChangeModalOpen(true);
@@ -2025,9 +2042,11 @@ export function CourseEditor() {
       setIsStepTypeChangeModalOpen(false);
       setIsStepViewModalOpen(false);
       setSelectedStep(null);
+      void refreshSubscription();
     } catch (error) {
-      toast.error('Не удалось изменить тип шага', { id: 'change-step-type' });
+      toast.error(extractApiErrorMessage(error, 'Не удалось изменить тип шага'), { id: 'change-step-type' });
       console.error('Failed to change step type:', error);
+      void refreshSubscription();
     } finally {
       setIsSaving(false);
     }
@@ -2247,6 +2266,7 @@ export function CourseEditor() {
         onClose={() => { setIsStepViewModalOpen(false); setSelectedStep(null); }}
         selectedStep={selectedStep}
         canChangeType={selectedStep ? getStepDisplayType(selectedStep) !== 'CODE' : false}
+        canChangeStepType={canChangeStepType}
         canEditTask={selectedStep ? (EDIT_TASK_BLOCK_NAMES as readonly string[]).includes(getStepBlockName(selectedStep)) : false}
         isCodeBlock={selectedStep ? getStepBlockName(selectedStep) === 'code' : false}
         onOpenStepTypeChange={() => selectedStep && (handleOpenStepTypeChange(selectedStep), setIsStepViewModalOpen(false))}
@@ -2345,6 +2365,8 @@ export function CourseEditor() {
                 value={selectedLlmModel}
                 onChange={setSelectedLlmModel}
                 menuPlacement="bottom"
+                canSelectModel={canSelectModel}
+                onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
               />
             </div>
 
