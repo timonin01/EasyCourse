@@ -10,7 +10,11 @@ import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
 import { buildExplicitStepsQuery, countTotalBatchSteps } from '../utils/batchSteps';
-import { BATCH_STEP_LIMIT_MESSAGE, MAX_BATCH_STEPS } from '../constants/batchLimits';
+import { getBatchStepLimitMessage } from '../constants/batchLimits';
+import { useSubscription } from '../hooks/useSubscription';
+import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
+import { MODEL_PRO_MESSAGE } from '../constants/subscription';
+import { extractApiErrorMessage } from '../utils/apiError';
 
 // Простая функция для обработки базового markdown
 const renderMarkdown = (text: string): string => {
@@ -85,7 +89,15 @@ export function AIGenerator() {
   const [batchResults, setBatchResults] = useState<Array<{ step: StepikBlockRequest; index: number; error?: string }>>([]);
   const [isSavingBatch, setIsSavingBatch] = useState(false);
 
-  const currentSessionId = mode === 'chat' 
+  const { isPro, canSelectModel, maxBatchSteps, refresh: refreshSubscription } = useSubscription();
+
+  useEffect(() => {
+    if (!canSelectModel && selectedLlmModel) {
+      setSelectedLlmModel('');
+    }
+  }, [canSelectModel, selectedLlmModel]);
+
+  const currentSessionId = mode === 'chat'
     ? getOrCreateChatSession() 
     : getOrCreateGenerateSession(stepType);
 
@@ -184,9 +196,11 @@ export function AIGenerator() {
     } catch (error) {
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: 'Произошла ошибка при генерации. Попробуйте ещё раз.',
+        content: extractApiErrorMessage(error, 'Произошла ошибка при генерации. Попробуйте ещё раз.'),
       };
       addMessage(sessionId, errorMessage);
+      toast.error(extractApiErrorMessage(error, 'Ошибка генерации'));
+      void refreshSubscription();
       console.error('AI generation error:', error);
     } finally {
       setIsLoading(false);
@@ -207,11 +221,14 @@ export function AIGenerator() {
       const assistantMessage: ChatMessage = { role: 'assistant', content: response };
       addMessage(sessionId, assistantMessage);
     } catch (error) {
+      const message = extractApiErrorMessage(error, 'Произошла ошибка. Попробуйте ещё раз.');
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: 'Произошла ошибка. Попробуйте ещё раз.',
+        content: message,
       };
       addMessage(sessionId, errorMessage);
+      toast.error(message);
+      void refreshSubscription();
     } finally {
       setIsLoading(false);
     }
@@ -406,8 +423,9 @@ export function AIGenerator() {
 
   const handlePlanConfirm = async (plan: BatchStepDTO) => {
     const totalSteps = countTotalBatchSteps(plan.steps);
-    if (totalSteps > MAX_BATCH_STEPS) {
-      toast.error(BATCH_STEP_LIMIT_MESSAGE);
+    const limitMessage = getBatchStepLimitMessage(isPro, totalSteps, maxBatchSteps);
+    if (totalSteps > maxBatchSteps) {
+      toast.error(limitMessage);
       return;
     }
 
@@ -434,6 +452,7 @@ export function AIGenerator() {
 
       setBatchResults(formattedResults);
       toast.success(`Сгенерировано ${results.length} шагов`);
+      void refreshSubscription();
     } catch (error: any) {
       console.error('Batch generation error:', error);
       
@@ -612,8 +631,9 @@ export function AIGenerator() {
                         setIsGeneratingBatch(true);
                         const plan = await agentApi.analyzeBatchRequest(userInputString);
                         const totalSteps = countTotalBatchSteps(plan.steps);
-                        if (totalSteps > MAX_BATCH_STEPS) {
-                          toast.error(BATCH_STEP_LIMIT_MESSAGE);
+                        const limitMessage = getBatchStepLimitMessage(isPro, totalSteps, maxBatchSteps);
+                        if (totalSteps > maxBatchSteps) {
+                          toast.error(limitMessage);
                         }
                         setBatchPlan(plan);
                         setIsPlanModalOpen(true);
@@ -785,6 +805,8 @@ export function AIGenerator() {
                       value={selectedLlmModel}
                       onChange={setSelectedLlmModel}
                       className="h-11"
+                      canSelectModel={canSelectModel}
+                      onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
                     />
                   </div>
                 )}
@@ -926,6 +948,7 @@ export function AIGenerator() {
                 </Button>
               )}
             </h2>
+            <SubscriptionPanel />
             <Card className="flex-1 overflow-auto min-h-0">
               <div className="space-y-4">
                 <div>

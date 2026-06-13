@@ -2,6 +2,7 @@ package org.core.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.core.enums.UserRole;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,6 +29,11 @@ public class User {
 
     @Column(name = "password", nullable = false, length = 100)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    @Builder.Default
+    private UserRole role = UserRole.DEFAULT;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

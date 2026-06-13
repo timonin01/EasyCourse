@@ -14,6 +14,7 @@ import org.core.exception.exceptions.StepNotFoundException;
 import org.core.repository.StepRepository;
 import org.core.service.agent.AgentService;
 import org.core.service.crud.StepService;
+import org.core.service.subscription.SubscriptionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +30,10 @@ public class StepTypeChangeService {
     private final StepRepository stepRepository;
     private final StepService stepService;
     private final StepikStepService stepikStepService;
+    private final SubscriptionService subscriptionService;
 
-    public StepResponseDTO changeStepType(Long stepId, StepType newType, String sessionId) {
+    public StepResponseDTO changeStepType(Long stepId, StepType newType, String sessionId, Long userId) {
+        subscriptionService.validateStepTypeChangeAllowed(userId);
         log.info("Starting change stepType for stepId: {}, and newStepType: {}", stepId, newType);
         StepResponseDTO stepResponseDTO = stepService.getStepById(stepId);
         StepType oldStepType = stepResponseDTO.getType();
@@ -78,7 +81,9 @@ public class StepTypeChangeService {
         updateStepDTO.setContent(newContent);
         updateStepDTO.setPosition(stepResponseDTO.getPosition());
 
-        return stepService.updateStep(updateStepDTO);
+        StepResponseDTO updated = stepService.updateStep(updateStepDTO);
+        subscriptionService.recordAiUsage(userId, 1);
+        return updated;
     }
 
     private Step getStepByStepId(Long stepId) {

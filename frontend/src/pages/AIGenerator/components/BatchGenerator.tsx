@@ -3,7 +3,9 @@ import { CheckCircle, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { CountStepDTO } from '../../../types';
 import { buildExplicitStepsQuery, countTotalBatchSteps } from '../../../utils/batchSteps';
-import { BATCH_GENERATION_HINT, BATCH_STEP_LIMIT_MESSAGE, MAX_BATCH_STEPS } from '../../../constants/batchLimits';
+import { getBatchGenerationHint, getBatchStepLimitMessage } from '../../../constants/batchLimits';
+import { useSubscription } from '../../../hooks/useSubscription';
+import { PRO_MAX_BATCH_STEPS } from '../../../constants/subscription';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -37,6 +39,8 @@ export function BatchGenerator({
   onGenerate,
   isLoading,
 }: BatchGeneratorProps) {
+  const { isPro, maxBatchSteps, aiUsed, aiLimit } = useSubscription();
+
   const handleAddExplicitStep = (type: string) => {
     const newStep: CountStepDTO = {
       type,
@@ -74,11 +78,12 @@ export function BatchGenerator({
   };
 
   const totalSteps = countTotalBatchSteps(explicitSteps);
-  const exceedsLimit = explicitSteps.length > 0 && totalSteps > MAX_BATCH_STEPS;
+  const exceedsLimit = explicitSteps.length > 0 && totalSteps > maxBatchSteps;
+  const limitMessage = getBatchStepLimitMessage(isPro, totalSteps, maxBatchSteps);
 
   const handleGenerateClick = () => {
     if (exceedsLimit) {
-      toast.error(BATCH_STEP_LIMIT_MESSAGE);
+      toast.error(limitMessage);
       return;
     }
     onGenerate();
@@ -86,9 +91,14 @@ export function BatchGenerator({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-dark-400">{BATCH_GENERATION_HINT}</p>
+      <p className="text-sm text-dark-400">{getBatchGenerationHint(isPro, maxBatchSteps)}</p>
 
-      {/* Текстовое поле */}
+      {!isPro && aiLimit !== null && (
+        <p className="text-xs text-dark-500">
+          AI-генерации в этом месяце: {aiUsed} / {aiLimit}
+        </p>
+      )}
+
       <div>
         <Textarea
           label="Описание заданий (опционально, если используете явный выбор)"
@@ -99,7 +109,6 @@ export function BatchGenerator({
         />
       </div>
 
-      {/* Явный выбор */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <label className="block text-sm font-medium text-dark-300">
@@ -118,8 +127,9 @@ export function BatchGenerator({
         {explicitSteps.length > 0 && (
           <div className="space-y-2">
             <p className={`text-xs ${exceedsLimit ? 'text-red-400' : 'text-dark-500'}`}>
-              Шагов в плане: {totalSteps} / {MAX_BATCH_STEPS}
-              {exceedsLimit && ` — ${BATCH_STEP_LIMIT_MESSAGE}`}
+              Шагов в плане: {totalSteps} / {maxBatchSteps}
+              {!isPro && ` (Pro: до ${PRO_MAX_BATCH_STEPS})`}
+              {exceedsLimit && ` — ${limitMessage}`}
             </p>
             {explicitSteps.map((step, index) => (
               <div
@@ -197,7 +207,6 @@ export function BatchGenerator({
         )}
       </div>
 
-      {/* Предпросмотр запроса */}
       {(userInput || explicitSteps.length > 0) && (
         <div className="p-3 bg-dark-800 rounded-lg border border-dark-600">
           <p className="text-xs text-dark-400 mb-1">Запрос который будет отправлен:</p>
@@ -205,7 +214,6 @@ export function BatchGenerator({
         </div>
       )}
 
-      {/* Кнопка генерации */}
       <Button
         onClick={handleGenerateClick}
         disabled={!canGenerate() || isLoading || exceedsLimit}

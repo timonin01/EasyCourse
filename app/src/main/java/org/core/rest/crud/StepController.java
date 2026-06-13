@@ -52,7 +52,7 @@ public class StepController {
     ){
         userContextBean.setUserId(userId);
         try {
-            return stepTypeChangeService.changeStepType(stepId, newStepType, sessionId);
+            return stepTypeChangeService.changeStepType(stepId, newStepType, sessionId, userId);
         } finally {
             userContextBean.clear();
         }

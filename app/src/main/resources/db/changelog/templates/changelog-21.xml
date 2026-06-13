@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="21-add-user-role" author="system">
+        <comment>Add subscription role to users</comment>
+        <addColumn tableName="users">
+            <column name="role" type="VARCHAR(20)" defaultValue="DEFAULT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <update tableName="users">
+            <column name="role" value="PRO"/>
+            <where>email = 'atimonin2006@gmail.com'</where>
+        </update>
+    </changeSet>
+
+    <changeSet id="21-create-ai-usage" author="system">
+        <comment>Track monthly AI generation usage per user</comment>
+        <createTable tableName="ai_usage">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_ai_usage"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="usage_month" type="VARCHAR(7)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_count" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="ai_usage"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_ai_usage_user"/>
+        <addUniqueConstraint
+                tableName="ai_usage"
+                columnNames="user_id, usage_month"
+                constraintName="uk_ai_usage_user_month"/>
+        <createIndex indexName="idx_ai_usage_user_month" tableName="ai_usage">
+            <column name="user_id"/>
+            <column name="usage_month"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

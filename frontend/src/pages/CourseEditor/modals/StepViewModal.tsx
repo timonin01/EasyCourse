@@ -1,6 +1,7 @@
-import { Edit, Repeat, Sparkles, Code } from 'lucide-react';
-import { Modal, Button } from '../../../components/ui';
+import { Edit, Repeat, Sparkles, Code, Lock } from 'lucide-react';
+import { Modal, Button, Badge } from '../../../components/ui';
 import { StepView } from '../../../components/StepView';
+import { STEP_TYPE_CHANGE_PRO_MESSAGE } from '../../../constants/subscription';
 import type { Step } from '../../../types';
 
 interface StepViewModalProps {
@@ -8,6 +9,7 @@ interface StepViewModalProps {
   onClose: () => void;
   selectedStep: Step | null;
   canChangeType: boolean;
+  canChangeStepType: boolean;
   canEditTask: boolean;
   isCodeBlock: boolean;
   onOpenStepTypeChange: () => void;
@@ -20,6 +22,7 @@ export function StepViewModal({
   onClose,
   selectedStep,
   canChangeType,
+  canChangeStepType,
   canEditTask,
   isCodeBlock,
   onOpenStepTypeChange,
@@ -39,8 +42,21 @@ export function StepViewModal({
           <div className="flex justify-end gap-3 pt-4 border-t border-dark-700 flex-wrap">
             <Button variant="secondary" onClick={onClose}>Закрыть</Button>
             {canChangeType && (
-              <Button variant="secondary" onClick={onOpenStepTypeChange}>
-                <Repeat className="w-4 h-4 mr-2" /> Изменить тип
+              <Button
+                variant="secondary"
+                onClick={onOpenStepTypeChange}
+                title={!canChangeStepType ? STEP_TYPE_CHANGE_PRO_MESSAGE : undefined}
+                className={!canChangeStepType ? 'opacity-80' : undefined}
+              >
+                {canChangeStepType ? (
+                  <Repeat className="w-4 h-4 mr-2" />
+                ) : (
+                  <Lock className="w-4 h-4 mr-2" />
+                )}
+                Изменить тип
+                {!canChangeStepType && (
+                  <Badge variant="info" className="ml-2 text-xs">Pro</Badge>
+                )}
               </Button>
             )}
             {canEditTask && (
