@@ -19,3 +19,8 @@ export const LLM_MODEL_OPTIONS: LlmModelOption[] = [
   { value: LlmModel.GPT_OSS_20B, label: 'GPT', icon: '/logos/openai.svg' },
   { value: LlmModel.DEEPSEEK_V4_FLASH, label: 'DeepSeek', icon: '/logos/deepseek.svg' },
 ];
+
+/** Модели, доступные в подписке Pro (без Auto). */
+export const PRO_LLM_MODEL_LABELS = LLM_MODEL_OPTIONS.filter((o) => o.value !== '').map(
+  (o) => o.label
+);

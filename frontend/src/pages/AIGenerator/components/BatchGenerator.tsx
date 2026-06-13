@@ -5,7 +5,6 @@ import type { CountStepDTO } from '../../../types';
 import { buildExplicitStepsQuery, countTotalBatchSteps } from '../../../utils/batchSteps';
 import { getBatchGenerationHint, getBatchStepLimitMessage } from '../../../constants/batchLimits';
 import { useSubscription } from '../../../hooks/useSubscription';
-import { PRO_MAX_BATCH_STEPS } from '../../../constants/subscription';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -126,11 +125,29 @@ export function BatchGenerator({
 
         {explicitSteps.length > 0 && (
           <div className="space-y-2">
-            <p className={`text-xs ${exceedsLimit ? 'text-red-400' : 'text-dark-500'}`}>
-              Шагов в плане: {totalSteps} / {maxBatchSteps}
-              {!isPro && ` (Pro: до ${PRO_MAX_BATCH_STEPS})`}
-              {exceedsLimit && ` — ${limitMessage}`}
-            </p>
+            <div className="rounded-xl border border-dark-700/80 bg-dark-800/50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className={`text-xs font-medium ${exceedsLimit ? 'text-red-400' : 'text-dark-400'}`}>
+                  Шагов в плане: {totalSteps} / {maxBatchSteps}
+                  {exceedsLimit && ` — ${limitMessage}`}
+                </span>
+                <span className="text-xs tabular-nums text-dark-500">
+                  {Math.min(100, Math.round((totalSteps / maxBatchSteps) * 100))}%
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-dark-700">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    exceedsLimit
+                      ? 'bg-gradient-to-r from-red-600 to-red-400'
+                      : 'bg-gradient-to-r from-primary-600 to-primary-400'
+                  }`}
+                  style={{
+                    width: `${Math.min(100, Math.round((totalSteps / maxBatchSteps) * 100))}%`,
+                  }}
+                />
+              </div>
+            </div>
             {explicitSteps.map((step, index) => (
               <div
                 key={index}

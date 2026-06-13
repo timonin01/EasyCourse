@@ -9,7 +9,8 @@ import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikB
 import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
-import { buildExplicitStepsQuery, countTotalBatchSteps } from '../utils/batchSteps';
+import { BatchProgressStepper, type BatchStepStatus } from './AIGenerator/components/BatchProgressStepper';
+import { buildExplicitStepsQuery, countTotalBatchSteps, expandBatchPlanToItems, type BatchPlanItem } from '../utils/batchSteps';
 import { getBatchStepLimitMessage } from '../constants/batchLimits';
 import { useSubscription } from '../hooks/useSubscription';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
@@ -88,8 +89,39 @@ export function AIGenerator() {
   const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
   const [batchResults, setBatchResults] = useState<Array<{ step: StepikBlockRequest; index: number; error?: string }>>([]);
   const [isSavingBatch, setIsSavingBatch] = useState(false);
+  const [batchPlanItems, setBatchPlanItems] = useState<BatchPlanItem[]>([]);
+  const [batchActiveIndex, setBatchActiveIndex] = useState(0);
 
   const { isPro, canSelectModel, maxBatchSteps, refresh: refreshSubscription } = useSubscription();
+
+  useEffect(() => {
+    if (!isGeneratingBatch || batchPlanItems.length === 0) return;
+
+    const interval = setInterval(() => {
+      setBatchActiveIndex((prev) => (prev >= batchPlanItems.length - 1 ? prev : prev + 1));
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isGeneratingBatch, batchPlanItems.length]);
+
+  const batchStepStatuses: BatchStepStatus[] = batchPlanItems.map((item, i) => {
+    const result = batchResults.find((r) => r.index === item.index);
+    if (result?.error) return 'error';
+    if (result && !result.error) return 'done';
+    if (isGeneratingBatch) {
+      if (i < batchActiveIndex) return 'done';
+      if (i === batchActiveIndex) return 'active';
+      return 'pending';
+    }
+    return 'pending';
+  });
+
+  const batchProgressPercent =
+    batchPlanItems.length > 0
+      ? batchResults.some((r) => !r.error)
+        ? 100
+        : Math.min(100, Math.round(((batchActiveIndex + 1) / batchPlanItems.length) * 100))
+      : 0;
 
   useEffect(() => {
     if (!canSelectModel && selectedLlmModel) {
@@ -431,6 +463,10 @@ export function AIGenerator() {
 
     setIsPlanModalOpen(false);
     setBatchPlan(plan);
+
+    const planItems = expandBatchPlanToItems(plan);
+    setBatchPlanItems(planItems);
+    setBatchActiveIndex(0);
     
     // Сохраняем в историю
     addBatchHistory(buildBatchUserInput(), plan);
@@ -451,6 +487,7 @@ export function AIGenerator() {
       }));
 
       setBatchResults(formattedResults);
+      setBatchActiveIndex(planItems.length - 1);
       toast.success(`Сгенерировано ${results.length} шагов`);
       void refreshSubscription();
     } catch (error: any) {
@@ -659,12 +696,20 @@ export function AIGenerator() {
                       selectedLessonId={selectedLessonId}
                     />
                   </Card>
+                ) : isGeneratingBatch && batchPlanItems.length > 0 ? (
+                  <Card>
+                    <BatchProgressStepper
+                      items={batchPlanItems}
+                      stepStatuses={batchStepStatuses}
+                      progressPercent={batchProgressPercent}
+                    />
+                  </Card>
                 ) : isGeneratingBatch ? (
                   <Card>
                     <div className="flex items-center justify-center py-12">
                       <div className="text-center">
                         <Spinner size="lg" />
-                        <p className="text-sm text-dark-400 mt-4">Генерация batch шагов...</p>
+                        <p className="text-sm text-dark-400 mt-4">Подготовка batch-генерации...</p>
                       </div>
                     </div>
                   </Card>

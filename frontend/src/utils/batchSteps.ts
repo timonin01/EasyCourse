@@ -1,4 +1,34 @@
-import type { CountStepDTO } from '../types';
+import type { CountStepDTO, BatchStepDTO } from '../types';
+import { getStepTypeLabel } from '../constants/stepTypeLabels';
+
+export interface BatchPlanItem {
+  index: number;
+  type: string;
+  label: string;
+}
+
+export function expandBatchPlanToItems(plan: BatchStepDTO): BatchPlanItem[] {
+  const items: BatchPlanItem[] = [];
+  let index = 0;
+
+  for (const step of plan.steps) {
+    const count = step.count || 1;
+    const typeLabel = getStepTypeLabel(step.type);
+
+    for (let i = 0; i < count; i++) {
+      const suffix = count > 1 ? ` ${i + 1}` : '';
+      const specific = step.specificInput?.trim() ? ` — ${step.specificInput.trim()}` : '';
+      items.push({
+        index,
+        type: step.type,
+        label: `${typeLabel}${suffix}${specific}`,
+      });
+      index += 1;
+    }
+  }
+
+  return items;
+}
 
 export function countTotalBatchSteps(steps: CountStepDTO[]): number {
   return steps.reduce((sum, step) => sum + (step.count || 1), 0);
