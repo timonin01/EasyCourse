@@ -13,6 +13,10 @@ interface FeatureRowProps {
   active?: boolean;
 }
 
+interface SubscriptionPanelProps {
+  variant?: 'full' | 'compact';
+}
+
 function FeatureRow({ icon, label, value, active = true }: FeatureRowProps) {
   return (
     <div
@@ -44,13 +48,79 @@ function FeatureRow({ icon, label, value, active = true }: FeatureRowProps) {
   );
 }
 
-export function SubscriptionPanel() {
+export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) {
   const { isPro, aiUsed, aiLimit, maxBatchSteps } = useSubscription();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const usagePercent =
     aiLimit !== null && aiLimit > 0 ? Math.min(100, Math.round((aiUsed / aiLimit) * 100)) : 0;
   const usageNearLimit = !isPro && aiLimit !== null && usagePercent >= 80;
+
+  if (variant === 'compact') {
+    return (
+      <>
+        <div
+          className={clsx(
+            'mb-3 rounded-xl border px-3 py-2.5',
+            isPro
+              ? 'border-primary-500/25 bg-primary-900/20'
+              : 'border-dark-700 bg-dark-800/50'
+          )}
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {isPro ? (
+                <Crown className="h-3.5 w-3.5 text-primary-400" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5 text-dark-500" />
+              )}
+              <span className={clsx('text-sm font-semibold', isPro ? 'gradient-text' : 'text-dark-200')}>
+                {isPro ? 'Pro' : 'Free'}
+              </span>
+            </div>
+            {!isPro && aiLimit !== null && (
+              <span
+                className={clsx(
+                  'text-xs font-semibold tabular-nums',
+                  usageNearLimit ? 'text-amber-400' : 'text-dark-300'
+                )}
+              >
+                {aiUsed}/{aiLimit} AI
+              </span>
+            )}
+            {isPro && (
+              <Badge variant="success" className="text-[10px] px-2 py-0">
+                Активна
+              </Badge>
+            )}
+          </div>
+          {!isPro && aiLimit !== null && (
+            <div className="mb-2 h-1 overflow-hidden rounded-full bg-dark-700">
+              <div
+                className={clsx(
+                  'h-full rounded-full transition-all duration-500',
+                  usageNearLimit
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-400'
+                    : 'bg-gradient-to-r from-primary-600 to-primary-400'
+                )}
+                style={{ width: `${usagePercent}%` }}
+              />
+            </div>
+          )}
+          {!isPro && (
+            <button
+              type="button"
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+            >
+              Batch до {maxBatchSteps} шагов · Перейти на Pro →
+            </button>
+          )}
+        </div>
+        <ProUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} />
+      </>
+    );
+  }
 
   return (
     <Card

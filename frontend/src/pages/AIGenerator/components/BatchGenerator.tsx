@@ -4,7 +4,9 @@ import toast from 'react-hot-toast';
 import type { CountStepDTO } from '../../../types';
 import { buildExplicitStepsQuery, countTotalBatchSteps } from '../../../utils/batchSteps';
 import { getBatchGenerationHint, getBatchStepLimitMessage } from '../../../constants/batchLimits';
+import { BATCH_PROMPT_SUGGESTIONS } from '../../../constants/aiPromptSuggestions';
 import { useSubscription } from '../../../hooks/useSubscription';
+import { PromptSuggestionChips } from './PromptSuggestionChips';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -106,6 +108,13 @@ export function BatchGenerator({
           onChange={(e) => onUserInputChange(e.target.value)}
           rows={3}
         />
+        {!userInput.trim() && explicitSteps.length === 0 && (
+          <PromptSuggestionChips
+            suggestions={BATCH_PROMPT_SUGGESTIONS}
+            onSelect={onUserInputChange}
+            className="justify-start mt-2"
+          />
+        )}
       </div>
 
       <div>

@@ -14,5 +14,6 @@ export { FormSection } from './FormSection';
 export { OptionCard } from './OptionCard';
 export { AddButton } from './AddButton';
 export { Tooltip } from './Tooltip';
+export { ChatMarkdown } from './ChatMarkdown';
 export { StatCard } from './StatCard';
 
