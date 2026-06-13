@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { Button, Textarea, Input, Toggle } from '../../../components/ui';
 import { CheckCircle, X, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 import type { CountStepDTO } from '../../../types';
-import { buildExplicitStepsQuery, mergeExplicitSteps } from '../../../utils/batchSteps';
+import { buildExplicitStepsQuery, countTotalBatchSteps } from '../../../utils/batchSteps';
+import { BATCH_GENERATION_HINT, BATCH_STEP_LIMIT_MESSAGE, MAX_BATCH_STEPS } from '../../../constants/batchLimits';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -36,8 +37,6 @@ export function BatchGenerator({
   onGenerate,
   isLoading,
 }: BatchGeneratorProps) {
-  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
-
   const handleAddExplicitStep = (type: string) => {
     const newStep: CountStepDTO = {
       type,
@@ -45,23 +44,17 @@ export function BatchGenerator({
       specificInput: '',
       useSummarizedEnabled: false,
     };
-    onExplicitStepsChange(mergeExplicitSteps([...explicitSteps, newStep]));
-    setSelectedTypes(new Set([...selectedTypes, type]));
+    onExplicitStepsChange([...explicitSteps, newStep]);
   };
 
   const handleRemoveExplicitStep = (index: number) => {
-    const newSteps = explicitSteps.filter((_, i) => i !== index);
-    onExplicitStepsChange(newSteps);
-    const removedType = explicitSteps[index].type;
-    const newSelected = new Set(selectedTypes);
-    newSelected.delete(removedType);
-    setSelectedTypes(newSelected);
+    onExplicitStepsChange(explicitSteps.filter((_, i) => i !== index));
   };
 
   const handleUpdateExplicitStep = (index: number, field: keyof CountStepDTO, value: string | number | boolean) => {
     const newSteps = [...explicitSteps];
     newSteps[index] = { ...newSteps[index], [field]: value };
-    onExplicitStepsChange(mergeExplicitSteps(newSteps));
+    onExplicitStepsChange(newSteps);
   };
 
   const buildUserInputString = (): string => {
@@ -80,8 +73,21 @@ export function BatchGenerator({
     return userInput.trim().length > 0 || explicitSteps.length > 0;
   };
 
+  const totalSteps = countTotalBatchSteps(explicitSteps);
+  const exceedsLimit = explicitSteps.length > 0 && totalSteps > MAX_BATCH_STEPS;
+
+  const handleGenerateClick = () => {
+    if (exceedsLimit) {
+      toast.error(BATCH_STEP_LIMIT_MESSAGE);
+      return;
+    }
+    onGenerate();
+  };
+
   return (
     <div className="space-y-4">
+      <p className="text-sm text-dark-400">{BATCH_GENERATION_HINT}</p>
+
       {/* Текстовое поле */}
       <div>
         <Textarea
@@ -102,14 +108,7 @@ export function BatchGenerator({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              const availableTypes = stepTypeOptions.filter(
-                (opt) => !explicitSteps.some((step) => step.type === opt.value)
-              );
-              if (availableTypes.length > 0) {
-                handleAddExplicitStep(availableTypes[0].value);
-              }
-            }}
+            onClick={() => handleAddExplicitStep('text')}
           >
             <Plus className="w-4 h-4 mr-1" />
             Добавить тип
@@ -118,13 +117,17 @@ export function BatchGenerator({
 
         {explicitSteps.length > 0 && (
           <div className="space-y-2">
+            <p className={`text-xs ${exceedsLimit ? 'text-red-400' : 'text-dark-500'}`}>
+              Шагов в плане: {totalSteps} / {MAX_BATCH_STEPS}
+              {exceedsLimit && ` — ${BATCH_STEP_LIMIT_MESSAGE}`}
+            </p>
             {explicitSteps.map((step, index) => (
               <div
                 key={index}
                 className="flex gap-2 items-start p-3 bg-dark-800 rounded-lg border border-dark-600"
               >
                 <div className="flex-1 space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <select
                       className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-dark-200 text-sm"
                       value={step.type}
@@ -147,14 +150,15 @@ export function BatchGenerator({
                       }
                       className="text-sm"
                     />
-
-                    <Input
-                      placeholder="Специфичный запрос (опционально)"
-                      value={step.specificInput || ''}
-                      onChange={(e) => handleUpdateExplicitStep(index, 'specificInput', e.target.value)}
-                      className="text-sm"
-                    />
                   </div>
+
+                  <Textarea
+                    placeholder="Описание шага (опционально) — тема, сложность, примеры..."
+                    value={step.specificInput || ''}
+                    onChange={(e) => handleUpdateExplicitStep(index, 'specificInput', e.target.value)}
+                    rows={3}
+                    className="text-sm resize-y min-h-[5.5rem]"
+                  />
 
                   {step.type !== 'text' && (
                     <div className="pt-1 border-t border-dark-700/60 mt-2">
@@ -203,8 +207,8 @@ export function BatchGenerator({
 
       {/* Кнопка генерации */}
       <Button
-        onClick={onGenerate}
-        disabled={!canGenerate() || isLoading}
+        onClick={handleGenerateClick}
+        disabled={!canGenerate() || isLoading || exceedsLimit}
         className="w-full"
         isLoading={isLoading}
       >

@@ -1,25 +1,28 @@
 import type { CountStepDTO } from '../types';
 
+export function countTotalBatchSteps(steps: CountStepDTO[]): number {
+  return steps.reduce((sum, step) => sum + (step.count || 1), 0);
+}
+
 function getExplicitStepKey(step: CountStepDTO): string {
   return `${step.type}|${(step.specificInput || '').trim()}|${step.useSummarizedEnabled ?? false}`;
 }
 
-export function mergeExplicitSteps(steps: CountStepDTO[]): CountStepDTO[] {
+/** Склеивает только подряд идущие одинаковые шаги (для предпросмотра и запроса). */
+export function mergeConsecutiveExplicitSteps(steps: CountStepDTO[]): CountStepDTO[] {
   const result: CountStepDTO[] = [];
-  const indexByKey = new Map<string, number>();
 
   for (const step of steps) {
-    const key = getExplicitStepKey(step);
-    const existingIndex = indexByKey.get(key);
+    const normalized: CountStepDTO = { ...step, count: step.count || 1 };
+    const last = result[result.length - 1];
 
-    if (existingIndex !== undefined) {
-      result[existingIndex] = {
-        ...result[existingIndex],
-        count: (result[existingIndex].count || 1) + (step.count || 1),
+    if (last && getExplicitStepKey(last) === getExplicitStepKey(normalized)) {
+      result[result.length - 1] = {
+        ...last,
+        count: (last.count || 1) + normalized.count,
       };
     } else {
-      indexByKey.set(key, result.length);
-      result.push({ ...step, count: step.count || 1 });
+      result.push(normalized);
     }
   }
 
@@ -31,7 +34,7 @@ export function buildExplicitStepsQuery(
   getTypeLabel: (type: string) => string,
   description?: string
 ): string {
-  const merged = mergeExplicitSteps(steps);
+  const merged = mergeConsecutiveExplicitSteps(steps);
   const explicitParts = merged.map((step) => {
     const count = step.count || 1;
     const specific = step.specificInput ? ` ${step.specificInput}` : '';

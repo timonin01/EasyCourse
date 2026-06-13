@@ -24,6 +24,9 @@ public class BatchGeneratorService {
     @Value("${yandex.gpt.api.model-uri.batch}")
     private String batchModelUri;
 
+    @Value("${batch.generation.max-steps:8}")
+    private int maxBatchSteps;
+
     private final YandexGptService yandexGptService;
     private final SystemPromptService systemPromptService;
     private final AgentService agenService;
@@ -35,6 +38,8 @@ public class BatchGeneratorService {
         if (batchStepDTO == null || batchStepDTO.getSteps() == null || batchStepDTO.getSteps().isEmpty()) {
             throw new RuntimeException("BatchStepDTO is null or empty");
         }
+
+        validateBatchStepLimit(batchStepDTO);
 
         List<StepikBlockRequest> stepikBlockRequests = new ArrayList<>();
         List<StepikBlockRequest> textBlockRequests = new ArrayList<>();
@@ -100,6 +105,20 @@ public class BatchGeneratorService {
 
         log.info("Generated list StepikBlockRequest for batch uploading, list: {}", stepikBlockRequests);
         return stepikBlockRequests;
+    }
+
+    private void validateBatchStepLimit(BatchStepDTO batchStepDTO) {
+        int totalSteps = batchStepDTO.getSteps().stream()
+                .mapToInt(step -> step.getCount() == null || step.getCount() < 1 ? 1 : step.getCount())
+                .sum();
+
+        if (totalSteps > maxBatchSteps) {
+            throw new IllegalArgumentException(String.format(
+                    "Максимум %d шагов за одну batch-генерацию. В плане: %d.",
+                    maxBatchSteps,
+                    totalSteps
+            ));
+        }
     }
 
     private List<StepikBlockRequest> generateBatchSteps(String userInput, String systemPrompt, String stepType, int count) {

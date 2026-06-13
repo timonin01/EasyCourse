@@ -1,5 +1,5 @@
 import { Plus, Trash2, Upload, Loader2, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
-import { Button, Card, SortableList, Badge } from '../../../components/ui';
+import { Button, Card, SortableList, Badge, Tooltip } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { getStepDisplayType } from '../../../types';
 import type { Lesson, Step } from '../../../types';
@@ -66,7 +66,7 @@ export function StepsColumn({
             return (
               <Card
                 padding="sm"
-                className={`cursor-pointer hover:bg-dark-800 transition-colors ${borderColor} overflow-hidden`}
+                className={`cursor-pointer hover:bg-dark-800 transition-colors ${borderColor}`}
                 onClick={() => onStepClick(step)}
               >
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -125,16 +125,19 @@ export function StepsColumn({
                     </Button>
                   )}
                   <div className="flex gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="p-0.5 text-red-400"
-                      disabled={deletingItems.has(step.id) || !!step.stepikStepId}
-                      onClick={() => onDeleteLocal(step.id)}
-                      title={step.stepikStepId ? 'Сначала удалите шаг со Stepik' : 'Удалить локально'}
+                    <Tooltip
+                      label={step.stepikStepId ? 'Сначала удалите шаг со Stepik' : 'Удалить локально'}
                     >
-                      {deletingItems.has(step.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-0.5 text-red-400"
+                        disabled={deletingItems.has(step.id) || !!step.stepikStepId}
+                        onClick={() => onDeleteLocal(step.id)}
+                      >
+                        {deletingItems.has(step.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      </Button>
+                    </Tooltip>
                     {step.stepikStepId && (
                       <Button
                         variant="ghost"

@@ -9,7 +9,8 @@ import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikB
 import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
-import { buildExplicitStepsQuery } from '../utils/batchSteps';
+import { buildExplicitStepsQuery, countTotalBatchSteps } from '../utils/batchSteps';
+import { BATCH_STEP_LIMIT_MESSAGE, MAX_BATCH_STEPS } from '../constants/batchLimits';
 
 // Простая функция для обработки базового markdown
 const renderMarkdown = (text: string): string => {
@@ -404,6 +405,12 @@ export function AIGenerator() {
   };
 
   const handlePlanConfirm = async (plan: BatchStepDTO) => {
+    const totalSteps = countTotalBatchSteps(plan.steps);
+    if (totalSteps > MAX_BATCH_STEPS) {
+      toast.error(BATCH_STEP_LIMIT_MESSAGE);
+      return;
+    }
+
     setIsPlanModalOpen(false);
     setBatchPlan(plan);
     
@@ -604,6 +611,10 @@ export function AIGenerator() {
                       try {
                         setIsGeneratingBatch(true);
                         const plan = await agentApi.analyzeBatchRequest(userInputString);
+                        const totalSteps = countTotalBatchSteps(plan.steps);
+                        if (totalSteps > MAX_BATCH_STEPS) {
+                          toast.error(BATCH_STEP_LIMIT_MESSAGE);
+                        }
                         setBatchPlan(plan);
                         setIsPlanModalOpen(true);
                       } catch (error) {

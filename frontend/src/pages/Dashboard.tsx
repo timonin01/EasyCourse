@@ -9,6 +9,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { MainLayout } from '../components/Layout';
+import { OnboardingBanner } from '../components/auth/OnboardingBanner';
 import { Card, Button, PageLoader } from '../components/ui';
 import { coursesApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -40,6 +41,8 @@ export function Dashboard() {
     { label: 'Черновики', value: courses.filter(c => !c.stepikCourseId).length, icon: FileText, color: 'text-amber-400' },
   ];
 
+  const isNewUser = courses.length === 0;
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -56,9 +59,13 @@ export function Dashboard() {
           Привет, <span className="gradient-text">{user?.name || 'Пользователь'}</span>! 👋
         </h1>
         <p className="text-dark-400 mt-2">
-          Вот что происходит с вашими курсами сегодня
+          {isNewUser
+            ? 'Начните создавать курсы для Stepik — мы подскажем, с чего начать'
+            : 'Вот что происходит с вашими курсами сегодня'}
         </p>
       </div>
+
+      {isNewUser && <OnboardingBanner />}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -116,24 +123,20 @@ export function Dashboard() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-dark-100">Последние курсы</h2>
-          <Link to="/courses">
-            <Button variant="ghost" size="sm">
-              Все курсы
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </Link>
-        </div>
-
-        {courses.length === 0 ? (
-          <Card className="text-center py-12">
-            <BookOpen className="w-12 h-12 text-dark-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-dark-300 mb-2">У вас пока нет курсов</h3>
-            <p className="text-dark-500 mb-4">Создайте свой первый курс прямо сейчас</p>
+          {!isNewUser && (
             <Link to="/courses">
-              <Button icon={<Plus className="w-4 h-4" />}>
-                Создать курс
+              <Button variant="ghost" size="sm">
+                Все курсы
+                <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
+          )}
+        </div>
+
+        {isNewUser ? (
+          <Card className="text-center py-8 border-dashed border-dark-600">
+            <BookOpen className="w-10 h-10 text-dark-500 mx-auto mb-3" />
+            <p className="text-dark-400 text-sm">Здесь появятся ваши курсы после создания</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
