@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Textarea, Input, Toggle } from '../../../components/ui';
 import { CheckCircle, X, Plus } from 'lucide-react';
 import type { CountStepDTO } from '../../../types';
+import { buildExplicitStepsQuery, mergeExplicitSteps } from '../../../utils/batchSteps';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -44,7 +45,7 @@ export function BatchGenerator({
       specificInput: '',
       useSummarizedEnabled: false,
     };
-    onExplicitStepsChange([...explicitSteps, newStep]);
+    onExplicitStepsChange(mergeExplicitSteps([...explicitSteps, newStep]));
     setSelectedTypes(new Set([...selectedTypes, type]));
   };
 
@@ -60,7 +61,7 @@ export function BatchGenerator({
   const handleUpdateExplicitStep = (index: number, field: keyof CountStepDTO, value: string | number | boolean) => {
     const newSteps = [...explicitSteps];
     newSteps[index] = { ...newSteps[index], [field]: value };
-    onExplicitStepsChange(newSteps);
+    onExplicitStepsChange(mergeExplicitSteps(newSteps));
   };
 
   const buildUserInputString = (): string => {
@@ -68,16 +69,11 @@ export function BatchGenerator({
       return userInput;
     }
 
-    const explicitParts: string[] = [];
-    explicitSteps.forEach((step) => {
-      const typeName = stepTypeOptions.find((opt) => opt.value === step.type)?.label || step.type;
-      const count = step.count || 1;
-      const specific = step.specificInput ? ` ${step.specificInput}` : '';
-      explicitParts.push(`${count} ${typeName}${specific}`);
-    });
-
-    const explicitText = explicitParts.join(', ');
-    return userInput ? `${userInput}. Создай: ${explicitText}` : `Создай: ${explicitText}`;
+    return buildExplicitStepsQuery(
+      explicitSteps,
+      (type) => stepTypeOptions.find((opt) => opt.value === type)?.label || type,
+      userInput
+    );
   };
 
   const canGenerate = () => {

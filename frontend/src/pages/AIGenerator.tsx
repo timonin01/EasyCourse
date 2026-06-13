@@ -9,6 +9,7 @@ import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikB
 import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
+import { buildExplicitStepsQuery } from '../utils/batchSteps';
 
 // Простая функция для обработки базового markdown
 const renderMarkdown = (text: string): string => {
@@ -327,16 +328,11 @@ export function AIGenerator() {
       return batchUserInput;
     }
 
-    const explicitParts: string[] = [];
-    batchExplicitSteps.forEach((step) => {
-      const typeName = stepTypeOptions.find((opt) => opt.value === step.type)?.label || step.type;
-      const count = step.count || 1;
-      const specific = step.specificInput ? ` ${step.specificInput}` : '';
-      explicitParts.push(`${count} ${typeName}${specific}`);
-    });
-
-    const explicitText = explicitParts.join(', ');
-    return batchUserInput ? `${batchUserInput}. Создай: ${explicitText}` : `Создай: ${explicitText}`;
+    return buildExplicitStepsQuery(
+      batchExplicitSteps,
+      (type) => stepTypeOptions.find((opt) => opt.value === type)?.label || type,
+      batchUserInput
+    );
   };
 
   const handleSaveBatchSteps = async (indices: number[]) => {
