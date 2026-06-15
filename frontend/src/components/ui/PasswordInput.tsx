@@ -22,7 +22,7 @@ export function PasswordInput({ icon, ...props }: PasswordInputProps) {
         <button
           type="button"
           onClick={() => setShowPassword((value) => !value)}
-          className="text-dark-500 hover:text-dark-300 transition-colors"
+          className="inline-flex items-center justify-center p-0 border-0 bg-transparent text-dark-500 hover:text-dark-300 transition-colors leading-none"
           aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
           tabIndex={-1}
         >
