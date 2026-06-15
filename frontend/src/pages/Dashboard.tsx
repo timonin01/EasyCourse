@@ -37,8 +37,8 @@ export function Dashboard() {
 
   const stats = [
     { label: 'Всего курсов', value: courses.length, icon: BookOpen, accent: 'primary' as const },
-    { label: 'Синхронизировано', value: courses.filter(c => c.stepikCourseId).length, icon: TrendingUp, accent: 'blue' as const },
-    { label: 'Черновики', value: courses.filter(c => !c.stepikCourseId).length, icon: FileText, accent: 'amber' as const },
+    { label: 'Синхронизировано', value: courses.filter(c => c.fullySynced).length, icon: TrendingUp, accent: 'blue' as const },
+    { label: 'Не синхронизировано', value: courses.filter(c => !c.fullySynced).length, icon: FileText, accent: 'amber' as const },
   ];
 
   const isNewUser = courses.length === 0;

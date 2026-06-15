@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import {
+  AlertTriangle,
   BookOpen,
   CheckCircle,
   Edit,
   ExternalLink,
   Eye,
-  RefreshCw,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -32,14 +32,19 @@ export function CourseCard({
   onViewDetails,
   onOpen,
 }: CourseCardProps) {
-  const isSynced = Boolean(course.stepikCourseId);
+  const hasStepikId = Boolean(course.stepikCourseId);
+  // Полностью синхронизирован, только если бэкенд это подтвердил.
+  // Для старых данных без флага считаем по наличию stepikCourseId.
+  const fullySynced = course.fullySynced ?? hasStepikId;
+  // На Stepik, но часть модулей/уроков/шагов ещё не выгружена.
+  const partiallySynced = hasStepikId && !fullySynced;
 
   const cardContent = (
     <>
       <div
         className={clsx(
           'absolute left-0 top-0 h-full w-1 rounded-l-xl',
-          isSynced ? 'bg-green-500' : 'bg-amber-500/80'
+          fullySynced ? 'bg-green-500' : 'bg-amber-500/80'
         )}
       />
       <div className="pl-3">
@@ -47,16 +52,22 @@ export function CourseCard({
           <div
             className={clsx(
               'rounded-lg p-2',
-              isSynced ? 'bg-green-500/15' : 'bg-primary-600/15'
+              fullySynced
+                ? 'bg-green-500/15'
+                : partiallySynced
+                  ? 'bg-amber-500/15'
+                  : 'bg-primary-600/15'
             )}
           >
-            {isSynced ? (
+            {fullySynced ? (
               <CheckCircle className="h-5 w-5 text-green-400" />
+            ) : partiallySynced ? (
+              <AlertTriangle className="h-5 w-5 text-amber-400" />
             ) : (
               <BookOpen className="h-5 w-5 text-primary-400" />
             )}
           </div>
-          {isSynced ? (
+          {fullySynced ? (
             <a
               href={`https://stepik.org/course/${course.stepikCourseId}`}
               target="_blank"
@@ -69,10 +80,24 @@ export function CourseCard({
                 <ExternalLink className="h-3 w-3" />
               </Badge>
             </a>
+          ) : partiallySynced ? (
+            <a
+              href={`https://stepik.org/course/${course.stepikCourseId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Курс выгружен, но часть содержимого ещё не на Stepik"
+            >
+              <Badge variant="warning" className="flex cursor-pointer items-center gap-1 hover:bg-amber-500/30">
+                <AlertTriangle className="h-3 w-3" />
+                Не полностью
+                <ExternalLink className="h-3 w-3" />
+              </Badge>
+            </a>
           ) : (
-            <Badge variant="warning">
-              <RefreshCw className="mr-1 h-3 w-3" />
-              Черновик
+            <Badge variant="warning" className="flex items-center gap-1" title="Курс ещё не выгружен на Stepik">
+              <AlertTriangle className="h-3 w-3" />
+              Не синхронизирован
             </Badge>
           )}
         </div>
@@ -114,8 +139,8 @@ export function CourseCard({
                   variant="ghost"
                   size="sm"
                   onClick={() => onSync(course.id)}
-                  title={isSynced ? 'Обновить в Stepik' : 'Синхронизировать'}
-                  className={isSynced ? 'text-green-400 hover:text-green-300' : ''}
+                  title={hasStepikId ? 'Обновить в Stepik' : 'Синхронизировать'}
+                  className={fullySynced ? 'text-green-400 hover:text-green-300' : partiallySynced ? 'text-amber-400 hover:text-amber-300' : ''}
                 >
                   <Upload className="h-4 w-4" />
                 </Button>

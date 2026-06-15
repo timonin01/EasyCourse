@@ -2,6 +2,7 @@ export { Button } from './Button';
 export { Input } from './Input';
 export { PasswordInput } from './PasswordInput';
 export { Textarea } from './Textarea';
+export { HtmlTextField, HtmlInlinePreview } from './HtmlTextField';
 export { Modal } from './Modal';
 export { Card } from './Card';
 export { Select } from './Select';

@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Input, Textarea, Modal, Badge, PageLoader, Toggle, FormSection, OptionCard, AddButton, Checkbox, LlmModelSelect } from '../components/ui';
+import { Button, Input, Textarea, Modal, Badge, PageLoader, Toggle, FormSection, OptionCard, AddButton, Checkbox, LlmModelSelect, HtmlTextField, HtmlInlinePreview } from '../components/ui';
 import { StepikIcon } from '../components/StepikIcon';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi, agentApi, stepikApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
@@ -81,6 +81,8 @@ export function CourseEditor() {
     unsyncedSteps,
     unsyncedLessons,
     unsyncedSections,
+    lessonsWithNewSteps,
+    sectionsWithNewSteps,
     markStepAsUnsynced,
     markModelAsUnsynced,
     markModelAsSynced,
@@ -2057,12 +2059,30 @@ export function CourseEditor() {
   };
 
   const isLessonUnsynced = (lesson: Lesson): boolean => {
-    return lesson.stepikLessonId !== undefined && lesson.stepikLessonId !== null && unsyncedLessons.has(lesson.id);
+    // Урок оранжевый, если в нём есть невыгруженный шаг
+    // или сам урок был изменён после синхронизации со Stepik.
+    return (
+      lessonsWithNewSteps.has(lesson.id) ||
+      (lesson.stepikLessonId !== undefined && lesson.stepikLessonId !== null && unsyncedLessons.has(lesson.id))
+    );
   };
 
   const isModelUnsynced = (section: Model): boolean => {
-    return section.stepikSectionId !== undefined && section.stepikSectionId !== null && unsyncedSections.has(section.id);
+    // Модуль оранжевый, если в одном из его уроков есть невыгруженный шаг
+    // или сам модуль был изменён после синхронизации.
+    return (
+      sectionsWithNewSteps.has(section.id) ||
+      (section.stepikSectionId !== undefined && section.stepikSectionId !== null && unsyncedSections.has(section.id))
+    );
   };
+
+  // Есть ли в курсе что-то невыгруженное/несинхронизированное (для индикатора в шапке).
+  const hasUnsyncedContent =
+    sectionsWithNewSteps.size > 0 ||
+    lessonsWithNewSteps.size > 0 ||
+    unsyncedSections.size > 0 ||
+    unsyncedLessons.size > 0 ||
+    unsyncedSteps.size > 0;
 
   const handleUpdateModelTitle = async (id: number, title: string) => {
     const section = sections.find((s) => s.id === id);
@@ -2133,6 +2153,12 @@ export function CourseEditor() {
               <Badge variant="warning" className="flex items-center gap-1">
                 <RefreshCw className="w-3 h-3" />
                 Не синхронизирован
+              </Badge>
+            )}
+            {hasUnsyncedContent && (
+              <Badge variant="warning" className="flex items-center gap-1" title="Есть шаги или изменения, не выгруженные на Stepik">
+                <AlertTriangle className="w-3 h-3" />
+                Есть несинхронизированные изменения
               </Badge>
             )}
           </div>
@@ -2474,11 +2500,11 @@ export function CourseEditor() {
         size="lg"
       >
         <div className="space-y-4">
-          <Textarea
+          <HtmlTextField
             label="Условие задачи"
             value={codeStepEditData.text}
-            onChange={(e) => setCodeStepEditData(prev => ({ ...prev, text: e.target.value }))}
-            rows={3}
+            onChange={(text) => setCodeStepEditData(prev => ({ ...prev, text }))}
+            rows={4}
             placeholder="Опишите, что должен сделать студент..."
           />
           <div>
@@ -2635,12 +2661,11 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие задания */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={choiceEditData.text}
-              onChange={(e) => setChoiceEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setChoiceEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Введите вопрос..."
-              hint="Можно использовать HTML для форматирования"
             />
           </FormSection>
 
@@ -2690,6 +2715,7 @@ export function CourseEditor() {
                               : 'border-dark-600 text-dark-100'
                           }`}
                         />
+                        <HtmlInlinePreview html={opt.text} />
                         <div className="flex items-center gap-2">
                           <MessageCircle className="w-3.5 h-3.5 text-dark-500" />
                           <input
@@ -2774,12 +2800,11 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Содержимое */}
           <FormSection title="Содержимое" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={textEditData.text}
-              onChange={(e) => setTextEditData({ text: e.target.value })}
-              rows={8}
+              onChange={(text) => setTextEditData((prev) => ({ ...prev, text }))}
+              rows={10}
               placeholder="Введите текст для отображения студенту..."
-              hint="Можно использовать HTML для форматирования"
             />
           </FormSection>
 
@@ -2831,12 +2856,11 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие задания */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={matchingEditData.text}
-              onChange={(e) => setMatchingEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setMatchingEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Опишите задание для студента..."
-              hint="Можно использовать HTML для форматирования"
             />
           </FormSection>
 
@@ -2956,12 +2980,11 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие задания */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={freeAnswerEditData.text}
-              onChange={(e) => setFreeAnswerEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={4}
+              onChange={(text) => setFreeAnswerEditData((prev) => ({ ...prev, text }))}
+              rows={5}
               placeholder="Опишите задание для студента..."
-              hint="Можно использовать HTML для форматирования"
             />
           </FormSection>
 
@@ -3052,12 +3075,11 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={mathEditData.text}
-              onChange={(e) => setMathEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={4}
+              onChange={(text) => setMathEditData((prev) => ({ ...prev, text }))}
+              rows={5}
               placeholder="Введите условие математической задачи..."
-              hint="Можно использовать LaTeX для формул"
             />
           </FormSection>
 
@@ -3126,10 +3148,10 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={numberEditData.text}
-              onChange={(e) => setNumberEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setNumberEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Введите условие задачи..."
             />
           </FormSection>
@@ -3240,10 +3262,10 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={sortingEditData.text}
-              onChange={(e) => setSortingEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setSortingEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Расположите элементы в правильном порядке..."
             />
           </FormSection>
@@ -3356,10 +3378,10 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={stringEditData.text}
-              onChange={(e) => setStringEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setStringEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Введите условие задания..."
             />
           </FormSection>
@@ -3481,12 +3503,11 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Текст задания */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={fillBlanksEditData.text}
-              onChange={(e) => setFillBlanksEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setFillBlanksEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Введите описание задания..."
-              hint="Можно использовать HTML для форматирования"
             />
           </FormSection>
 
@@ -3737,12 +3758,11 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие задания */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={tableEditData.text}
-              onChange={(e) => setTableEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setTableEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Опишите задание для студента..."
-              hint="Можно использовать HTML для форматирования"
             />
           </FormSection>
 
@@ -3941,10 +3961,10 @@ export function CourseEditor() {
         <div className="space-y-6">
           {/* Условие */}
           <FormSection title="Условие задания" icon={<FileText className="w-4 h-4" />}>
-            <Textarea
+            <HtmlTextField
               value={randomTasksEditData.text}
-              onChange={(e) => setRandomTasksEditData((prev) => ({ ...prev, text: e.target.value }))}
-              rows={3}
+              onChange={(text) => setRandomTasksEditData((prev) => ({ ...prev, text }))}
+              rows={4}
               placeholder="Общее описание задачи..."
             />
           </FormSection>

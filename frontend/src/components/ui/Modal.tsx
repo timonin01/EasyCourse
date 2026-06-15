@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -40,8 +41,8 @@ export function Modal({ isOpen, onClose, title, subtitle, icon, children, size =
     full: 'max-w-[90vw]',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 overflow-hidden">
       {/* Backdrop with gradient */}
       <div 
         className="absolute inset-0 bg-gradient-to-br from-black/70 via-dark-900/80 to-black/70 backdrop-blur-md"
@@ -128,7 +129,8 @@ export function Modal({ isOpen, onClose, title, subtitle, icon, children, size =
           }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }
 

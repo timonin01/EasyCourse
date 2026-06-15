@@ -41,6 +41,8 @@ export interface Course {
   stepikCourseId?: number;
   createdAt: string;
   updatedAt: string;
+  /** true, если курс и всё его содержимое выгружены на Stepik */
+  fullySynced?: boolean;
 }
 
 export interface CreateCourseDTO {

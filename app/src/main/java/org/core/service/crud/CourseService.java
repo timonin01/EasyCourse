@@ -126,6 +126,20 @@ public class CourseService {
                 .stepikCourseId(course.getStepikCourseId())
                 .createdAt(course.getCreatedAt())
                 .updatedAt(course.getUpdatedAt())
+                .fullySynced(isFullySynced(course))
                 .build();
+    }
+
+    private boolean isFullySynced(Course course){
+        if (course.getStepikCourseId() == null) {
+            return false;
+        }
+        return course.getSections().stream().allMatch(section ->
+                section.getStepikSectionId() != null &&
+                section.getLessons().stream().allMatch(lesson ->
+                        lesson.getStepikLessonId() != null &&
+                        lesson.getSteps().stream().allMatch(step -> step.getStepikStepId() != null)
+                )
+        );
     }
 }
