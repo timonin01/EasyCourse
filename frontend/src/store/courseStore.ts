@@ -1,6 +1,46 @@
 import { create } from 'zustand';
 import type { Course, Model, Lesson, Step } from '../types';
 
+/**
+ * Пересчитывает множества уроков/секций, в которых есть невыгруженные шаги
+ * (шаги без stepikStepId). Секция считается по урокам, которые сейчас загружены.
+ */
+function computeNewSteps(
+  lessons: Lesson[],
+  prevLessonsWithNewSteps: Set<number>,
+  prevSectionsWithNewSteps: Set<number>,
+  lessonId: number | undefined,
+  stepsForLesson: Step[]
+): { lessonsWithNewSteps: Set<number>; sectionsWithNewSteps: Set<number> } {
+  const lessonsWithNewSteps = new Set(prevLessonsWithNewSteps);
+  const sectionsWithNewSteps = new Set(prevSectionsWithNewSteps);
+
+  if (lessonId === undefined) {
+    return { lessonsWithNewSteps, sectionsWithNewSteps };
+  }
+
+  const hasNew = stepsForLesson.some((s) => s.lessonId === lessonId && !s.stepikStepId);
+  if (hasNew) {
+    lessonsWithNewSteps.add(lessonId);
+  } else {
+    lessonsWithNewSteps.delete(lessonId);
+  }
+
+  const lesson = lessons.find((l) => l.id === lessonId);
+  if (lesson) {
+    const sectionHasNew = lessons.some(
+      (l) => l.sectionId === lesson.sectionId && lessonsWithNewSteps.has(l.id)
+    );
+    if (sectionHasNew) {
+      sectionsWithNewSteps.add(lesson.sectionId);
+    } else {
+      sectionsWithNewSteps.delete(lesson.sectionId);
+    }
+  }
+
+  return { lessonsWithNewSteps, sectionsWithNewSteps };
+}
+
 interface CourseState {
   selectedCourse: Course | null;
   selectedModel: Model | null;
@@ -15,6 +55,10 @@ interface CourseState {
   unsyncedSteps: Set<number>;
   unsyncedLessons: Set<number>;
   unsyncedSections: Set<number>;
+
+  // Уроки/секции, содержащие хотя бы один ещё не выгруженный на Stepik шаг
+  lessonsWithNewSteps: Set<number>;
+  sectionsWithNewSteps: Set<number>;
   
   // Последние синхронизированные позиции (entityId -> position)
   syncedModelPositions: Map<number, number>;
@@ -82,6 +126,9 @@ export const useCourseStore = create<CourseState>((set) => ({
   unsyncedSteps: new Set<number>(),
   unsyncedLessons: new Set<number>(),
   unsyncedSections: new Set<number>(),
+
+  lessonsWithNewSteps: new Set<number>(),
+  sectionsWithNewSteps: new Set<number>(),
   
   syncedModelPositions: new Map<number, number>(),
   syncedLessonPositions: new Map<number, number>(),
@@ -116,7 +163,16 @@ export const useCourseStore = create<CourseState>((set) => ({
   setCourses: (courses) => set({ courses }),
   setModels: (sections) => set({ sections }),
   setLessons: (lessons) => set({ lessons }),
-  setSteps: (steps) => set({ steps }),
+  setSteps: (steps) => set((state) => ({
+    steps,
+    ...computeNewSteps(
+      state.lessons,
+      state.lessonsWithNewSteps,
+      state.sectionsWithNewSteps,
+      steps[0]?.lessonId ?? state.selectedLesson?.id,
+      steps
+    ),
+  })),
   
   addCourse: (course) => set((state) => ({ 
     courses: [course, ...state.courses] 
@@ -178,27 +234,66 @@ export const useCourseStore = create<CourseState>((set) => ({
     lessons: lessons.map((l, index) => ({ ...l, position: index + 1 })),
   }),
   
-  addStep: (step) => set((state) => ({
-    steps: [...state.steps, step].sort((a, b) => a.position - b.position),
-  })),
-  
-  updateStep: (step) => set((state) => ({
-    steps: state.steps.map((s) => s.id === step.id ? step : s),
-    selectedStep: state.selectedStep?.id === step.id ? step : state.selectedStep,
-  })),
-  
-  removeStep: (stepId) => set((state) => {
-    const newPositions = new Map(state.syncedStepPositions);
-    newPositions.delete(stepId);
+  addStep: (step) => set((state) => {
+    const steps = [...state.steps, step].sort((a, b) => a.position - b.position);
     return {
-      steps: state.steps.filter((s) => s.id !== stepId),
-      selectedStep: state.selectedStep?.id === stepId ? null : state.selectedStep,
-      syncedStepPositions: newPositions,
+      steps,
+      ...computeNewSteps(
+        state.lessons,
+        state.lessonsWithNewSteps,
+        state.sectionsWithNewSteps,
+        step.lessonId,
+        steps
+      ),
     };
   }),
   
-  reorderSteps: (steps) => set({
-    steps: steps.map((s, index) => ({ ...s, position: index + 1 })),
+  updateStep: (step) => set((state) => {
+    const steps = state.steps.map((s) => s.id === step.id ? step : s);
+    return {
+      steps,
+      selectedStep: state.selectedStep?.id === step.id ? step : state.selectedStep,
+      ...computeNewSteps(
+        state.lessons,
+        state.lessonsWithNewSteps,
+        state.sectionsWithNewSteps,
+        step.lessonId,
+        steps
+      ),
+    };
+  }),
+  
+  removeStep: (stepId) => set((state) => {
+    const removed = state.steps.find((s) => s.id === stepId);
+    const steps = state.steps.filter((s) => s.id !== stepId);
+    const newPositions = new Map(state.syncedStepPositions);
+    newPositions.delete(stepId);
+    return {
+      steps,
+      selectedStep: state.selectedStep?.id === stepId ? null : state.selectedStep,
+      syncedStepPositions: newPositions,
+      ...computeNewSteps(
+        state.lessons,
+        state.lessonsWithNewSteps,
+        state.sectionsWithNewSteps,
+        removed?.lessonId,
+        steps
+      ),
+    };
+  }),
+  
+  reorderSteps: (steps) => set((state) => {
+    const renumbered = steps.map((s, index) => ({ ...s, position: index + 1 }));
+    return {
+      steps: renumbered,
+      ...computeNewSteps(
+        state.lessons,
+        state.lessonsWithNewSteps,
+        state.sectionsWithNewSteps,
+        renumbered[0]?.lessonId,
+        renumbered
+      ),
+    };
   }),
   
   markStepAsUnsynced: (stepId, lessonId, modelId) => set((state) => {
@@ -406,6 +501,8 @@ export const useCourseStore = create<CourseState>((set) => ({
     syncedModelPositions: new Map(),
     syncedLessonPositions: new Map(),
     syncedStepPositions: new Map(),
+    lessonsWithNewSteps: new Set(),
+    sectionsWithNewSteps: new Set(),
   }),
 }));
 

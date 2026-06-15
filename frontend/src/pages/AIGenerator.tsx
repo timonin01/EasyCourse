@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw } from 'lucide-react';
+import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
 import { Button, Card, Textarea, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
 import { StepView } from '../components/StepView';
+import { StepikBlockEditModal } from '../components/steps/StepikBlockEditModal';
 import { agentApi, stepsApi, coursesApi, sectionsApi, lessonsApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
 import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikBlockRequest } from '../types';
@@ -81,6 +82,9 @@ export function AIGenerator() {
   const [batchPlanItems, setBatchPlanItems] = useState<BatchPlanItem[]>([]);
   const [batchActiveIndex, setBatchActiveIndex] = useState(0);
   const [lastGeneratePrompt, setLastGeneratePrompt] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<StepikBlockRequest | null>(null);
+  const [editingBatchIndex, setEditingBatchIndex] = useState<number | null>(null);
 
   const { isPro, canSelectModel, maxBatchSteps, refresh: refreshSubscription } = useSubscription();
 
@@ -335,6 +339,35 @@ export function AIGenerator() {
       navigator.clipboard.writeText(generatedStep.text);
       toast.success('Скопировано!');
     }
+  };
+
+  const openEditGeneratedStep = () => {
+    if (!generatedStep) return;
+    setEditingBatchIndex(null);
+    setEditingBlock(generatedStep);
+    setIsEditModalOpen(true);
+  };
+
+  const openEditBatchStep = (index: number) => {
+    const result = batchResults.find((r) => r.index === index);
+    if (!result || result.error) return;
+    setEditingBatchIndex(index);
+    setEditingBlock(result.step);
+    setIsEditModalOpen(true);
+  };
+
+  const handleApplyEditedBlock = (block: StepikBlockRequest) => {
+    if (editingBatchIndex !== null) {
+      setBatchResults((prev) =>
+        prev.map((r) => (r.index === editingBatchIndex ? { ...r, step: block } : r))
+      );
+      toast.success('Шаг обновлён');
+    } else {
+      setGeneratedStep(block);
+      toast.success('Сгенерированный шаг обновлён');
+    }
+    setEditingBlock(null);
+    setEditingBatchIndex(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -711,6 +744,7 @@ export function AIGenerator() {
                       onSaveAll={handleSaveAllBatchSteps}
                       isSaving={isSavingBatch}
                       selectedLessonId={selectedLessonId}
+                      onEditStep={openEditBatchStep}
                     />
                   </Card>
                 ) : isGeneratingBatch && batchPlanItems.length > 0 ? (
@@ -897,6 +931,14 @@ export function AIGenerator() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={openEditGeneratedStep}
+                        title="Редактировать шаг"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={handleRegenerate}
                         disabled={isLoading || !lastGeneratePrompt}
                         title="Перегенерировать с тем же запросом"
@@ -1041,6 +1083,17 @@ export function AIGenerator() {
         plan={batchPlan}
         onPlanChange={setBatchPlan}
         onConfirm={handlePlanConfirm}
+      />
+
+      <StepikBlockEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingBlock(null);
+          setEditingBatchIndex(null);
+        }}
+        block={editingBlock}
+        onSave={handleApplyEditedBlock}
       />
     </MainLayout>
   );

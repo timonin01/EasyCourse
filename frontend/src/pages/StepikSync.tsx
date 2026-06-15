@@ -394,11 +394,22 @@ export function StepikSync() {
   };
 
   const getSyncStatus = (course: Course) => {
-    if (course.stepikCourseId) {
+    if (course.stepikCourseId && course.fullySynced) {
       return { status: 'synced', label: 'Синхронизирован', icon: CheckCircle, color: 'text-green-400' };
     }
-    return { status: 'unsynced', label: 'Не синхронизирован', icon: XCircle, color: 'text-yellow-400' };
+    if (course.stepikCourseId) {
+      return { status: 'partial', label: 'Не полностью', icon: AlertTriangle, color: 'text-amber-400' };
+    }
+    return { status: 'unsynced', label: 'Не синхронизирован', icon: AlertTriangle, color: 'text-amber-400' };
   };
+
+  // Курс выгружен, но часть модулей/уроков/шагов ещё не на Stepik
+  const selectedUnsyncedCount = selectedCourse?.stepikCourseId
+    ? (selectedCourse.sections?.filter((s) => !s.stepikSectionId).length ?? 0) +
+      (selectedCourse.lessons?.filter((l) => !l.stepikLessonId).length ?? 0) +
+      (selectedCourse.steps?.filter((st) => !st.stepikStepId).length ?? 0)
+    : 0;
+  const selectedHasUnsyncedChildren = selectedUnsyncedCount > 0;
 
   if (isLoading) {
     return (
@@ -490,7 +501,9 @@ export function StepikSync() {
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer
                         ${selectedCourse?.id === course.id 
                           ? 'border-primary-500 bg-primary-600/10' 
-                          : 'border-dark-700 hover:border-dark-600 hover:bg-dark-800/50'
+                          : !course.fullySynced
+                            ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60'
+                            : 'border-dark-700 hover:border-dark-600 hover:bg-dark-800/50'
                         }`}
                       onClick={() => loadCourseDetails(course)}
                     >
@@ -605,19 +618,36 @@ export function StepikSync() {
               {/* Individual items sync - only if course is synced */}
               {selectedCourse.stepikCourseId && (
                 <div className="space-y-6">
-                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-yellow-400 mb-1">
-                          Курс уже синхронизирован с Stepik
-                        </p>
-                        <p className="text-sm text-dark-400">
-                          Используйте кнопку загрузки рядом с каждым элементом для синхронизации
-                        </p>
+                  {selectedHasUnsyncedChildren ? (
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-400 mb-1">
+                            Курс синхронизирован не полностью
+                          </p>
+                          <p className="text-sm text-dark-400">
+                            {selectedUnsyncedCount} элемент(ов) ещё не выгружены на Stepik. Используйте кнопку
+                            загрузки рядом с каждым элементом, чтобы завершить синхронизацию.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-green-400 mb-1">
+                            Курс полностью синхронизирован с Stepik
+                          </p>
+                          <p className="text-sm text-dark-400">
+                            Все модули, уроки и шаги выгружены. Используйте кнопки загрузки, чтобы обновить элементы.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {selectedCourse.sections && selectedCourse.sections.length > 0 && (
                     <div>

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button, Card, Badge, Checkbox } from '../../../components/ui';
-import { Save, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Save, XCircle, AlertTriangle, Eye, EyeOff, Pencil } from 'lucide-react';
 import type { StepikBlockRequest } from '../../../types';
+import { StepView } from '../../../components/StepView';
+import { stepikBlockToPreviewStep } from '../../../utils/stepPreview';
 
 interface BatchResult {
   step: StepikBlockRequest;
@@ -15,6 +17,7 @@ interface BatchResultsPreviewProps {
   onSaveAll: () => void;
   isSaving: boolean;
   selectedLessonId: number | null;
+  onEditStep?: (index: number) => void;
 }
 
 export function BatchResultsPreview({
@@ -23,6 +26,7 @@ export function BatchResultsPreview({
   onSaveAll,
   isSaving,
   selectedLessonId,
+  onEditStep,
 }: BatchResultsPreviewProps) {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
@@ -162,17 +166,29 @@ export function BatchResultsPreview({
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleExpand(result.index)}
-                  >
+                  <div className="flex items-center gap-1">
+                    {!hasError && onEditStep && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditStep(result.index)}
+                        title="Редактировать шаг"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleExpand(result.index)}
+                    >
                     {isExpanded ? (
                       <EyeOff className="w-4 h-4" />
                     ) : (
                       <Eye className="w-4 h-4" />
                     )}
                   </Button>
+                  </div>
                 </div>
 
                 {/* Ошибка */}
@@ -203,24 +219,13 @@ export function BatchResultsPreview({
                 {!hasError && (
                   <div>
                     {isExpanded ? (
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="text-sm font-medium text-dark-400 mb-2">Текст:</h4>
-                          <div
-                            className="text-sm text-dark-200 bg-dark-800 p-3 rounded-lg prose prose-sm prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{ __html: result.step.text || '' }}
-                          />
-                        </div>
-
-                        {result.step.source != null && (
-                          <div>
-                            <h4 className="text-sm font-medium text-dark-400 mb-2">Данные:</h4>
-                            <pre className="text-xs text-dark-400 bg-dark-800 p-3 rounded-lg overflow-auto max-h-60">
-                              {JSON.stringify(result.step.source, null, 2)}
-                            </pre>
-                          </div>
+                      <StepView
+                        step={stepikBlockToPreviewStep(
+                          result.step,
+                          result.step.name || 'text'
                         )}
-                      </div>
+                        variant="preview"
+                      />
                     ) : (
                       <div className="text-sm text-dark-300 line-clamp-2">
                         {result.step.text?.replace(/<[^>]*>/g, '').substring(0, 150) || 'Нет текста'}...
