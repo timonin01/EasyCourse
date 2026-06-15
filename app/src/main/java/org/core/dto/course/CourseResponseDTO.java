@@ -18,5 +18,6 @@ public class CourseResponseDTO {
     private Long stepikCourseId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean fullySynced;
 
 }
