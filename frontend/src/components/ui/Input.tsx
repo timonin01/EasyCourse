@@ -38,8 +38,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               'focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 focus:bg-dark-800',
               'hover:border-dark-500 hover:bg-dark-800',
               'transition-all duration-200',
-              icon ? 'pl-10 pr-4' : 'px-4',
-              suffix && 'pr-12',
+              icon ? 'pl-10' : 'pl-4',
+              suffix ? 'pr-12' : 'pr-4',
               error && 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50',
               className
             )}

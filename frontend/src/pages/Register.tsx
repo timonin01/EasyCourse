@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Button, Input } from '../components/ui';
+import { Button, Input, PasswordInput } from '../components/ui';
 import { authApi } from '../api';
+import { extractApiErrorMessage, getApiErrorStatus, isNetworkError } from '../utils/apiError';
 
 export function Register() {
   const navigate = useNavigate();
@@ -27,14 +28,23 @@ export function Register() {
 
     try {
       await authApi.register({
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         password: formData.password,
       });
       toast.success('Регистрация успешна! Теперь войдите в аккаунт.');
       navigate('/login');
     } catch (error) {
-      toast.error('Ошибка регистрации. Возможно, email уже используется.');
+      if (isNetworkError(error)) {
+        toast.error(extractApiErrorMessage(error, 'Сервер недоступен'));
+      } else {
+        const status = getApiErrorStatus(error);
+        if (status === 409) {
+          toast.error('Email уже зарегистрирован. Попробуйте войти.');
+        } else {
+          toast.error(extractApiErrorMessage(error, 'Ошибка регистрации'));
+        }
+      }
       console.error('Registration error:', error);
     } finally {
       setIsLoading(false);
@@ -74,8 +84,7 @@ export function Register() {
               required
             />
 
-            <Input
-              type="password"
+            <PasswordInput
               placeholder="Пароль"
               icon={<Lock className="w-5 h-5" />}
               value={formData.password}
@@ -84,8 +93,7 @@ export function Register() {
               minLength={6}
             />
 
-            <Input
-              type="password"
+            <PasswordInput
               placeholder="Подтвердите пароль"
               icon={<Lock className="w-5 h-5" />}
               value={formData.confirmPassword}

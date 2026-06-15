@@ -27,7 +27,8 @@ public class CorsConfig implements WebMvcConfigurer {
             String[] origins = allowedOrigins.split(",");
             mapping.allowedOrigins(origins).allowCredentials(true);
         } else {
-            mapping.allowedOriginPatterns(allowedOriginPattern);
+            String[] patterns = allowedOriginPattern.split(",");
+            mapping.allowedOriginPatterns(patterns);
         }
     }
 }

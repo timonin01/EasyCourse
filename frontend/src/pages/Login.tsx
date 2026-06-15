@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Button, Input } from '../components/ui';
+import { Button, Input, PasswordInput } from '../components/ui';
 import { ProductIntro } from '../components/auth/ProductIntro';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
+import { extractApiErrorMessage, getApiErrorStatus, isNetworkError } from '../utils/apiError';
 
 export function Login() {
   const navigate = useNavigate();
@@ -21,12 +22,26 @@ export function Login() {
     setIsLoading(true);
 
     try {
-      const response = await authApi.login(formData);
+      const response = await authApi.login({
+        email: formData.email.trim(),
+        password: formData.password,
+      });
       login(response.user, response.token);
       toast.success('Добро пожаловать!');
       navigate('/dashboard');
     } catch (error) {
-      toast.error('Неверный email или пароль');
+      if (isNetworkError(error)) {
+        toast.error(extractApiErrorMessage(error, 'Сервер недоступен'));
+      } else {
+        const status = getApiErrorStatus(error);
+        if (status === 404) {
+          toast.error('Пользователь с таким email не найден');
+        } else if (status === 401) {
+          toast.error('Неверный пароль');
+        } else {
+          toast.error(extractApiErrorMessage(error, 'Не удалось войти'));
+        }
+      }
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);
@@ -68,8 +83,7 @@ export function Login() {
                 required
               />
 
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="Пароль"
                 icon={<Lock className="w-5 h-5" />}
                 value={formData.password}

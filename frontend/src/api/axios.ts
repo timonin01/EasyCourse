@@ -25,11 +25,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+function isAuthRequest(url?: string): boolean {
+  if (!url) {
+    return false;
+  }
+
+  return url.includes('/v1/users/login') || /\/v1\/users\/?$/.test(url);
+}
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url as string | undefined;
+
+    // Не редиректим при неудачном логине/регистрации — иначе страница перезагружается
+    if (status === 401 && !isAuthRequest(requestUrl)) {
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       localStorage.removeItem('auth-storage');
