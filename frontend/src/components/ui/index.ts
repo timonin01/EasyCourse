@@ -1,5 +1,6 @@
 export { Button } from './Button';
 export { Input } from './Input';
+export { PasswordInput } from './PasswordInput';
 export { Textarea } from './Textarea';
 export { Modal } from './Modal';
 export { Card } from './Card';
@@ -14,4 +15,6 @@ export { FormSection } from './FormSection';
 export { OptionCard } from './OptionCard';
 export { AddButton } from './AddButton';
 export { Tooltip } from './Tooltip';
+export { ChatMarkdown } from './ChatMarkdown';
+export { StatCard } from './StatCard';
 

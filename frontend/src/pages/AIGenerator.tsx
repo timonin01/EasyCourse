@@ -1,39 +1,29 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
 import { Button, Card, Textarea, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
+import { ChatMarkdown } from '../components/ui/ChatMarkdown';
+import { StepView } from '../components/StepView';
 import { agentApi, stepsApi, coursesApi, sectionsApi, lessonsApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
 import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikBlockRequest } from '../types';
 import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
-import { buildExplicitStepsQuery, countTotalBatchSteps } from '../utils/batchSteps';
+import { BatchProgressStepper, type BatchStepStatus } from './AIGenerator/components/BatchProgressStepper';
+import { PromptSuggestionChips } from './AIGenerator/components/PromptSuggestionChips';
+import { buildExplicitStepsQuery, countTotalBatchSteps, expandBatchPlanToItems, type BatchPlanItem } from '../utils/batchSteps';
+import { stepikBlockToPreviewStep } from '../utils/stepPreview';
 import { getBatchStepLimitMessage } from '../constants/batchLimits';
+import {
+  CHAT_PROMPT_SUGGESTIONS,
+  GENERATE_PROMPT_SUGGESTIONS,
+} from '../constants/aiPromptSuggestions';
 import { useSubscription } from '../hooks/useSubscription';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
 import { MODEL_PRO_MESSAGE } from '../constants/subscription';
 import { extractApiErrorMessage } from '../utils/apiError';
-
-// Простая функция для обработки базового markdown
-const renderMarkdown = (text: string): string => {
-  if (!text) return '';
-  
-  let result = text;
-  
-  // Сначала обрабатываем жирный текст **text** (двойные звездочки)
-  result = result.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
-  
-  // Затем обрабатываем курсив *text* (одиночные звездочки)
-  // После обработки жирного текста останутся только одиночные звездочки
-  result = result.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
-  
-  // Обработка переносов строк
-  result = result.replace(/\n/g, '<br />');
-  
-  return result;
-};
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент (урок/задача)' },
@@ -88,8 +78,45 @@ export function AIGenerator() {
   const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
   const [batchResults, setBatchResults] = useState<Array<{ step: StepikBlockRequest; index: number; error?: string }>>([]);
   const [isSavingBatch, setIsSavingBatch] = useState(false);
+  const [batchPlanItems, setBatchPlanItems] = useState<BatchPlanItem[]>([]);
+  const [batchActiveIndex, setBatchActiveIndex] = useState(0);
+  const [lastGeneratePrompt, setLastGeneratePrompt] = useState('');
 
   const { isPro, canSelectModel, maxBatchSteps, refresh: refreshSubscription } = useSubscription();
+
+  const previewStep = useMemo(
+    () => (generatedStep ? stepikBlockToPreviewStep(generatedStep, stepType) : null),
+    [generatedStep, stepType]
+  );
+
+  useEffect(() => {
+    if (!isGeneratingBatch || batchPlanItems.length === 0) return;
+
+    const interval = setInterval(() => {
+      setBatchActiveIndex((prev) => (prev >= batchPlanItems.length - 1 ? prev : prev + 1));
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isGeneratingBatch, batchPlanItems.length]);
+
+  const batchStepStatuses: BatchStepStatus[] = batchPlanItems.map((item, i) => {
+    const result = batchResults.find((r) => r.index === item.index);
+    if (result?.error) return 'error';
+    if (result && !result.error) return 'done';
+    if (isGeneratingBatch) {
+      if (i < batchActiveIndex) return 'done';
+      if (i === batchActiveIndex) return 'active';
+      return 'pending';
+    }
+    return 'pending';
+  });
+
+  const batchProgressPercent =
+    batchPlanItems.length > 0
+      ? batchResults.some((r) => !r.error)
+        ? 100
+        : Math.min(100, Math.round(((batchActiveIndex + 1) / batchPlanItems.length) * 100))
+      : 0;
 
   useEffect(() => {
     if (!canSelectModel && selectedLlmModel) {
@@ -175,24 +202,31 @@ export function AIGenerator() {
     setStepType(newStepType);
   };
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const runGenerateStep = async (prompt: string, options?: { addUserMessage?: boolean }) => {
+    if (!prompt.trim() || isLoading) return;
 
     const sessionId = getOrCreateGenerateSession(stepType);
-    const userMessage: ChatMessage = { role: 'user', content: input };
-    addMessage(sessionId, userMessage);
-    setInput('');
+    if (options?.addUserMessage !== false) {
+      addMessage(sessionId, { role: 'user', content: prompt });
+    }
+    setLastGeneratePrompt(prompt);
     setIsLoading(true);
 
     try {
-      const response = await agentApi.generateStep(sessionId, input, stepType, selectedLlmModel || undefined);
+      const response = await agentApi.generateStep(
+        sessionId,
+        prompt,
+        stepType,
+        selectedLlmModel || undefined
+      );
       setGeneratedStep(response);
-      
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: `Готово! Сгенерирован шаг типа "${stepType}".\n\nПредпросмотр контента:\n${response.text?.substring(0, 200) || 'Контент сгенерирован'}...`,
       };
       addMessage(sessionId, assistantMessage);
+      void refreshSubscription();
     } catch (error) {
       const errorMessage: ChatMessage = {
         role: 'assistant',
@@ -205,6 +239,21 @@ export function AIGenerator() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    const prompt = input.trim();
+    setInput('');
+    await runGenerateStep(prompt);
+  };
+
+  const handleRegenerate = async () => {
+    if (!lastGeneratePrompt) {
+      toast.error('Сначала сгенерируйте шаг');
+      return;
+    }
+    await runGenerateStep(lastGeneratePrompt, { addUserMessage: false });
   };
 
   const handleChat = async () => {
@@ -431,6 +480,10 @@ export function AIGenerator() {
 
     setIsPlanModalOpen(false);
     setBatchPlan(plan);
+
+    const planItems = expandBatchPlanToItems(plan);
+    setBatchPlanItems(planItems);
+    setBatchActiveIndex(0);
     
     // Сохраняем в историю
     addBatchHistory(buildBatchUserInput(), plan);
@@ -451,6 +504,7 @@ export function AIGenerator() {
       }));
 
       setBatchResults(formattedResults);
+      setBatchActiveIndex(planItems.length - 1);
       toast.success(`Сгенерировано ${results.length} шагов`);
       void refreshSubscription();
     } catch (error: any) {
@@ -659,12 +713,20 @@ export function AIGenerator() {
                       selectedLessonId={selectedLessonId}
                     />
                   </Card>
+                ) : isGeneratingBatch && batchPlanItems.length > 0 ? (
+                  <Card>
+                    <BatchProgressStepper
+                      items={batchPlanItems}
+                      stepStatuses={batchStepStatuses}
+                      progressPercent={batchProgressPercent}
+                    />
+                  </Card>
                 ) : isGeneratingBatch ? (
                   <Card>
                     <div className="flex items-center justify-center py-12">
                       <div className="text-center">
                         <Spinner size="lg" />
-                        <p className="text-sm text-dark-400 mt-4">Генерация batch шагов...</p>
+                        <p className="text-sm text-dark-400 mt-4">Подготовка batch-генерации...</p>
                       </div>
                     </div>
                   </Card>
@@ -731,6 +793,10 @@ export function AIGenerator() {
                       : 'Опишите, какой шаг вы хотите создать, и я сгенерирую его для вас. Например: "Создай тест про фотосинтез с 4 вариантами ответа"'
                     }
                   </p>
+                  <PromptSuggestionChips
+                    suggestions={mode === 'chat' ? CHAT_PROMPT_SUGGESTIONS : GENERATE_PROMPT_SUGGESTIONS}
+                    onSelect={setInput}
+                  />
                 </div>
               ) : (
                 messages.map((message, index) => (
@@ -751,13 +817,7 @@ export function AIGenerator() {
                       }`}
                     >
                       {message.role === 'assistant' ? (
-                        <div 
-                          className="markdown-content"
-                          style={{
-                            lineHeight: '1.6',
-                          }}
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
-                        />
+                        <ChatMarkdown content={message.content} />
                       ) : (
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       )}
@@ -829,38 +889,27 @@ export function AIGenerator() {
           <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
             <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">Предпросмотр</h2>
             <Card className="flex-1 overflow-auto min-h-0">
-              {generatedStep ? (
+              {generatedStep && previewStep ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <Badge variant="success">Шаг сгенерирован</Badge>
                     <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRegenerate}
+                        disabled={isLoading || !lastGeneratePrompt}
+                        title="Перегенерировать с тем же запросом"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={handleCopyContent}>
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-dark-400 mb-2">Тип:</h3>
-                    <Badge>{generatedStep.name || stepType}</Badge>
-                  </div>
 
-                  <div>
-                    <h3 className="text-sm font-medium text-dark-400 mb-2">Контент:</h3>
-                    <div 
-                      className="text-sm text-dark-200 bg-dark-800 p-3 rounded-lg prose prose-sm prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: generatedStep.text || '' }}
-                    />
-                  </div>
-
-                  {generatedStep.source != null && (
-                    <div>
-                      <h3 className="text-sm font-medium text-dark-400 mb-2">Данные:</h3>
-                      <pre className="text-xs text-dark-400 bg-dark-800 p-3 rounded-lg overflow-auto max-h-40">
-                        {JSON.stringify(generatedStep.source, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                  <StepView step={previewStep} variant="preview" />
 
                   <div className="pt-4 border-t border-dark-700">
                     <div className="flex items-center justify-between mb-2">
@@ -948,7 +997,7 @@ export function AIGenerator() {
                 </Button>
               )}
             </h2>
-            <SubscriptionPanel />
+            <SubscriptionPanel variant="compact" />
             <Card className="flex-1 overflow-auto min-h-0">
               <div className="space-y-4">
                 <div>

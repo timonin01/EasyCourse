@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Trash2, Edit, Upload, Search, CheckCircle, RefreshCw, ExternalLink, Eye } from 'lucide-react';
+import { Plus, BookOpen, Search, CheckCircle, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
 import { Card, Button, Input, Modal, Textarea, Badge, PageLoader } from '../components/ui';
+import { CourseCard } from '../components/courses/CourseCard';
 import { StepView } from '../components/StepView';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -228,88 +229,16 @@ export function Courses() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((course) => (
-            <Card key={course.id} className="flex flex-col">
-              <div className="flex items-start justify-between mb-3">
-                <div className={`p-2 rounded-lg ${course.stepikCourseId ? 'bg-green-500/20' : 'bg-primary-600/20'}`}>
-                  {course.stepikCourseId ? (
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                  ) : (
-                    <BookOpen className="w-5 h-5 text-primary-400" />
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  {course.stepikCourseId ? (
-                    <a 
-                      href={`https://stepik.org/course/${course.stepikCourseId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Badge variant="success" className="flex items-center gap-1 cursor-pointer hover:bg-green-500/30">
-                        <CheckCircle className="w-3 h-3" />
-                        #{course.stepikCourseId}
-                        <ExternalLink className="w-3 h-3" />
-                      </Badge>
-                    </a>
-                  ) : (
-                    <Badge variant="warning">
-                      <RefreshCw className="w-3 h-3 mr-1" />
-                      Не синхр.
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              
-              <h3 className="font-semibold text-dark-100 mb-1 line-clamp-1">{course.title}</h3>
-              <p className="text-sm text-dark-400 line-clamp-2 flex-1">{course.description}</p>
-              
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-dark-700">
-                <p className="text-xs text-dark-500">
-                  {new Date(course.updatedAt).toLocaleDateString('ru-RU')}
-                </p>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/courses/${course.id}`)}
-                  >
-                    Открыть
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => loadCourseDetails(course)}
-                    title="Просмотреть детали курса"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEditModal(course)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSyncCourse(course.id)}
-                    title={course.stepikCourseId ? 'Обновить в Stepik' : 'Синхронизировать с Stepik'}
-                    className={course.stepikCourseId ? 'text-green-400 hover:text-green-300' : ''}
-                  >
-                    <Upload className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteCourse(course.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
+            <CourseCard
+              key={course.id}
+              course={course}
+              variant="detailed"
+              onOpen={(id) => navigate(`/courses/${id}`)}
+              onViewDetails={loadCourseDetails}
+              onEdit={openEditModal}
+              onSync={handleSyncCourse}
+              onDelete={handleDeleteCourse}
+            />
           ))}
         </div>
       )}

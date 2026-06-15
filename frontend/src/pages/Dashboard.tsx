@@ -10,10 +10,10 @@ import {
 } from 'lucide-react';
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
-import { Card, Button, PageLoader } from '../components/ui';
+import { Card, Button, PageLoader, StatCard } from '../components/ui';
+import { CourseCard } from '../components/courses/CourseCard';
 import { coursesApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
-import type { Course } from '../types';
 
 export function Dashboard() {
   const { user } = useAuthStore();
@@ -36,9 +36,9 @@ export function Dashboard() {
   }, [user?.id, setCourses]);
 
   const stats = [
-    { label: 'Всего курсов', value: courses.length, icon: BookOpen, color: 'text-primary-400' },
-    { label: 'Синхронизировано', value: courses.filter(c => c.stepikCourseId).length, icon: TrendingUp, color: 'text-blue-400' },
-    { label: 'Черновики', value: courses.filter(c => !c.stepikCourseId).length, icon: FileText, color: 'text-amber-400' },
+    { label: 'Всего курсов', value: courses.length, icon: BookOpen, accent: 'primary' as const },
+    { label: 'Синхронизировано', value: courses.filter(c => c.stepikCourseId).length, icon: TrendingUp, accent: 'blue' as const },
+    { label: 'Черновики', value: courses.filter(c => !c.stepikCourseId).length, icon: FileText, accent: 'amber' as const },
   ];
 
   const isNewUser = courses.length === 0;
@@ -70,15 +70,13 @@ export function Dashboard() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {stats.map((stat) => (
-          <Card key={stat.label} className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl bg-dark-800 ${stat.color}`}>
-              <stat.icon className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-dark-100">{stat.value}</p>
-              <p className="text-sm text-dark-400">{stat.label}</p>
-            </div>
-          </Card>
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            icon={stat.icon}
+            accent={stat.accent}
+          />
         ))}
       </div>
 
@@ -141,36 +139,12 @@ export function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {courses.slice(0, 6).map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <CourseCard key={course.id} course={course} variant="compact" />
             ))}
           </div>
         )}
       </div>
     </MainLayout>
-  );
-}
-
-function CourseCard({ course }: { course: Course }) {
-  return (
-    <Link to={`/courses/${course.id}`}>
-      <Card hover className="h-full">
-        <div className="flex items-start justify-between mb-3">
-          <div className="p-2 bg-primary-600/20 rounded-lg">
-            <BookOpen className="w-5 h-5 text-primary-400" />
-          </div>
-          {course.stepikCourseId && (
-            <span className="px-2 py-1 bg-primary-900/50 text-primary-400 text-xs rounded-full">
-              Stepik
-            </span>
-          )}
-        </div>
-        <h3 className="font-semibold text-dark-100 mb-1 line-clamp-1">{course.title}</h3>
-        <p className="text-sm text-dark-400 line-clamp-2">{course.description}</p>
-        <p className="text-xs text-dark-500 mt-3">
-          Обновлено: {new Date(course.updatedAt).toLocaleDateString('ru-RU')}
-        </p>
-      </Card>
-    </Link>
   );
 }
 

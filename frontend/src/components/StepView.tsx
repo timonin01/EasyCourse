@@ -5,6 +5,7 @@ import { getStepDisplayType } from '../types';
 
 interface StepViewProps {
   step: Step;
+  variant?: 'full' | 'preview';
 }
 
 interface StepikBlock {
@@ -91,7 +92,7 @@ function inferBlockName(block: StepikBlock): string {
   return 'text';
 }
 
-export function StepView({ step }: StepViewProps) {
+export function StepView({ step, variant = 'full' }: StepViewProps) {
   let blockData: StepikBlock | null = null;
 
   if (step.stepikBlockData) {
@@ -645,10 +646,12 @@ export function StepView({ step }: StepViewProps) {
             Stepik ID: {step.stepikStepId}
           </Badge>
         )}
-        <span className="text-sm text-dark-400">
-          Позиция: {step.position}
-        </span>
-        {step.cost !== undefined && step.cost !== null && (
+        {variant === 'full' && (
+          <span className="text-sm text-dark-400">
+            Позиция: {step.position}
+          </span>
+        )}
+        {variant === 'full' && step.cost !== undefined && step.cost !== null && (
           <span className="text-sm font-medium text-primary-400">
             Стоимость: {step.cost}
           </span>
@@ -657,51 +660,55 @@ export function StepView({ step }: StepViewProps) {
 
       {renderBlockContent()}
 
-      <div className="pt-4 border-t border-dark-700">
-        <h4 className="text-sm font-semibold text-dark-200 mb-3">Информация о шаге</h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-3 bg-dark-800 rounded-lg border border-dark-600">
-            <label className="block text-xs font-medium text-dark-400 mb-1">Дата создания</label>
-            <p className="text-sm text-dark-100 font-medium">
-              {step.createdAt 
-                ? new Date(step.createdAt).toLocaleString('ru-RU', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })
-                : 'Не указано'}
-            </p>
+      {variant === 'full' && (
+        <>
+          <div className="pt-4 border-t border-dark-700">
+            <h4 className="text-sm font-semibold text-dark-200 mb-3">Информация о шаге</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-dark-800 rounded-lg border border-dark-600">
+                <label className="block text-xs font-medium text-dark-400 mb-1">Дата создания</label>
+                <p className="text-sm text-dark-100 font-medium">
+                  {step.createdAt 
+                    ? new Date(step.createdAt).toLocaleString('ru-RU', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : 'Не указано'}
+                </p>
+              </div>
+              <div className="p-3 bg-dark-800 rounded-lg border border-dark-600">
+                <label className="block text-xs font-medium text-dark-400 mb-1">Дата обновления</label>
+                <p className="text-sm text-dark-100 font-medium">
+                  {step.updatedAt 
+                    ? new Date(step.updatedAt).toLocaleString('ru-RU', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : 'Не указано'}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="p-3 bg-dark-800 rounded-lg border border-dark-600">
-            <label className="block text-xs font-medium text-dark-400 mb-1">Дата обновления</label>
-            <p className="text-sm text-dark-100 font-medium">
-              {step.updatedAt 
-                ? new Date(step.updatedAt).toLocaleString('ru-RU', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })
-                : 'Не указано'}
-            </p>
-          </div>
-        </div>
-      </div>
 
-      {blockData && (
-        <details className="mt-4">
-          <summary className="text-sm font-medium text-dark-400 cursor-pointer hover:text-dark-300">
-            Показать данные шага (JSON)
-          </summary>
-          <div className="mt-2 w-full px-4 py-3 bg-dark-800 border border-dark-600 rounded-xl text-dark-100 max-h-[300px] overflow-y-auto">
-            <pre className="text-xs whitespace-pre-wrap break-words">
-              {JSON.stringify(blockData, null, 2)}
-            </pre>
-          </div>
-        </details>
+          {blockData && (
+            <details className="mt-4">
+              <summary className="text-sm font-medium text-dark-400 cursor-pointer hover:text-dark-300">
+                Показать данные шага (JSON)
+              </summary>
+              <div className="mt-2 w-full px-4 py-3 bg-dark-800 border border-dark-600 rounded-xl text-dark-100 max-h-[300px] overflow-y-auto">
+                <pre className="text-xs whitespace-pre-wrap break-words">
+                  {JSON.stringify(blockData, null, 2)}
+                </pre>
+              </div>
+            </details>
+          )}
+        </>
       )}
     </div>
   );
