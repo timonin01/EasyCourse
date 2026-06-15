@@ -45,6 +45,7 @@ interface AIGeneratorState {
   // Batch history management
   addBatchHistory: (userInput: string, plan: BatchStepDTO) => void;
   getBatchHistory: () => BatchGenerationHistory[];
+  removeBatchHistory: (id: string) => void;
   clearBatchHistory: () => void;
   
   // Reset
@@ -161,6 +162,10 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
       getBatchHistory: () => {
         return get().batchHistory;
       },
+
+      removeBatchHistory: (id) => set((state) => ({
+        batchHistory: state.batchHistory.filter((entry) => entry.id !== id),
+      })),
       
       clearBatchHistory: () => set({ batchHistory: [] }),
       

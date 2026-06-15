@@ -8,10 +8,11 @@ import { StepView } from '../components/StepView';
 import { StepikBlockEditModal } from '../components/steps/StepikBlockEditModal';
 import { agentApi, stepsApi, coursesApi, sectionsApi, lessonsApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
-import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikBlockRequest } from '../types';
+import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikBlockRequest, BatchGenerationHistory } from '../types';
 import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
+import { BatchHistoryPanel } from './AIGenerator/components/BatchHistoryPanel';
 import { BatchProgressStepper, type BatchStepStatus } from './AIGenerator/components/BatchProgressStepper';
 import { PromptSuggestionChips } from './AIGenerator/components/PromptSuggestionChips';
 import { buildExplicitStepsQuery, countTotalBatchSteps, expandBatchPlanToItems, type BatchPlanItem } from '../utils/batchSteps';
@@ -62,7 +63,6 @@ export function AIGenerator() {
     setMessages,
     clearSession,
     addBatchHistory,
-    getBatchHistory,
   } = useAIGeneratorStore();
 
   const [input, setInput] = useState('');
@@ -435,6 +435,22 @@ export function AIGenerator() {
     );
   };
 
+  const handleRestoreBatchHistory = (entry: BatchGenerationHistory) => {
+    setBatchExplicitSteps(entry.plan.steps.map((step) => ({ ...step })));
+    setBatchUserInput(entry.userInput);
+    setBatchResults([]);
+    toast.success('Запрос восстановлен в форму');
+  };
+
+  const handleRerunBatchHistory = (entry: BatchGenerationHistory) => {
+    if (!selectedLessonId) {
+      toast.error('Выберите урок для сохранения шагов');
+      return;
+    }
+    setBatchPlan(entry.plan);
+    setIsPlanModalOpen(true);
+  };
+
   const handleSaveBatchSteps = async (indices: number[]) => {
     if (!selectedLessonId || indices.length === 0) {
       return;
@@ -777,31 +793,10 @@ export function AIGenerator() {
                         Введите запрос или выберите типы шагов для пакетной генерации.
                         Вы можете использовать текстовое описание или явно указать типы и количество.
                       </p>
-                      <div className="mt-6">
-                        <h4 className="text-md font-medium text-dark-300 mb-3">История генераций:</h4>
-                        {getBatchHistory().length === 0 ? (
-                          <p className="text-sm text-dark-500">История пуста</p>
-                        ) : (
-                          <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                            {getBatchHistory().map((entry, index) => (
-                              <div key={index} className="bg-dark-800 p-3 rounded-lg text-sm text-dark-300">
-                                <p className="truncate">{entry.userInput}</p>
-                                <p className="text-xs text-dark-500">
-                                  {new Date(entry.timestamp).toLocaleString()} - {entry.plan.steps.length} типов, {entry.plan.steps.reduce((sum, s) => sum + s.count, 0)} шагов
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toast('История batch-генераций (в разработке)', { icon: 'ℹ️' })}
-                          className="mt-3 text-dark-400 hover:text-dark-200"
-                        >
-                          Показать всю историю
-                        </Button>
-                      </div>
+                      <BatchHistoryPanel
+                        onRestore={handleRestoreBatchHistory}
+                        onRerun={handleRerunBatchHistory}
+                      />
                     </div>
                   </Card>
                 )}
@@ -1025,21 +1020,17 @@ export function AIGenerator() {
         {/* Batch Settings Section - only in batch mode */}
         {mode === 'batch' && (
           <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
-            <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0 flex items-center justify-between">
-              <span>Настройки</span>
-              {getBatchHistory().length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    toast('История batch-генераций (в разработке)', { icon: 'ℹ️' });
-                  }}
-                >
-                  <FolderOpen className="w-4 h-4" />
-                </Button>
-              )}
+            <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">
+              Настройки
             </h2>
             <SubscriptionPanel variant="compact" />
+            <div className="mb-4">
+              <BatchHistoryPanel
+                variant="compact"
+                onRestore={handleRestoreBatchHistory}
+                onRerun={handleRerunBatchHistory}
+              />
+            </div>
             <Card className="flex-1 overflow-auto min-h-0">
               <div className="space-y-4">
                 <div>
