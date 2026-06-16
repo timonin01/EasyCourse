@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="23-create-ai-message" author="system">
+        <comment>Messages within AI sessions</comment>
+        <createTable tableName="ai_message">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_ai_message"/>
+            </column>
+            <column name="session_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message_role" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="step_type" type="VARCHAR(30)"/>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="ai_message"
+                baseColumnNames="session_id"
+                referencedTableName="ai_session"
+                referencedColumnNames="id"
+                constraintName="fk_ai_message_session"
+                onDelete="CASCADE"/>
+
+        <createIndex indexName="idx_ai_message_session_order" tableName="ai_message">
+            <column name="session_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

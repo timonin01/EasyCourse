@@ -2,7 +2,7 @@ package org.core.service.subscription;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.domain.AiUsage;
+import org.core.domain.ai.AiUsage;
 import org.core.domain.User;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.subscription.SubscriptionStatusDTO;
