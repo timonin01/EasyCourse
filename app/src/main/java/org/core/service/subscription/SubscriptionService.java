@@ -10,7 +10,7 @@ import org.core.enums.LlmModel;
 import org.core.enums.UserRole;
 import org.core.exception.exceptions.SubscriptionLimitExceededException;
 import org.core.exception.exceptions.UserNotFoundException;
-import org.core.repository.AiUsageRepository;
+import org.core.repository.ai.AiUsageRepository;
 import org.core.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

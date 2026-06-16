@@ -1,4 +1,4 @@
-package org.core.repository;
+package org.core.repository.ai;
 
 import org.core.domain.ai.AiUsage;
 import org.springframework.data.jpa.repository.JpaRepository;
