@@ -31,6 +31,7 @@ interface AIGeneratorState {
   // Session management
   getOrCreateChatSession: () => string;
   getOrCreateGenerateSession: (stepType: string) => string;
+  setGenerateSession: (stepType: string, sessionId: string) => void;
   getCurrentSessionId: () => string;
   
   // Message management
@@ -95,6 +96,15 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
         }
         return state.generateSessions[stepType];
       },
+
+      setGenerateSession: (stepType: string, sessionId: string) => {
+        set((state) => ({
+          generateSessions: {
+            ...state.generateSessions,
+            [stepType]: sessionId,
+          },
+        }));
+      },
       
       getCurrentSessionId: () => {
         const state = get();
@@ -147,16 +157,12 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
       }),
     }),
     {
-      name: 'ai-generator-storage',
+      name: 'ai-generator-storage-v2',
       partialize: (state) => ({
         mode: state.mode,
         chatSessionId: state.chatSessionId,
         generateSessions: state.generateSessions,
-        chatHistory: state.chatHistory,
         stepType: state.stepType,
-        generatedStep: state.generatedStep,
-        selectedLessonId: state.selectedLessonId,
-        // Don't persist allLessons - will be loaded fresh each time
       }),
     }
   )

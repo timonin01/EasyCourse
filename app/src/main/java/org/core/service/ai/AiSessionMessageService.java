@@ -8,6 +8,7 @@ import org.core.domain.ai.AiMessageRole;
 import org.core.domain.ai.AiSession;
 import org.core.domain.ai.ChatType;
 import org.core.dto.ai.AiMessageHistoryDTO;
+import org.core.dto.ai.GeneratedStepHistoryDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
@@ -30,8 +31,11 @@ import java.util.Optional;
 @Transactional
 public class AiSessionMessageService {
 
-    @Value("${message.history.limit:50}")
+    @Value("${message.history.limit}")
     private int messageLimit;
+
+    @Value("${generated.steps.history.limit}")
+    private int generatedStepsHistoryLimit;
 
     private final UserRepository userRepository;
     private final AiSessionRepository aiSessionRepository;
@@ -62,6 +66,18 @@ public class AiSessionMessageService {
 
         aiSession.setUpdatedAt(LocalDateTime.now());
         aiSessionRepository.save(aiSession);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GeneratedStepHistoryDTO> getGeneratedStepsHistory(Long userId) {
+        List<AiMessage> messages = aiMessageRepository.findGeneratedStepsByUserId(
+                userId,
+                PageRequest.of(0, generatedStepsHistoryLimit)
+        );
+
+        return messages.stream()
+                .map(aiMessageHelper::toGeneratedStepHistoryDto)
+                .toList();
     }
 
     @Transactional(readOnly = true)

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw, Pencil } from 'lucide-react';
+import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw, Pencil, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
 import { Button, Card, Textarea, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
@@ -8,16 +8,18 @@ import { StepView } from '../components/StepView';
 import { StepikBlockEditModal } from '../components/steps/StepikBlockEditModal';
 import { agentApi, stepsApi, coursesApi, sectionsApi, lessonsApi } from '../api';
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
-import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikBlockRequest, BatchGenerationHistory } from '../types';
+import type { ChatMessage, StepType, Lesson, BatchStepDTO, CountStepDTO, StepikBlockRequest, BatchGenerationHistory, GeneratedStepHistory } from '../types';
 import { BatchGenerator } from './AIGenerator/components/BatchGenerator';
 import { BatchPlanModal } from './AIGenerator/components/BatchPlanModal';
 import { BatchResultsPreview } from './AIGenerator/components/BatchResultsPreview';
 import { BatchHistoryPanel } from './AIGenerator/components/BatchHistoryPanel';
+import { GeneratedStepHistoryPanel } from './AIGenerator/components/GeneratedStepHistoryPanel';
 import { BatchProgressStepper, type BatchStepStatus } from './AIGenerator/components/BatchProgressStepper';
 import { PromptSuggestionChips } from './AIGenerator/components/PromptSuggestionChips';
 import { buildExplicitStepsQuery, countTotalBatchSteps, expandBatchPlanToItems, type BatchPlanItem } from '../utils/batchSteps';
 import { stepikBlockToPreviewStep } from '../utils/stepPreview';
 import { getBatchStepLimitMessage } from '../constants/batchLimits';
+import { getStepTypeLabel } from '../constants/stepTypeLabels';
 import {
   CHAT_PROMPT_SUGGESTIONS,
   GENERATE_PROMPT_SUGGESTIONS,
@@ -58,6 +60,7 @@ export function AIGenerator() {
     setAllLessons,
     getOrCreateChatSession,
     getOrCreateGenerateSession,
+    setGenerateSession,
     addMessage,
     getMessages,
     setMessages,
@@ -81,6 +84,7 @@ export function AIGenerator() {
   const [batchPlanItems, setBatchPlanItems] = useState<BatchPlanItem[]>([]);
   const [batchActiveIndex, setBatchActiveIndex] = useState(0);
   const [batchHistoryRefreshKey, setBatchHistoryRefreshKey] = useState(0);
+  const [generatedStepHistoryRefreshKey, setGeneratedStepHistoryRefreshKey] = useState(0);
   const [lastGeneratePrompt, setLastGeneratePrompt] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<StepikBlockRequest | null>(null);
@@ -177,21 +181,34 @@ export function AIGenerator() {
   }, [messages]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadHistory = async () => {
       try {
         const history = await agentApi.getHistory(currentSessionId);
-        if (history.length > 0) {
-          setMessages(currentSessionId, history);
+        if (cancelled) return;
+
+        setMessages(currentSessionId, history);
+
+        if (mode === 'generate') {
+          const lastWithStep = [...history]
+            .reverse()
+            .find((message) => message.role === 'assistant' && message.generatedStep);
+          setGeneratedStep(lastWithStep?.generatedStep ?? null);
         }
       } catch {
+        if (!cancelled) {
+          setMessages(currentSessionId, []);
+        }
       }
     };
-    
-    if (messages.length === 0) {
-      loadHistory();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSessionId]);
+
+    void loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSessionId, mode, setMessages, setGeneratedStep]);
 
   const handleModeChange = (newMode: 'chat' | 'generate' | 'batch') => {
     if (newMode === mode) return;
@@ -228,8 +245,11 @@ export function AIGenerator() {
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: `Готово! Сгенерирован шаг типа "${stepType}".\n\nПредпросмотр контента:\n${response.text?.substring(0, 200) || 'Контент сгенерирован'}...`,
+        stepType,
+        generatedStep: response,
       };
       addMessage(sessionId, assistantMessage);
+      setGeneratedStepHistoryRefreshKey((key) => key + 1);
       void refreshSubscription();
     } catch (error) {
       const errorMessage: ChatMessage = {
@@ -258,6 +278,34 @@ export function AIGenerator() {
       return;
     }
     await runGenerateStep(lastGeneratePrompt, { addUserMessage: false });
+  };
+
+  const handleRestoreGeneratedStep = (step: StepikBlockRequest) => {
+    setGeneratedStep(step);
+    toast.success('Шаг загружен в предпросмотр');
+  };
+
+  const handleOpenGeneratedStepFromHistory = async (entry: GeneratedStepHistory) => {
+    if (mode !== 'generate') {
+      setMode('generate');
+    }
+
+    setStepType(entry.stepType);
+    setGenerateSession(entry.stepType, entry.sessionId);
+    setGeneratedStep(entry.generatedStep);
+
+    if (entry.userPrompt) {
+      setLastGeneratePrompt(entry.userPrompt);
+    }
+
+    try {
+      const history = await agentApi.getHistory(entry.sessionId);
+      setMessages(entry.sessionId, history);
+    } catch {
+      toast.error('Не удалось загрузить чат сессии');
+    }
+
+    toast.success('Шаг открыт в предпросмотре');
   };
 
   const handleChat = async () => {
@@ -652,10 +700,18 @@ export function AIGenerator() {
                   : 'Пакетная генерация нескольких шагов'}
               </p>
             </div>
-            <Button variant="secondary" size="sm" onClick={handleClearSession}>
-              <Trash2 className="w-4 h-4 mr-1" />
-              Очистить
-            </Button>
+            <div className="flex items-center gap-2">
+              {mode === 'generate' && (
+                <GeneratedStepHistoryPanel
+                  refreshTrigger={generatedStepHistoryRefreshKey}
+                  onOpen={handleOpenGeneratedStepFromHistory}
+                />
+              )}
+              <Button variant="secondary" size="sm" onClick={handleClearSession}>
+                <Trash2 className="w-4 h-4 mr-1" />
+                Очистить
+              </Button>
+            </div>
           </div>
 
           {/* Mode Toggle */}
@@ -848,6 +904,24 @@ export function AIGenerator() {
                         <ChatMarkdown content={message.content} />
                       ) : (
                         <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+
+                      {message.role === 'assistant' && message.generatedStep && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-dark-700">
+                          <Badge variant="info">
+                            {getStepTypeLabel(message.stepType || stepType)}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRestoreGeneratedStep(message.generatedStep!)}
+                            className="h-7 px-2 text-dark-300 hover:text-dark-100"
+                            title="Показать этот шаг в предпросмотре"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1.5" />
+                            В предпросмотр
+                          </Button>
+                        </div>
                       )}
                     </div>
                     {message.role === 'user' && (

@@ -7,6 +7,7 @@ import {
   LogOut,
   GraduationCap,
   RefreshCw,
+  PanelLeftClose,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../store';
@@ -23,9 +24,10 @@ const navItems = [
 interface SidebarProps {
   className?: string;
   onNavigate?: () => void;
+  onCollapse?: () => void;
 }
 
-export function Sidebar({ className, onNavigate }: SidebarProps) {
+export function Sidebar({ className, onNavigate, onCollapse }: SidebarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
@@ -52,6 +54,17 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
             <h1 className="text-lg font-bold gradient-text">EasyCourse</h1>
             <p className="text-xs text-dark-500">Создавайте курсы легко</p>
           </div>
+          {onCollapse && (
+            <button
+              type="button"
+              onClick={onCollapse}
+              className="ml-auto hidden rounded-lg p-2 text-dark-400 transition-colors hover:bg-dark-800 hover:text-dark-200 lg:block"
+              aria-label="Свернуть меню"
+              title="Свернуть меню"
+            >
+              <PanelLeftClose className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
 

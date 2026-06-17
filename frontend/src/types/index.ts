@@ -195,6 +195,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   stepType?: string;
+  generatedStep?: StepikBlockRequest;
 }
 
 // Batch generation types
@@ -219,6 +220,16 @@ export interface BatchGenerationHistory {
   errorMessage?: string | null;
   createdAt?: string;
   completedAt?: string | null;
+}
+
+export interface GeneratedStepHistory {
+  id: number;
+  sessionId: string;
+  stepType: string;
+  userPrompt?: string | null;
+  content?: string;
+  generatedStep: StepikBlockRequest;
+  createdAt?: string;
 }
 
 export interface StepikBlockRequest {
