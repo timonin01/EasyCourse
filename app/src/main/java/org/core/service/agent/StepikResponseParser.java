@@ -1,5 +1,9 @@
 package org.core.service.agent;
 
+import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +29,11 @@ import java.util.regex.Pattern;
 @Slf4j
 public class StepikResponseParser {
 
-    private static final Pattern JSON_PATTERN = Pattern.compile("```json\\s*(.*?)\\s*```", Pattern.DOTALL);
+    private static final Pattern JSON_PATTERN = Pattern.compile("```(?:json)?\\s*(.*?)\\s*```", Pattern.DOTALL);
+
+    private static final ObjectMapper LENIENT_MAPPER = JsonMapper.builder()
+            .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
+            .build();
 
     private final ChoiceStepParser choiceStepParser;
     private final TextStepParser textStepParser;
@@ -127,7 +135,20 @@ public class StepikResponseParser {
         }
         
         cleaned = cleaned.trim();
-        return cleaned;
+        return normalizeJson(cleaned);
+    }
+
+    private String normalizeJson(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+        try {
+            JsonNode node = LENIENT_MAPPER.readTree(json);
+            return LENIENT_MAPPER.writeValueAsString(node);
+        } catch (Exception e) {
+            log.warn("Failed to normalize JSON, using raw value: {}", e.getMessage());
+            return json;
+        }
     }
 
 }
