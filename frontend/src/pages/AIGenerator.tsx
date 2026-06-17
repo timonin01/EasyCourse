@@ -62,7 +62,6 @@ export function AIGenerator() {
     getMessages,
     setMessages,
     clearSession,
-    addBatchHistory,
   } = useAIGeneratorStore();
 
   const [input, setInput] = useState('');
@@ -81,6 +80,7 @@ export function AIGenerator() {
   const [isSavingBatch, setIsSavingBatch] = useState(false);
   const [batchPlanItems, setBatchPlanItems] = useState<BatchPlanItem[]>([]);
   const [batchActiveIndex, setBatchActiveIndex] = useState(0);
+  const [batchHistoryRefreshKey, setBatchHistoryRefreshKey] = useState(0);
   const [lastGeneratePrompt, setLastGeneratePrompt] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<StepikBlockRequest | null>(null);
@@ -534,9 +534,6 @@ export function AIGenerator() {
     setBatchPlanItems(planItems);
     setBatchActiveIndex(0);
     
-    // Сохраняем в историю
-    addBatchHistory(buildBatchUserInput(), plan);
-    
     // Запускаем генерацию с обновленным планом
     const userInputString = buildBatchUserInput();
     setIsGeneratingBatch(true);
@@ -622,6 +619,7 @@ export function AIGenerator() {
       }]);
     } finally {
       setIsGeneratingBatch(false);
+      setBatchHistoryRefreshKey((key) => key + 1);
     }
   };
 
@@ -794,6 +792,7 @@ export function AIGenerator() {
                         Вы можете использовать текстовое описание или явно указать типы и количество.
                       </p>
                       <BatchHistoryPanel
+                        refreshTrigger={batchHistoryRefreshKey}
                         onRestore={handleRestoreBatchHistory}
                         onRerun={handleRerunBatchHistory}
                       />
@@ -1027,6 +1026,7 @@ export function AIGenerator() {
             <div className="mb-4">
               <BatchHistoryPanel
                 variant="compact"
+                refreshTrigger={batchHistoryRefreshKey}
                 onRestore={handleRestoreBatchHistory}
                 onRerun={handleRerunBatchHistory}
               />

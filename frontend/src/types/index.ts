@@ -210,10 +210,15 @@ export interface BatchStepDTO {
 }
 
 export interface BatchGenerationHistory {
-  id: string;
+  id: number;
   userInput: string;
   plan: BatchStepDTO;
-  timestamp: number;
+  status?: string;
+  totalSteps?: number;
+  lessonId?: number | null;
+  errorMessage?: string | null;
+  createdAt?: string;
+  completedAt?: string | null;
 }
 
 export interface StepikBlockRequest {

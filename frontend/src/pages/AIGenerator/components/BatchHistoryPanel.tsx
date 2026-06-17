@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Clock,
   History,
@@ -10,8 +10,8 @@ import {
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Button, Modal, Badge } from '../../../components/ui';
-import { useAIGeneratorStore } from '../../../store';
+import { Button, Modal, Badge, Spinner } from '../../../components/ui';
+import { agentApi } from '../../../api';
 import type { BatchGenerationHistory, CountStepDTO } from '../../../types';
 import { countTotalBatchSteps } from '../../../utils/batchSteps';
 import { getStepTypeLabel } from '../../../constants/stepTypeLabels';
@@ -31,8 +31,15 @@ const STEP_TYPE_EMOJI: Record<string, string> = {
   code: '💻',
 };
 
-function formatRelativeTime(timestamp: number): string {
-  const diff = Date.now() - timestamp;
+function getEntryTimestamp(entry: BatchGenerationHistory): number {
+  if (entry.createdAt) {
+    return new Date(entry.createdAt).getTime();
+  }
+  return Date.now();
+}
+
+function formatRelativeTime(entry: BatchGenerationHistory): string {
+  const diff = Date.now() - getEntryTimestamp(entry);
   const minutes = Math.floor(diff / 60_000);
   if (minutes < 1) return 'только что';
   if (minutes < 60) return `${minutes} мин. назад`;
@@ -40,11 +47,24 @@ function formatRelativeTime(timestamp: number): string {
   if (hours < 24) return `${hours} ч. назад`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days} дн. назад`;
-  return new Date(timestamp).toLocaleDateString('ru-RU', {
+  return new Date(getEntryTimestamp(entry)).toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'short',
     year: days > 365 ? 'numeric' : undefined,
   });
+}
+
+function getStatusBadge(status?: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return <Badge variant="success">Готово</Badge>;
+    case 'FAILED':
+      return <Badge variant="danger">Ошибка</Badge>;
+    case 'RUNNING':
+      return <Badge variant="warning">В процессе</Badge>;
+    default:
+      return null;
+  }
 }
 
 function aggregateStepTypes(steps: CountStepDTO[]): Array<{ type: string; count: number }> {
@@ -60,7 +80,7 @@ interface BatchHistoryEntryCardProps {
   compact?: boolean;
   onRestore: (entry: BatchGenerationHistory) => void;
   onRerun: (entry: BatchGenerationHistory) => void;
-  onRemove: (id: string) => void;
+  onRemove: (id: number) => void;
 }
 
 function BatchHistoryEntryCard({
@@ -80,9 +100,10 @@ function BatchHistoryEntryCard({
 
       <div className={`${compact ? 'p-3' : 'p-4'} pl-4`}>
         <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex items-center gap-2 text-xs text-dark-500 min-w-0">
+          <div className="flex items-center gap-2 text-xs text-dark-500 min-w-0 flex-wrap">
             <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>{formatRelativeTime(entry.timestamp)}</span>
+            <span>{formatRelativeTime(entry)}</span>
+            {getStatusBadge(entry.status)}
             <span className="text-dark-600">·</span>
             <span className="flex items-center gap-1 text-dark-400">
               <Layers className="w-3.5 h-3.5" />
@@ -103,6 +124,10 @@ function BatchHistoryEntryCard({
           <p className={`text-sm text-dark-200 mb-3 ${compact ? 'line-clamp-2' : 'line-clamp-3'} text-left`}>
             {previewText}
           </p>
+        )}
+
+        {entry.status === 'FAILED' && entry.errorMessage && (
+          <p className="text-xs text-red-400 mb-3 line-clamp-2">{entry.errorMessage}</p>
         )}
 
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -148,6 +173,7 @@ function BatchHistoryEntryCard({
 interface BatchHistoryPanelProps {
   variant?: 'inline' | 'compact';
   maxPreview?: number;
+  refreshTrigger?: number;
   onRestore: (entry: BatchGenerationHistory) => void;
   onRerun: (entry: BatchGenerationHistory) => void;
 }
@@ -155,23 +181,61 @@ interface BatchHistoryPanelProps {
 export function BatchHistoryPanel({
   variant = 'inline',
   maxPreview = 3,
+  refreshTrigger = 0,
   onRestore,
   onRerun,
 }: BatchHistoryPanelProps) {
-  const { batchHistory, removeBatchHistory, clearBatchHistory } = useAIGeneratorStore();
+  const [batchHistory, setBatchHistory] = useState<BatchGenerationHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleRemove = (id: string) => {
-    removeBatchHistory(id);
-    toast.success('Запись удалена');
+  const loadHistory = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const history = await agentApi.getBatchHistory();
+      setBatchHistory(history);
+    } catch {
+      toast.error('Не удалось загрузить историю batch-генераций');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory, refreshTrigger]);
+
+  const handleRemove = async (id: number) => {
+    try {
+      await agentApi.deleteBatchHistory(id);
+      setBatchHistory((prev) => prev.filter((entry) => entry.id !== id));
+      toast.success('Запись удалена');
+    } catch {
+      toast.error('Не удалось удалить запись');
+    }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (batchHistory.length === 0) return;
-    clearBatchHistory();
-    toast.success('История очищена');
-    setIsModalOpen(false);
+    try {
+      await Promise.all(batchHistory.map((entry) => agentApi.deleteBatchHistory(entry.id)));
+      setBatchHistory([]);
+      toast.success('История очищена');
+      setIsModalOpen(false);
+    } catch {
+      toast.error('Не удалось очистить историю');
+      void loadHistory();
+    }
   };
+
+  if (isLoading && batchHistory.length === 0) {
+    if (variant === 'compact') return null;
+    return (
+      <div className="mt-8 w-full max-w-lg flex justify-center py-6">
+        <Spinner />
+      </div>
+    );
+  }
 
   if (batchHistory.length === 0) {
     if (variant === 'compact') return null;
@@ -239,7 +303,7 @@ export function BatchHistoryPanel({
         {batchHistory.length > 1 && (
           <button
             type="button"
-            onClick={handleClearAll}
+            onClick={() => void handleClearAll()}
             className="text-xs text-dark-500 hover:text-red-400 transition-colors flex items-center gap-1"
           >
             <Trash2 className="w-3 h-3" />
@@ -292,7 +356,7 @@ interface BatchHistoryModalProps {
   entries: BatchGenerationHistory[];
   onRestore: (entry: BatchGenerationHistory) => void;
   onRerun: (entry: BatchGenerationHistory) => void;
-  onRemove: (id: string) => void;
+  onRemove: (id: number) => void;
   onClearAll: () => void;
 }
 
