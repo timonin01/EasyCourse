@@ -214,6 +214,7 @@ export interface BatchGenerationHistory {
   id: number;
   userInput: string;
   plan: BatchStepDTO;
+  generatedSteps?: StepikBlockRequest[];
   status?: string;
   totalSteps?: number;
   lessonId?: number | null;

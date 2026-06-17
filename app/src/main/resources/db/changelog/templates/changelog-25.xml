@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="25-add-results-json-to-batch-generation" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="batch_generation" columnName="results_json"/>
+            </not>
+        </preConditions>
+        <comment>Persist generated step contents for batch generation history</comment>
+        <addColumn tableName="batch_generation">
+            <column name="results_json" type="LONGTEXT"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

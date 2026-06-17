@@ -2,7 +2,7 @@ package org.core.rest.ai;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.context.UserContextBean;
+import org.core.domain.ai.ChatType;
 import org.core.dto.ai.AiMessageHistoryDTO;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.service.agent.AgentService;
@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -28,6 +29,27 @@ public class AiSessionController {
     private final AiSessionMessageService aiSessionMessageService;
 
     private final AgentService agentService;
+
+    @GetMapping("/latest")
+    public ResponseEntity<?> getLatestSession(
+            @RequestHeader("User-Id") Long userId,
+            @RequestParam String chatType,
+            @RequestParam(required = false) String stepType) {
+        try {
+            ChatType type = ChatType.valueOf(chatType.trim().toUpperCase());
+            String sessionId = aiSessionMessageService
+                    .getLatestSessionId(userId, type, stepType)
+                    .orElse(null);
+            log.info("Latest session for userId={}, chatType={}, stepType={}: {}", userId, chatType, stepType, sessionId);
+            return ResponseEntity.ok(Collections.singletonMap("sessionId", sessionId));
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid chatType in latest session request for userId={}: {}", userId, chatType);
+            return ResponseEntity.badRequest().body("Invalid chatType");
+        } catch (Exception e) {
+            log.error("Failed to resolve latest session for userId={}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.internalServerError().body("Ошибка при получении последней сессии");
+        }
+    }
 
     @GetMapping("/history")
     public ResponseEntity<?> getHistory(

@@ -30,6 +30,7 @@ interface AIGeneratorState {
   
   // Session management
   getOrCreateChatSession: () => string;
+  setChatSession: (sessionId: string) => void;
   getOrCreateGenerateSession: (stepType: string) => string;
   setGenerateSession: (stepType: string, sessionId: string) => void;
   getCurrentSessionId: () => string;
@@ -81,6 +82,8 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
         }
         return state.chatSessionId;
       },
+
+      setChatSession: (sessionId: string) => set({ chatSessionId: sessionId }),
       
       getOrCreateGenerateSession: (stepType: string) => {
         const state = get();

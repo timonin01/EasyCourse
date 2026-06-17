@@ -69,6 +69,18 @@ public class AiSessionMessageService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<String> getLatestSessionId(Long userId, ChatType chatType, @Nullable String stepType) {
+        if (chatType == ChatType.GENERATE && stepType != null && !stepType.isBlank()) {
+            return aiSessionRepository
+                    .findFirstByUser_IdAndChatTypeAndStepTypeOrderByUpdatedAtDesc(userId, chatType, stepType)
+                    .map(AiSession::getSessionId);
+        }
+        return aiSessionRepository
+                .findFirstByUser_IdAndChatTypeOrderByUpdatedAtDesc(userId, chatType)
+                .map(AiSession::getSessionId);
+    }
+
+    @Transactional(readOnly = true)
     public List<GeneratedStepHistoryDTO> getGeneratedStepsHistory(Long userId) {
         List<AiMessage> messages = aiMessageRepository.findGeneratedStepsByUserId(
                 userId,
@@ -76,7 +88,7 @@ public class AiSessionMessageService {
         );
 
         return messages.stream()
-                .map(aiMessageHelper::toGeneratedStepHistoryDto)
+                .map(this::toGeneratedStepHistoryDto)
                 .toList();
     }
 
@@ -123,6 +135,27 @@ public class AiSessionMessageService {
                 .content(message.getContent())
                 .stepType(message.getStepType())
                 .generatedStep(aiMessageHelper.deserializePayload(message.getPayloadJson()))
+                .build();
+    }
+
+    private GeneratedStepHistoryDTO toGeneratedStepHistoryDto(AiMessage message) {
+        String userPrompt = aiMessageRepository
+                .findFirstByAiSession_IdAndMessageRoleAndSortOrderLessThanOrderBySortOrderDesc(
+                        message.getAiSession().getId(),
+                        AiMessageRole.USER,
+                        message.getSortOrder()
+                )
+                .map(AiMessage::getContent)
+                .orElse(message.getAiSession().getTitle());
+
+        return GeneratedStepHistoryDTO.builder()
+                .id(message.getId())
+                .sessionId(message.getAiSession().getSessionId())
+                .stepType(message.getStepType())
+                .userPrompt(userPrompt)
+                .content(message.getContent())
+                .generatedStep(aiMessageHelper.deserializePayload(message.getPayloadJson()))
+                .createdAt(message.getCreatedAt())
                 .build();
     }
 
