@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ChatMessage, StepikBlockRequest, Lesson, BatchGenerationHistory, BatchStepDTO } from '../types';
+import type { ChatMessage, StepikBlockRequest, Lesson } from '../types';
 
 interface AIGeneratorState {
   // Mode
@@ -21,9 +21,6 @@ interface AIGeneratorState {
   // All user lessons (for lesson selection dropdown)
   allLessons: Array<Lesson & { modelTitle?: string; courseTitle?: string }>;
   
-  // Batch generation history
-  batchHistory: BatchGenerationHistory[];
-  
   // Actions
   setMode: (mode: 'chat' | 'generate' | 'batch') => void;
   setStepType: (stepType: string) => void;
@@ -41,12 +38,6 @@ interface AIGeneratorState {
   getMessages: (sessionId: string) => ChatMessage[];
   setMessages: (sessionId: string, messages: ChatMessage[]) => void;
   clearSession: (sessionId: string) => void;
-  
-  // Batch history management
-  addBatchHistory: (userInput: string, plan: BatchStepDTO) => void;
-  getBatchHistory: () => BatchGenerationHistory[];
-  removeBatchHistory: (id: string) => void;
-  clearBatchHistory: () => void;
   
   // Reset
   resetState: () => void;
@@ -67,7 +58,6 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
       generatedStep: null,
       selectedLessonId: null,
       allLessons: [],
-      batchHistory: [],
       
       // Actions
       setMode: (mode) => set({ mode }),
@@ -146,29 +136,6 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
         };
       }),
       
-      // Batch history management
-      addBatchHistory: (userInput, plan) => set((state) => {
-        const newHistory: BatchGenerationHistory = {
-          id: `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          userInput,
-          plan,
-          timestamp: Date.now(),
-        };
-        return {
-          batchHistory: [newHistory, ...state.batchHistory].slice(0, 50), // Keep last 50
-        };
-      }),
-      
-      getBatchHistory: () => {
-        return get().batchHistory;
-      },
-
-      removeBatchHistory: (id) => set((state) => ({
-        batchHistory: state.batchHistory.filter((entry) => entry.id !== id),
-      })),
-      
-      clearBatchHistory: () => set({ batchHistory: [] }),
-      
       resetState: () => set({
         mode: 'chat',
         chatSessionId: generateSessionId('chat'),
@@ -177,7 +144,6 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
         stepType: 'text',
         generatedStep: null,
         selectedLessonId: null,
-        batchHistory: [],
       }),
     }),
     {
@@ -190,7 +156,6 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
         stepType: state.stepType,
         generatedStep: state.generatedStep,
         selectedLessonId: state.selectedLessonId,
-        batchHistory: state.batchHistory,
         // Don't persist allLessons - will be loaded fresh each time
       }),
     }

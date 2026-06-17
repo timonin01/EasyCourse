@@ -12,7 +12,9 @@ import org.core.service.agent.StepContentModifier;
 import org.core.service.agent.batch.BatchAnalyzerService;
 import org.core.service.agent.batch.BatchGeneratorService;
 import org.core.service.agent.StepikRequestParser;
+import org.core.service.ai.BatchSessionMessageService;
 import org.core.service.subscription.SubscriptionService;
+import org.core.dto.agent.batchAnalyzer.CountStepDTO;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,7 @@ public class AgentController {
     private final StepikRequestParser stepikRequestParser;
     private final BatchGeneratorService batchGeneratorService;
     private final BatchAnalyzerService batchAnalyzerService;
+    private final BatchSessionMessageService batchSessionMessageService;
     private final StepContentModifier stepContentModifier;
 
     private final SubscriptionService subscriptionService;
@@ -113,22 +116,31 @@ public class AgentController {
             @RequestParam String sessionId,
             @RequestBody BatchStepDTO batchStepDTO) {
         userContextBean.setUserId(userId);
+        Long batchGenerationId = null;
         try {
             subscriptionService.validateBatchPlan(userId, batchStepDTO);
 
+            int totalSteps = SubscriptionService.countBatchSteps(batchStepDTO);
+            batchGenerationId = batchSessionMessageService.startGeneration(
+                    userId, buildUserInputFromPlan(batchStepDTO), batchStepDTO, totalSteps);
+
             log.info("Start generating batch steps with plan: {}", batchStepDTO);
             List<StepikBlockRequest> results = batchGeneratorService.generateBatchRequests(userId, sessionId, batchStepDTO);
-            subscriptionService.recordAiUsage(userId, SubscriptionService.countBatchSteps(batchStepDTO));
+            subscriptionService.recordAiUsage(userId, totalSteps);
+            batchSessionMessageService.markCompleted(batchGenerationId, results.size());
             String json = objectMapper
                     .writerFor(new TypeReference<List<StepikBlockRequest>>() {})
                     .writeValueAsString(results);
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json);
         } catch (IllegalArgumentException e) {
+            batchSessionMessageService.markFailed(batchGenerationId, e.getMessage());
             log.warn("Invalid batch plan: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (SubscriptionLimitExceededException e) {
+            batchSessionMessageService.markFailed(batchGenerationId, e.getMessage());
             return ResponseEntity.status(403).body(e.getMessage());
         } catch (Exception e) {
+            batchSessionMessageService.markFailed(batchGenerationId, e.getMessage());
             log.error("Error in generateBatchSteps endpoint: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body("Ошибка при генерации batch шагов");
         } finally {
@@ -186,6 +198,24 @@ public class AgentController {
             return null;
         }
         return LlmModel.valueOf(llmModel.toUpperCase());
+    }
+
+    private String buildUserInputFromPlan(BatchStepDTO batchStepDTO) {
+        if (batchStepDTO == null || batchStepDTO.getSteps() == null || batchStepDTO.getSteps().isEmpty()) {
+            return "Batch generation";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (CountStepDTO step : batchStepDTO.getSteps()) {
+            if (builder.length() > 0) {
+                builder.append("; ");
+            }
+            int count = step.getCount() == null || step.getCount() < 1 ? 1 : step.getCount();
+            builder.append(count).append("x ").append(step.getType());
+            if (step.getSpecificInput() != null && !step.getSpecificInput().isBlank()) {
+                builder.append(": ").append(step.getSpecificInput());
+            }
+        }
+        return builder.toString();
     }
 
     private ResponseEntity<?> sessionAccessDeniedResponse(IllegalArgumentException e) {

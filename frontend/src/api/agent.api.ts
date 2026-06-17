@@ -1,5 +1,5 @@
 import api from './axios';
-import type { ChatMessage, StepikBlockRequest, BatchStepDTO } from '../types';
+import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory } from '../types';
 
 export const agentApi = {
   // Chat with AI
@@ -107,6 +107,21 @@ export const agentApi = {
       );
       return response.data;
     }
+  },
+
+  getBatchHistory: async (): Promise<BatchGenerationHistory[]> => {
+    const response = await api.get<BatchGenerationHistory[]>('/agent/batch/history');
+    return response.data
+      .filter((entry) => entry.plan?.steps?.length)
+      .map((entry) => ({
+        ...entry,
+        id: Number(entry.id),
+      }));
+  },
+
+  deleteBatchHistory: async (batchGenerationId: number): Promise<string> => {
+    const response = await api.delete<string>(`/agent/batch/${batchGenerationId}`);
+    return response.data;
   },
 
   // Direct AI chat (without agent)
