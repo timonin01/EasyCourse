@@ -21,6 +21,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="step_type" type="VARCHAR(30)"/>
+            <column name="payload_json" type="TEXT"/>
             <column name="sort_order" type="INT">
                 <constraints nullable="false"/>
             </column>
