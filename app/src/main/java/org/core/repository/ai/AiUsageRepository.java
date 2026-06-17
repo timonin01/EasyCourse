@@ -1,6 +1,6 @@
-package org.core.repository;
+package org.core.repository.ai;
 
-import org.core.domain.AiUsage;
+import org.core.domain.ai.AiUsage;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

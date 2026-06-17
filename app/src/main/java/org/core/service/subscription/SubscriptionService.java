@@ -2,7 +2,7 @@ package org.core.service.subscription;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.domain.AiUsage;
+import org.core.domain.ai.AiUsage;
 import org.core.domain.User;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.subscription.SubscriptionStatusDTO;
@@ -10,7 +10,7 @@ import org.core.enums.LlmModel;
 import org.core.enums.UserRole;
 import org.core.exception.exceptions.SubscriptionLimitExceededException;
 import org.core.exception.exceptions.UserNotFoundException;
-import org.core.repository.AiUsageRepository;
+import org.core.repository.ai.AiUsageRepository;
 import org.core.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

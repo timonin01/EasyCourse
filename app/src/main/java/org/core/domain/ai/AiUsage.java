@@ -1,7 +1,8 @@
-package org.core.domain;
+package org.core.domain.ai;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.core.domain.User;
 
 @Entity
 @Table(name = "ai_usage")
