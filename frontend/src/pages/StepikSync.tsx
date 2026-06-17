@@ -119,13 +119,22 @@ export function StepikSync() {
   const handleUploadCourse = async () => {
     if (!selectedCourse || !selectedCourse.sections) return;
 
-    if (selectedCourse.stepikCourseId) {
-      toast.error('Курс уже синхронизирован с Stepik. Используйте синхронизацию отдельных модулей, уроков и шагов.');
-      return;
-    }
+    const isPartialUpload = Boolean(selectedCourse.stepikCourseId);
 
     setIsSyncing(true);
     setSyncProgress(null);
+
+    const finishSync = async () => {
+      const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
+      updateCourse(updatedCourse);
+      await loadCourseDetails(updatedCourse);
+      toast.success(
+        isPartialUpload
+          ? 'Недостающие элементы выгружены на Stepik!'
+          : 'Курс успешно синхронизирован с Stepik!'
+      );
+      setIsSyncing(false);
+    };
 
     try {
       const result = await stepikApi.syncCourse(selectedCourse.id);
@@ -137,17 +146,8 @@ export function StepikSync() {
           onSubmit: async (token) => {
             setCaptchaModal({ isOpen: false });
             try {
-              // syncCourse уже синхронизирует весь курс (курс + модули + уроки + шаги)
               await stepikApi.syncCourse(selectedCourse.id, token);
-              
-              // Обновляем данные курса после синхронизации
-              const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
-              updateCourse(updatedCourse);
-              await loadCourseDetails(updatedCourse);
-              
-              toast.success('Курс успешно синхронизирован с Stepik!');
-              setSelectedCourse(null);
-              setIsSyncing(false);
+              await finishSync();
             } catch {
               toast.error('Ошибка при синхронизации с captcha');
               setIsSyncing(false);
@@ -157,17 +157,7 @@ export function StepikSync() {
         return;
       }
 
-      // syncCourse уже синхронизирует весь курс (курс + модули + уроки + шаги)
-      // Не нужно вызывать uploadFullCourse, так как это приведет к дублированию
-      
-      // Обновляем данные курса после синхронизации
-      const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
-      updateCourse(updatedCourse);
-      await loadCourseDetails(updatedCourse);
-      
-      toast.success('Курс успешно синхронизирован с Stepik!');
-      setSelectedCourse(null);
-      setIsSyncing(false);
+      await finishSync();
     } catch (error) {
       toast.error('Ошибка при синхронизации курса');
       console.error('Failed to sync course:', error);
@@ -410,6 +400,12 @@ export function StepikSync() {
       (selectedCourse.steps?.filter((st) => !st.stepikStepId).length ?? 0)
     : 0;
   const selectedHasUnsyncedChildren = selectedUnsyncedCount > 0;
+  const showCourseUploadButton =
+    selectedCourse != null &&
+    (!selectedCourse.stepikCourseId || selectedHasUnsyncedChildren);
+  const courseUploadButtonLabel = selectedCourse?.stepikCourseId
+    ? `Догрузить на Stepik (${selectedUnsyncedCount})`
+    : 'Выгрузить на Stepik';
 
   if (isLoading) {
     return (
@@ -596,8 +592,8 @@ export function StepikSync() {
                 </div>
               )}
 
-              {/* Course sync button - only if not synced */}
-              {!selectedCourse.stepikCourseId && (
+              {/* Course sync button — first upload or finishing partial sync */}
+              {showCourseUploadButton && (
                 <div className="flex gap-3 mb-6">
                   <Button
                     variant="secondary"
@@ -610,7 +606,7 @@ export function StepikSync() {
                     onClick={handleUploadCourse}
                     disabled={isSyncing}
                   >
-                    {isSyncing ? 'Синхронизация...' : 'Выгрузить на Stepik'}
+                    {isSyncing ? 'Синхронизация...' : courseUploadButtonLabel}
                   </Button>
                 </div>
               )}
@@ -627,8 +623,8 @@ export function StepikSync() {
                             Курс синхронизирован не полностью
                           </p>
                           <p className="text-sm text-dark-400">
-                            {selectedUnsyncedCount} элемент(ов) ещё не выгружены на Stepik. Используйте кнопку
-                            загрузки рядом с каждым элементом, чтобы завершить синхронизацию.
+                            {selectedUnsyncedCount} элемент(ов) ещё не выгружены на Stepik. Нажмите «Догрузить на
+                            Stepik» выше или используйте кнопку загрузки рядом с каждым элементом.
                           </p>
                         </div>
                       </div>

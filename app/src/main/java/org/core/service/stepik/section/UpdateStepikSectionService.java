@@ -4,6 +4,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Section;
+import org.core.domain.Course;
+import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.section.UpdateSectionDTO;
 import org.core.dto.stepik.section.StepikSectionResponseData;
@@ -11,6 +13,7 @@ import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.exception.exceptions.StepikSectionIntegrationException;
 import org.core.repository.SectionRepository;
 import org.core.service.crud.SectionService;
+import org.core.service.crud.CourseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,7 @@ import java.util.List;
 public class UpdateStepikSectionService {
 
     private final SectionService sectionService;
+    private final CourseService courseService;
     private final StepikSectionService stepikSectionService;
     private final SectionRepository sectionRepository;
 
@@ -41,16 +45,18 @@ public class UpdateStepikSectionService {
         if(newPosition < oldPosition){
             sectionRepository.incrementPositionsRange(courseId, newPosition, oldPosition - 1);
             shiftStepsDownInStepik(sectionsByCourse, newPosition, oldPosition - 1);
+            section.setPosition(newPosition);
             sectionService.updateSection(createUpdateDTO(section.getId(), newPosition));
-            stepikSectionService.updateSection(section.getStepikSectionId());
+            stepikSectionService.updateSection(section);
         } else if (newPosition > oldPosition) {
             sectionRepository.decrementPositionsRange(courseId, oldPosition + 1, newPosition);
             shiftStepsUpInStepik(sectionsByCourse, oldPosition + 1, newPosition);
+            section.setPosition(newPosition);
             sectionService.updateSection(createUpdateDTO(section.getId(), newPosition));
-            stepikSectionService.updateSection(section.getStepikSectionId());
+            stepikSectionService.updateSection(section);
         } else {
             sectionService.updateSection(createUpdateDTO(section.getId(), newPosition));
-            stepikSectionService.updateSection(section.getStepikSectionId());
+            stepikSectionService.updateSection(section);
         }
 
         return stepikSectionService.getSectionByStepikId(section.getStepikSectionId());
@@ -68,7 +74,9 @@ public class UpdateStepikSectionService {
                     log.info("Updating section {} position in Stepik from {} to {}",
                             sectionDTO.getId(), originalPosition, newPosition);
 
-                    stepikSectionService.updateSection(sectionDTO.getStepikSectionId());
+                    Section sectionForUpdate = mapToSection(sectionDTO);
+                    sectionForUpdate.setPosition(newPosition);
+                    stepikSectionService.updateSection(sectionForUpdate);
                 }
             } catch (Exception e) {
                 log.warn("Section {} not found in Stepik (sectionStepId: {}), skipping: {}",
@@ -89,7 +97,9 @@ public class UpdateStepikSectionService {
                     log.info("Updating section {} position in Stepik from {} to {}",
                             sectionDTO.getId(), originalPosition, newPosition);
 
-                    stepikSectionService.updateSection(sectionDTO.getStepikSectionId());
+                    Section sectionForUpdate = mapToSection(sectionDTO);
+                    sectionForUpdate.setPosition(newPosition);
+                    stepikSectionService.updateSection(sectionForUpdate);
                 }
             } catch (Exception e) {
                 log.warn("Section {} not found in Stepik (sectionStepId: {}), skipping: {}",
@@ -114,7 +124,9 @@ public class UpdateStepikSectionService {
                     sectionDTO.getId(), currentPosition, newPosition);
 
             sectionService.updateSection(createUpdateDTO(sectionDTO.getId(),newPosition));
-            stepikSectionService.updateSection(sectionDTO.getStepikSectionId());
+            Section sectionForUpdate = mapToSection(sectionDTO);
+            sectionForUpdate.setPosition(newPosition);
+            stepikSectionService.updateSection(sectionForUpdate);
         }
     }
 
@@ -123,6 +135,25 @@ public class UpdateStepikSectionService {
         updateSectionDTO.setSectionId(sectionId);
         updateSectionDTO.setPosition(newPosition);
         return updateSectionDTO;
+    }
+
+    private Section mapToSection(SectionResponseDTO sectionDTO) {
+        Section section = new Section();
+        section.setId(sectionDTO.getId());
+        section.setTitle(sectionDTO.getTitle());
+        section.setDescription(sectionDTO.getDescription());
+        section.setPosition(sectionDTO.getPosition());
+        section.setStepikSectionId(sectionDTO.getStepikSectionId());
+
+        CourseResponseDTO courseDTO = courseService.getCourseByCourseId(sectionDTO.getCourseId());
+        if (courseDTO.getStepikCourseId() == null) {
+            throw new IllegalStateException("Course must be synced with Stepik before syncing sections. Course ID: " + courseDTO.getId());
+        }
+        Course course = new Course();
+        course.setId(courseDTO.getId());
+        course.setStepikCourseId(courseDTO.getStepikCourseId());
+        section.setCourse(course);
+        return section;
     }
 
 }

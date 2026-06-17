@@ -79,7 +79,7 @@ public class StepikSectionSyncService {
         if(currentDbPosition.equals(currentStepikPosition)){
             log.info("Positions match, performing simple update");
             Section section = mapToSection(sectionDTO);
-            stepikSectionService.updateSection(section.getStepikSectionId());
+            stepikSectionService.updateSection(section);
             return stepikSectionService.getSectionByStepikId(sectionDTO.getStepikSectionId());
         }
 

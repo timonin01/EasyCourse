@@ -11,7 +11,6 @@ import org.core.dto.stepik.section.StepikSectionRequest;
 import org.core.dto.stepik.section.StepikSectionResponse;
 import org.core.dto.stepik.section.StepikSectionResponseData;
 import org.core.exception.exceptions.StepikSectionIntegrationException;
-import org.core.repository.SectionRepository;
 import org.core.util.HeaderBuilder;
 import org.core.util.StepikSectionRequestDataBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +29,6 @@ public class StepikSectionService {
     @Value("${stepik.api.base-url}")
     private String baseUrl;
 
-    private final SectionRepository sectionRepository;
     private final StepikSectionRequestDataBuilder stepikSectionRequestDataBuilder;
     private final ObjectMapper objectMapper;
     private final HeaderBuilder headerBuilder;
@@ -61,11 +59,14 @@ public class StepikSectionService {
     }
 
     @RequiresStepikToken
-    public StepikSectionResponse updateSection(Long sectionId) {
+    public StepikSectionResponse updateSection(Section section) {
         try {
-            Section section = sectionRepository.findByStepikSectionId(sectionId);
+            Long stepikSectionId = section.getStepikSectionId();
+            if (stepikSectionId == null) {
+                throw new IllegalArgumentException("Section does not have stepikSectionId");
+            }
 
-            String url = baseUrl + "/sections/" + sectionId;
+            String url = baseUrl + "/sections/" + stepikSectionId;
             StepikSectionRequest request = new StepikSectionRequest(stepikSectionRequestDataBuilder.createRequestDataForUpdate(section));
 
             HttpHeaders headers = headerBuilder.createHeaders();

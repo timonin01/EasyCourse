@@ -82,7 +82,7 @@ export function LessonsColumn({
                   ) : (
                     <FileText className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                   )}
-                  <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
                       <span className="flex-1 text-sm truncate" title={lesson.title}>
                         {lesson.title}
