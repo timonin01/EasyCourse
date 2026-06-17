@@ -2,18 +2,22 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Clock,
   History,
-  RotateCcw,
+  Copy,
+  Eye,
+  EyeOff,
   Play,
   Trash2,
   ChevronRight,
   Layers,
-  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Modal, Badge, Spinner } from '../../../components/ui';
+import { StepView } from '../../../components/StepView';
 import { agentApi } from '../../../api';
 import type { BatchGenerationHistory, CountStepDTO } from '../../../types';
-import { countTotalBatchSteps } from '../../../utils/batchSteps';
+import { countTotalBatchSteps, expandBatchPlanToItems } from '../../../utils/batchSteps';
+import { formatRelativeTimeFromIso } from '../../../utils/formatDate';
+import { stepikBlockToPreviewStep } from '../../../utils/stepPreview';
 import { getStepTypeLabel } from '../../../constants/stepTypeLabels';
 
 const STEP_TYPE_EMOJI: Record<string, string> = {
@@ -31,27 +35,8 @@ const STEP_TYPE_EMOJI: Record<string, string> = {
   code: '💻',
 };
 
-function getEntryTimestamp(entry: BatchGenerationHistory): number {
-  if (entry.createdAt) {
-    return new Date(entry.createdAt).getTime();
-  }
-  return Date.now();
-}
-
 function formatRelativeTime(entry: BatchGenerationHistory): string {
-  const diff = Date.now() - getEntryTimestamp(entry);
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'только что';
-  if (minutes < 60) return `${minutes} мин. назад`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} ч. назад`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} дн. назад`;
-  return new Date(getEntryTimestamp(entry)).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    year: days > 365 ? 'numeric' : undefined,
-  });
+  return formatRelativeTimeFromIso(entry.createdAt);
 }
 
 function getStatusBadge(status?: string) {
@@ -75,24 +60,71 @@ function aggregateStepTypes(steps: CountStepDTO[]): Array<{ type: string; count:
   return Array.from(map.entries()).map(([type, count]) => ({ type, count }));
 }
 
+function BatchHistoryStepsPreview({ entry }: { entry: BatchGenerationHistory }) {
+  const steps = entry.generatedSteps ?? [];
+  const planItems = expandBatchPlanToItems(entry.plan);
+
+  if (steps.length === 0) {
+    return (
+      <div className="mt-3 rounded-lg border border-dashed border-dark-700 bg-dark-900/50 px-3 py-4 text-left">
+        <p className="text-sm text-dark-400">Содержимое шагов не сохранено.</p>
+        <p className="text-xs text-dark-500 mt-1">
+          Эта генерация была до обновления системы. Нажмите «Повторить», чтобы создать шаги заново —
+          после этого их можно будет просмотреть здесь.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      {steps.map((step, index) => {
+        const planItem = planItems[index];
+        const stepType = planItem?.type || step.name || 'text';
+
+        return (
+          <div
+            key={index}
+            className="rounded-lg border border-dark-700 bg-dark-900/40 p-3 text-left"
+          >
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <Badge variant="info">Шаг {index + 1}</Badge>
+              <Badge>{getStepTypeLabel(stepType)}</Badge>
+              {planItem?.label && (
+                <span className="text-xs text-dark-500 truncate">{planItem.label}</span>
+              )}
+            </div>
+            <StepView
+              step={stepikBlockToPreviewStep(step, stepType)}
+              variant="preview"
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 interface BatchHistoryEntryCardProps {
   entry: BatchGenerationHistory;
   compact?: boolean;
-  onRestore: (entry: BatchGenerationHistory) => void;
+  onCopy: (entry: BatchGenerationHistory) => void;
+  onViewSteps: (entry: BatchGenerationHistory) => void;
   onRerun: (entry: BatchGenerationHistory) => void;
-  onRemove: (id: number) => void;
 }
 
 function BatchHistoryEntryCard({
   entry,
   compact,
-  onRestore,
+  onCopy,
+  onViewSteps,
   onRerun,
-  onRemove,
 }: BatchHistoryEntryCardProps) {
+  const [stepsExpanded, setStepsExpanded] = useState(false);
   const totalSteps = countTotalBatchSteps(entry.plan.steps);
   const typeSummary = aggregateStepTypes(entry.plan.steps);
   const previewText = entry.userInput.trim();
+  const hasGeneratedSteps = (entry.generatedSteps?.length ?? 0) > 0;
 
   return (
     <div className="group relative rounded-xl border border-dark-700/80 bg-dark-800/60 hover:bg-dark-800 hover:border-primary-600/30 transition-all duration-200">
@@ -110,14 +142,6 @@ function BatchHistoryEntryCard({
               {totalSteps} {totalSteps === 1 ? 'шаг' : totalSteps < 5 ? 'шага' : 'шагов'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => onRemove(entry.id)}
-            className="p-1 rounded-md text-dark-600 hover:text-red-400 hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
-            title="Удалить из истории"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         {previewText && (
@@ -145,16 +169,39 @@ function BatchHistoryEntryCard({
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onRestore(entry)}
+            onClick={() => onCopy(entry)}
             className="text-dark-400 hover:text-dark-200 h-8 px-2.5"
           >
-            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-            В форму
+            <Copy className="w-3.5 h-3.5 mr-1.5" />
+            Копировать запрос
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setStepsExpanded((prev) => !prev)}
+            className="text-primary-400 hover:text-primary-300 h-8 px-2.5"
+          >
+            {stepsExpanded ? (
+              <EyeOff className="w-3.5 h-3.5 mr-1.5" />
+            ) : (
+              <Eye className="w-3.5 h-3.5 mr-1.5" />
+            )}
+            {stepsExpanded ? 'Скрыть шаги' : 'Показать шаги'}
+          </Button>
+          {hasGeneratedSteps && stepsExpanded && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onViewSteps(entry)}
+              className="text-dark-400 hover:text-dark-200 h-8 px-2.5"
+            >
+              Открыть для сохранения
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"
@@ -165,6 +212,8 @@ function BatchHistoryEntryCard({
             Повторить
           </Button>
         </div>
+
+        {stepsExpanded && <BatchHistoryStepsPreview entry={entry} />}
       </div>
     </div>
   );
@@ -174,7 +223,7 @@ interface BatchHistoryPanelProps {
   variant?: 'inline' | 'compact';
   maxPreview?: number;
   refreshTrigger?: number;
-  onRestore: (entry: BatchGenerationHistory) => void;
+  onViewSteps: (entry: BatchGenerationHistory) => void;
   onRerun: (entry: BatchGenerationHistory) => void;
 }
 
@@ -182,7 +231,7 @@ export function BatchHistoryPanel({
   variant = 'inline',
   maxPreview = 3,
   refreshTrigger = 0,
-  onRestore,
+  onViewSteps,
   onRerun,
 }: BatchHistoryPanelProps) {
   const [batchHistory, setBatchHistory] = useState<BatchGenerationHistory[]>([]);
@@ -205,20 +254,19 @@ export function BatchHistoryPanel({
     void loadHistory();
   }, [loadHistory, refreshTrigger]);
 
-  const handleRemove = async (id: number) => {
+  const handleCopy = async (entry: BatchGenerationHistory) => {
     try {
-      await agentApi.deleteBatchHistory(id);
-      setBatchHistory((prev) => prev.filter((entry) => entry.id !== id));
-      toast.success('Запись удалена');
+      await navigator.clipboard.writeText(entry.userInput);
+      toast.success('Запрос скопирован');
     } catch {
-      toast.error('Не удалось удалить запись');
+      toast.error('Не удалось скопировать запрос');
     }
   };
 
   const handleClearAll = async () => {
     if (batchHistory.length === 0) return;
     try {
-      await Promise.all(batchHistory.map((entry) => agentApi.deleteBatchHistory(entry.id)));
+      await agentApi.clearBatchHistory();
       setBatchHistory([]);
       toast.success('История очищена');
       setIsModalOpen(false);
@@ -283,9 +331,9 @@ export function BatchHistoryPanel({
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           entries={batchHistory}
-          onRestore={onRestore}
+          onCopy={handleCopy}
+          onViewSteps={onViewSteps}
           onRerun={onRerun}
-          onRemove={handleRemove}
           onClearAll={handleClearAll}
         />
       </>
@@ -300,7 +348,7 @@ export function BatchHistoryPanel({
           <h4 className="text-sm font-medium text-dark-300">История генераций</h4>
           <Badge variant="info">{batchHistory.length}</Badge>
         </div>
-        {batchHistory.length > 1 && (
+        {batchHistory.length > 0 && (
           <button
             type="button"
             onClick={() => void handleClearAll()}
@@ -318,9 +366,9 @@ export function BatchHistoryPanel({
             key={entry.id}
             entry={entry}
             compact
-            onRestore={onRestore}
+            onCopy={handleCopy}
+            onViewSteps={onViewSteps}
             onRerun={onRerun}
-            onRemove={handleRemove}
           />
         ))}
       </div>
@@ -341,9 +389,9 @@ export function BatchHistoryPanel({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         entries={batchHistory}
-        onRestore={onRestore}
+        onCopy={handleCopy}
+        onViewSteps={onViewSteps}
         onRerun={onRerun}
-        onRemove={handleRemove}
         onClearAll={handleClearAll}
       />
     </div>
@@ -354,9 +402,9 @@ interface BatchHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   entries: BatchGenerationHistory[];
-  onRestore: (entry: BatchGenerationHistory) => void;
+  onCopy: (entry: BatchGenerationHistory) => void;
+  onViewSteps: (entry: BatchGenerationHistory) => void;
   onRerun: (entry: BatchGenerationHistory) => void;
-  onRemove: (id: number) => void;
   onClearAll: () => void;
 }
 
@@ -364,13 +412,13 @@ function BatchHistoryModal({
   isOpen,
   onClose,
   entries,
-  onRestore,
+  onCopy,
+  onViewSteps,
   onRerun,
-  onRemove,
   onClearAll,
 }: BatchHistoryModalProps) {
-  const handleRestore = (entry: BatchGenerationHistory) => {
-    onRestore(entry);
+  const handleViewStepsInEditor = (entry: BatchGenerationHistory) => {
+    onViewSteps(entry);
     onClose();
   };
 
@@ -406,9 +454,9 @@ function BatchHistoryModal({
           <BatchHistoryEntryCard
             key={entry.id}
             entry={entry}
-            onRestore={handleRestore}
+            onCopy={onCopy}
+            onViewSteps={handleViewStepsInEditor}
             onRerun={handleRerun}
-            onRemove={onRemove}
           />
         ))}
       </div>

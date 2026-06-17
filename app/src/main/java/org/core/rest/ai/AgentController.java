@@ -127,7 +127,7 @@ public class AgentController {
             log.info("Start generating batch steps with plan: {}", batchStepDTO);
             List<StepikBlockRequest> results = batchGeneratorService.generateBatchRequests(userId, sessionId, batchStepDTO);
             subscriptionService.recordAiUsage(userId, totalSteps);
-            batchSessionMessageService.markCompleted(batchGenerationId, results.size());
+            batchSessionMessageService.markCompleted(batchGenerationId, results);
             String json = objectMapper
                     .writerFor(new TypeReference<List<StepikBlockRequest>>() {})
                     .writeValueAsString(results);

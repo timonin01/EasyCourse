@@ -31,6 +31,9 @@ public class BatchGeneration {
     @Column(name = "plan_json", nullable = false)
     private String planJson;
 
+    @Column(name = "results_json", columnDefinition = "LONGTEXT")
+    private String resultsJson;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private BatchGenerationStatus status;

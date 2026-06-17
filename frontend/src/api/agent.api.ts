@@ -22,6 +22,17 @@ export const agentApi = {
     return response.data;
   },
 
+  // Resolve latest backend session id for a user (cross-browser history)
+  getLatestSession: async (
+    chatType: 'CHAT' | 'GENERATE',
+    stepType?: string
+  ): Promise<string | null> => {
+    const response = await api.get<{ sessionId: string | null }>('/agent/sessions/latest', {
+      params: stepType ? { chatType, stepType } : { chatType },
+    });
+    return response.data?.sessionId ?? null;
+  },
+
   // Generate step using AI
   generateStep: async (
     sessionId: string, 
@@ -119,8 +130,8 @@ export const agentApi = {
       }));
   },
 
-  deleteBatchHistory: async (batchGenerationId: number): Promise<string> => {
-    const response = await api.delete<string>(`/agent/batch/${batchGenerationId}`);
+  clearBatchHistory: async (): Promise<string> => {
+    const response = await api.delete<string>('/agent/batch/history');
     return response.data;
   },
 

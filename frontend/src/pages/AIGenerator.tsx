@@ -59,6 +59,7 @@ export function AIGenerator() {
     allLessons,
     setAllLessons,
     getOrCreateChatSession,
+    setChatSession,
     getOrCreateGenerateSession,
     setGenerateSession,
     addMessage,
@@ -132,11 +133,14 @@ export function AIGenerator() {
     }
   }, [canSelectModel, selectedLlmModel]);
 
-  const currentSessionId = mode === 'chat'
-    ? getOrCreateChatSession() 
-    : getOrCreateGenerateSession(stepType);
+  const currentSessionId =
+    mode === 'chat'
+      ? getOrCreateChatSession()
+      : mode === 'generate'
+        ? getOrCreateGenerateSession(stepType)
+        : getOrCreateChatSession();
 
-  const messages = getMessages(currentSessionId);
+  const messages = mode === 'batch' ? [] : getMessages(currentSessionId);
 
   useEffect(() => {
     const loadAllLessons = async () => {
@@ -181,6 +185,71 @@ export function AIGenerator() {
   }, [messages]);
 
   useEffect(() => {
+    if (mode === 'batch') return;
+    let cancelled = false;
+
+    const adoptLatestSession = async () => {
+      try {
+        const chatType = mode === 'chat' ? 'CHAT' : 'GENERATE';
+        const latest = await agentApi.getLatestSession(
+          chatType,
+          mode === 'generate' ? stepType : undefined
+        );
+        if (cancelled || !latest) return;
+
+        if (mode === 'chat') {
+          if (latest !== getOrCreateChatSession()) {
+            setChatSession(latest);
+          }
+        } else if (latest !== getOrCreateGenerateSession(stepType)) {
+          setGenerateSession(stepType, latest);
+        }
+      } catch {
+        // ignore — keep local session if backend has none
+      }
+    };
+
+    void adoptLatestSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, stepType, getOrCreateChatSession, getOrCreateGenerateSession, setChatSession, setGenerateSession]);
+
+  useEffect(() => {
+    if (mode !== 'batch') return;
+    if (batchResults.length > 0 || isGeneratingBatch) return;
+    let cancelled = false;
+
+    const hydrateBatchResults = async () => {
+      try {
+        const history = await agentApi.getBatchHistory();
+        if (cancelled) return;
+
+        const lastWithSteps = history.find(
+          (entry) => (entry.generatedSteps?.length ?? 0) > 0
+        );
+        if (!lastWithSteps?.generatedSteps?.length) return;
+
+        setBatchUserInput(lastWithSteps.userInput);
+        setBatchExplicitSteps(lastWithSteps.plan.steps.map((step) => ({ ...step })));
+        setBatchResults(
+          lastWithSteps.generatedSteps.map((step, index) => ({ step, index }))
+        );
+      } catch {
+        // ignore — empty preview is fine
+      }
+    };
+
+    void hydrateBatchResults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, batchResults.length, isGeneratingBatch]);
+
+  useEffect(() => {
+    if (mode === 'batch') return;
     let cancelled = false;
 
     const loadHistory = async () => {
@@ -339,10 +408,38 @@ export function AIGenerator() {
     try {
       await agentApi.clearSession(currentSessionId);
       clearSession(currentSessionId);
+      if (mode === 'generate') {
+        setGeneratedStep(null);
+      }
       toast.success('Сессия очищена');
-    } catch (error) {
+    } catch {
       toast.error('Не удалось очистить сессию');
     }
+  };
+
+  const handleClearBatch = async () => {
+    try {
+      await agentApi.clearBatchHistory();
+      setBatchUserInput('');
+      setBatchExplicitSteps([]);
+      setBatchPlan(null);
+      setBatchResults([]);
+      setBatchPlanItems([]);
+      setBatchActiveIndex(0);
+      setIsPlanModalOpen(false);
+      setBatchHistoryRefreshKey((key) => key + 1);
+      toast.success('История batch-генераций очищена');
+    } catch {
+      toast.error('Не удалось очистить batch-историю');
+    }
+  };
+
+  const handleClear = async () => {
+    if (mode === 'batch') {
+      await handleClearBatch();
+      return;
+    }
+    await handleClearSession();
   };
 
   const handleSaveStep = async () => {
@@ -483,11 +580,16 @@ export function AIGenerator() {
     );
   };
 
-  const handleRestoreBatchHistory = (entry: BatchGenerationHistory) => {
+  const handleViewBatchSteps = (entry: BatchGenerationHistory) => {
+    const steps = entry.generatedSteps ?? [];
+    if (steps.length === 0) {
+      toast.error('Для этой генерации нет сохранённых шагов');
+      return;
+    }
     setBatchExplicitSteps(entry.plan.steps.map((step) => ({ ...step })));
     setBatchUserInput(entry.userInput);
-    setBatchResults([]);
-    toast.success('Запрос восстановлен в форму');
+    setBatchResults(steps.map((step, index) => ({ step, index })));
+    toast.success(`Загружено ${steps.length} шагов из истории`);
   };
 
   const handleRerunBatchHistory = (entry: BatchGenerationHistory) => {
@@ -707,9 +809,9 @@ export function AIGenerator() {
                   onOpen={handleOpenGeneratedStepFromHistory}
                 />
               )}
-              <Button variant="secondary" size="sm" onClick={handleClearSession}>
+              <Button variant="secondary" size="sm" onClick={handleClear}>
                 <Trash2 className="w-4 h-4 mr-1" />
-                Очистить
+                {mode === 'batch' ? 'Очистить историю' : 'Очистить'}
               </Button>
             </div>
           </div>
@@ -849,7 +951,7 @@ export function AIGenerator() {
                       </p>
                       <BatchHistoryPanel
                         refreshTrigger={batchHistoryRefreshKey}
-                        onRestore={handleRestoreBatchHistory}
+                        onViewSteps={handleViewBatchSteps}
                         onRerun={handleRerunBatchHistory}
                       />
                     </div>
@@ -1101,7 +1203,7 @@ export function AIGenerator() {
               <BatchHistoryPanel
                 variant="compact"
                 refreshTrigger={batchHistoryRefreshKey}
-                onRestore={handleRestoreBatchHistory}
+                onViewSteps={handleViewBatchSteps}
                 onRerun={handleRerunBatchHistory}
               />
             </div>

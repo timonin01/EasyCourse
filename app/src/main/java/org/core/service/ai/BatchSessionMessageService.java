@@ -1,6 +1,7 @@
 package org.core.service.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.core.domain.ai.BatchGeneration;
 import org.core.domain.ai.BatchGenerationStatus;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.ai.BatchGenerationHistoryDTO;
+import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.repository.ai.BatchGenerationRepository;
@@ -20,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ import java.util.Optional;
 @Slf4j
 public class BatchSessionMessageService {
 
-    @Value("${batch.history.limit:50}")
+    @Value("${batch.history.limit}")
     private int batchHistoryLimit;
 
     private final UserRepository userRepository;
@@ -49,13 +50,14 @@ public class BatchSessionMessageService {
         return batchGenerationRepository.save(batchGeneration).getId();
     }
 
-    public void markCompleted(Long batchGenerationId, int totalSteps) {
+    public void markCompleted(Long batchGenerationId, List<StepikBlockRequest> results) {
         if (batchGenerationId == null) {
             return;
         }
         batchGenerationRepository.findById(batchGenerationId).ifPresent(batchGeneration -> {
             batchGeneration.setStatus(BatchGenerationStatus.COMPLETED);
-            batchGeneration.setTotalSteps(totalSteps);
+            batchGeneration.setTotalSteps(results != null ? results.size() : 0);
+            batchGeneration.setResultsJson(serializeResults(results));
             batchGeneration.setCompletedAt(LocalDateTime.now());
             batchGenerationRepository.save(batchGeneration);
         });
@@ -82,16 +84,8 @@ public class BatchSessionMessageService {
                 .toList();
     }
 
-    public void clearBatchGeneration(Long userId, Long batchGenerationId) {
-        Optional<BatchGeneration> batchGenerationOptional = batchGenerationRepository.findById(batchGenerationId);
-        if (batchGenerationOptional.isEmpty()) {
-            return;
-        }
-        BatchGeneration batchGeneration = batchGenerationOptional.get();
-        if (!batchGeneration.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Batch generation does not belong to user");
-        }
-        batchGenerationRepository.delete(batchGeneration);
+    public void clearAllBatchGenerations(Long userId) {
+        batchGenerationRepository.deleteAllByUser_Id(userId);
     }
 
     private BatchGenerationHistoryDTO toHistoryDto(BatchGeneration batchGeneration) {
@@ -99,6 +93,7 @@ public class BatchSessionMessageService {
                 .id(batchGeneration.getId())
                 .userInput(batchGeneration.getUserInput())
                 .plan(deserializePlan(batchGeneration.getPlanJson()))
+                .generatedSteps(deserializeResults(batchGeneration.getResultsJson()))
                 .status(batchGeneration.getStatus().name())
                 .totalSteps(batchGeneration.getTotalSteps())
                 .lessonId(batchGeneration.getLesson() != null ? batchGeneration.getLesson().getId() : null)
@@ -126,6 +121,33 @@ public class BatchSessionMessageService {
         } catch (JsonProcessingException e) {
             log.error("Failed to deserialize batch plan, skipping: {}", e.getMessage());
             return null;
+        }
+    }
+
+    @Nullable
+    private String serializeResults(@Nullable List<StepikBlockRequest> results) {
+        if (results == null || results.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper
+                    .writerFor(new TypeReference<List<StepikBlockRequest>>() {})
+                    .writeValueAsString(results);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize batch results, skipping: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private List<StepikBlockRequest> deserializeResults(@Nullable String resultsJson) {
+        if (resultsJson == null || resultsJson.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(resultsJson, new TypeReference<List<StepikBlockRequest>>() {});
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize batch results, skipping: {}", e.getMessage());
+            return List.of();
         }
     }
 }
