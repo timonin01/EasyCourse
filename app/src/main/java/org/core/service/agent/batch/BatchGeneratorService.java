@@ -31,7 +31,7 @@ public class BatchGeneratorService {
     private final BatchPromptModifierService promptModifierService;
     private final BatchAnalyzerService batchAnalyzerService;
 
-    public List<StepikBlockRequest> generateBatchRequests(String sessionId, BatchStepDTO batchStepDTO) {
+    public List<StepikBlockRequest> generateBatchRequests(Long userId, String sessionId, BatchStepDTO batchStepDTO) {
         if (batchStepDTO == null || batchStepDTO.getSteps() == null || batchStepDTO.getSteps().isEmpty()) {
             throw new RuntimeException("BatchStepDTO is null or empty");
         }
@@ -45,7 +45,7 @@ public class BatchGeneratorService {
             boolean stepUseTextContext = countStepDTO.getUseSummarizedEnabled() == null || countStepDTO.getUseSummarizedEnabled();
             if (countStepDTO.getCount() == 1) {
                 String userInput = countStepDTO.getSpecificInput();
-                StepikBlockRequest request = agenService.generateStep(sessionId, userInput, type);
+                StepikBlockRequest request = agenService.generateStep(userId, sessionId, userInput, type, null, false);
                 stepikBlockRequests.add(request);
                 if ("text".equals(type)) {
                     textBlockRequests.clear();

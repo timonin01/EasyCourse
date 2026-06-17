@@ -16,7 +16,9 @@ export const agentApi = {
 
   // Get chat history
   getHistory: async (sessionId: string): Promise<ChatMessage[]> => {
-    const response = await api.get<ChatMessage[]>(`/agent/history/${sessionId}`);
+    const response = await api.get<ChatMessage[]>('/agent/sessions/history', {
+      params: { sessionId },
+    });
     return response.data;
   },
 
@@ -69,7 +71,7 @@ export const agentApi = {
 
   // Clear session
   clearSession: async (sessionId: string): Promise<string> => {
-    const response = await api.delete<string>(`/agent/session/${sessionId}`);
+    const response = await api.delete<string>(`/agent/sessions/${sessionId}`);
     return response.data;
   },
 

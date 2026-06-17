@@ -27,11 +27,14 @@ public class AiMessage {
     @Column(name = "message_role", nullable = false)
     private AiMessageRole messageRole;
 
-    @Column(name = "content", nullable = false)
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "step_type", length = 30)
     private String stepType;
+
+    @Column(name = "payload_json", columnDefinition = "TEXT")
+    private String payloadJson;
 
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;

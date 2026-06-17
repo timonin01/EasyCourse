@@ -3,7 +3,6 @@ package org.core.rest.ai;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
-import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.enums.LlmModel;
@@ -14,7 +13,11 @@ import org.core.service.agent.batch.BatchAnalyzerService;
 import org.core.service.agent.batch.BatchGeneratorService;
 import org.core.service.agent.StepikRequestParser;
 import org.core.service.subscription.SubscriptionService;
-import com.fasterxml.jackson.core.type.TypeReference;import com.fasterxml.jackson.databind.ObjectMapper;import org.springframework.http.MediaType;import org.springframework.http.ResponseEntity;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -47,10 +50,14 @@ public class AgentController {
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
 
-            String response = agentService.handleUserMessage(sessionId, userInput, model);
+            String response = agentService.handleUserMessage(userId, sessionId, userInput, model);
             subscriptionService.recordAiUsage(userId, 1);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
+            ResponseEntity<?> sessionError = sessionAccessDeniedResponse(e);
+            if (sessionError != null) {
+                return sessionError;
+            }
             log.error("Invalid LLM model: {}", llmModel);
             return ResponseEntity.badRequest().body("Неверная модель LLM: " + llmModel);
         } catch (SubscriptionLimitExceededException e) {
@@ -60,17 +67,6 @@ public class AgentController {
             return ResponseEntity.internalServerError().body("Ошибка при обработке запроса");
         } finally {
             userContextBean.clear();
-        }
-    }
-
-    @GetMapping("/history/{sessionId}")
-    public ResponseEntity<List<ChatMessage>> getHistory(@PathVariable String sessionId) {
-        try {
-            List<ChatMessage> history = agentService.getSessionHistory(sessionId);
-            return ResponseEntity.ok(history);
-        } catch (Exception e) {
-            log.error("Error getting history for session {}: {}", sessionId, e.getMessage());
-            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -90,11 +86,15 @@ public class AgentController {
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
 
-            StepikBlockRequest stepikRequest = agentService.generateStep(sessionId, userInput, stepType, model);
+            StepikBlockRequest stepikRequest = agentService.generateStep(userId, sessionId, userInput, stepType, model, true);
             subscriptionService.recordAiUsage(userId, 1);
             log.info("Generated step of type {} for session {} with model {}", stepType, sessionId, model);
             return ResponseEntity.ok(stepikRequest);
         } catch (IllegalArgumentException e) {
+            ResponseEntity<?> sessionError = sessionAccessDeniedResponse(e);
+            if (sessionError != null) {
+                return sessionError;
+            }
             log.error("Invalid LLM model: {}", llmModel);
             return ResponseEntity.badRequest().build();
         } catch (SubscriptionLimitExceededException e) {
@@ -117,7 +117,7 @@ public class AgentController {
             subscriptionService.validateBatchPlan(userId, batchStepDTO);
 
             log.info("Start generating batch steps with plan: {}", batchStepDTO);
-            List<StepikBlockRequest> results = batchGeneratorService.generateBatchRequests(sessionId, batchStepDTO);
+            List<StepikBlockRequest> results = batchGeneratorService.generateBatchRequests(userId, sessionId, batchStepDTO);
             subscriptionService.recordAiUsage(userId, SubscriptionService.countBatchSteps(batchStepDTO));
             String json = objectMapper
                     .writerFor(new TypeReference<List<StepikBlockRequest>>() {})
@@ -181,22 +181,18 @@ public class AgentController {
         }
     }
 
-    @DeleteMapping("/session/{sessionId}")
-    public ResponseEntity<String> clearSession(@PathVariable String sessionId) {
-        try {
-            agentService.clearSession(sessionId);
-            return ResponseEntity.ok("Сессия очищена");
-        } catch (Exception e) {
-            log.error("Error clearing session {}: {}", sessionId, e.getMessage());
-            return ResponseEntity.internalServerError().body("Ошибка при очистке сессии");
-        }
-    }
-
     private LlmModel parseLlmModel(String llmModel) {
         if (llmModel == null || llmModel.trim().isEmpty()) {
             return null;
         }
         return LlmModel.valueOf(llmModel.toUpperCase());
+    }
+
+    private ResponseEntity<?> sessionAccessDeniedResponse(IllegalArgumentException e) {
+        if ("Session does not belong to user".equals(e.getMessage())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
+        return null;
     }
 }
 

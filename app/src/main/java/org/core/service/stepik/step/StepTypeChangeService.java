@@ -61,7 +61,7 @@ public class StepTypeChangeService {
 
         StepikBlockRequest newStepikBlockRequest;
         try {
-            newStepikBlockRequest = agentService.generateStep(sessionId, content, correctStepType);
+            newStepikBlockRequest = agentService.generateStep(userId, sessionId, content, correctStepType, null, false);
         } catch (Exception e) {
             log.error("Failed to generate step via AI for stepId: {}, newType: {}", stepId, newType, e);
             throw new RuntimeException("Не удалось сгенерировать шаг через AI: " + e.getMessage(), e);
