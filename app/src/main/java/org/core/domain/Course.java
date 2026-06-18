@@ -41,6 +41,10 @@ public class Course {
     @Column(name = "stepik_captcha_token", columnDefinition = "TEXT")
     private String stepikCaptchaToken;
 
+    @Column(name = "needs_stepik_sync", nullable = false)
+    @Builder.Default
+    private boolean needsStepikSync = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

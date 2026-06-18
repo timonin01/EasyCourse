@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="26-add-needs-stepik-sync-to-courses" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="courses" columnName="needs_stepik_sync"/>
+            </not>
+        </preConditions>
+        <comment>Track local course changes that require Stepik update</comment>
+        <addColumn tableName="courses">
+            <column name="needs_stepik_sync" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="26-add-needs-stepik-sync-to-models" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="models" columnName="needs_stepik_sync"/>
+            </not>
+        </preConditions>
+        <comment>Track local section changes that require Stepik update</comment>
+        <addColumn tableName="models">
+            <column name="needs_stepik_sync" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="26-add-needs-stepik-sync-to-lessons" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="lessons" columnName="needs_stepik_sync"/>
+            </not>
+        </preConditions>
+        <comment>Track local lesson changes that require Stepik update</comment>
+        <addColumn tableName="lessons">
+            <column name="needs_stepik_sync" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="26-add-needs-stepik-sync-to-steps" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="steps" columnName="needs_stepik_sync"/>
+            </not>
+        </preConditions>
+        <comment>Track local step changes that require Stepik update</comment>
+        <addColumn tableName="steps">
+            <column name="needs_stepik_sync" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
