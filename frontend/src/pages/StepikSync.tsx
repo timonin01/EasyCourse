@@ -22,6 +22,10 @@ import { stepikApi, SyncProgress } from '../api/stepik.api';
 import { useAuthStore, useCourseStore } from '../store';
 import type { Course, Model, Lesson, Step, CaptchaChallenge } from '../types';
 import { getStepDisplayType } from '../types';
+import {
+  countPendingStepikUploads,
+  hasPendingStepikUploads,
+} from '../utils/stepikSyncStatus';
 
 type TabType = 'upload' | 'download';
 
@@ -86,33 +90,39 @@ export function StepikSync() {
     loadCourses();
   }, [user?.id, setCourses]);
 
-  const loadCourseDetails = async (course: Course) => {
+  const loadCourseDetails = async (course: Course): Promise<CourseWithDetails | null> => {
     try {
       setSyncProgress(null);
 
-      const sections = await sectionsApi.getCourseSections(course.id);
+      const freshCourse = await coursesApi.getCourse(course.id);
+      updateCourse(freshCourse);
+
+      const sections = await sectionsApi.getCourseSections(freshCourse.id);
       const allLessons: Lesson[] = [];
       const allSteps: Step[] = [];
 
       for (const section of sections) {
         const lessons = await lessonsApi.getSectionLessons(section.id);
         allLessons.push(...lessons);
-        
+
         for (const lesson of lessons) {
           const steps = await stepsApi.getLessonSteps(lesson.id);
           allSteps.push(...steps);
         }
       }
 
-      setSelectedCourse({
-        ...course,
+      const details: CourseWithDetails = {
+        ...freshCourse,
         sections,
         lessons: allLessons,
-        steps: allSteps
-      });
+        steps: allSteps,
+      };
+      setSelectedCourse(details);
+      return details;
     } catch (error) {
       toast.error('Не удалось загрузить детали курса');
       console.error('Failed to load course details:', error);
+      return null;
     }
   };
 
@@ -126,7 +136,7 @@ export function StepikSync() {
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
-      toast.success('Курс успешно выгружен на Stepik!');
+      toast.success('Синхронизация с Stepik завершена');
       setIsSyncing(false);
     };
 
@@ -388,20 +398,42 @@ export function StepikSync() {
   };
 
   // Курс выгружен, но часть модулей/уроков/шагов ещё не на Stepik
-  const selectedUnsyncedCount = selectedCourse?.stepikCourseId
-    ? (selectedCourse.sections?.filter((s) => !s.stepikSectionId).length ?? 0) +
-      (selectedCourse.lessons?.filter((l) => !l.stepikLessonId).length ?? 0) +
-      (selectedCourse.steps?.filter((st) => !st.stepikStepId).length ?? 0)
+  const selectedUnsyncedCount = selectedCourse
+    ? countPendingStepikUploads({
+        course: selectedCourse,
+        sections: selectedCourse.sections,
+        lessons: selectedCourse.lessons,
+        steps: selectedCourse.steps,
+      })
     : 0;
-  const selectedHasUnsyncedChildren = selectedUnsyncedCount > 0;
+  const selectedHasUnsyncedChildren = selectedCourse
+    ? hasPendingStepikUploads({
+        course: selectedCourse,
+        sections: selectedCourse.sections,
+        lessons: selectedCourse.lessons,
+        steps: selectedCourse.steps,
+      })
+    : false;
   const showCourseUploadButton =
     selectedCourse != null &&
-    (!selectedCourse.stepikCourseId || selectedHasUnsyncedChildren);
+    (!selectedCourse.stepikCourseId ||
+      selectedHasUnsyncedChildren ||
+      selectedCourse.fullySynced === false);
   const courseUploadButtonLabel = selectedUnsyncedCount > 0
     ? `Выгрузить на Stepik (${selectedUnsyncedCount})`
     : 'Выгрузить на Stepik';
 
-  const handleUploadClick = () => {
+  const renderItemSyncIcon = (hasStepikId: boolean, needsStepikSync?: boolean) => {
+    if (!hasStepikId) {
+      return <XCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />;
+    }
+    if (needsStepikSync) {
+      return <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />;
+    }
+    return <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />;
+  };
+
+  const handleUploadClick = async () => {
     if (activeTab !== 'upload') {
       setActiveTab('upload');
       return;
@@ -410,10 +442,22 @@ export function StepikSync() {
       toast.error('Выберите курс из списка');
       return;
     }
-    if (!showCourseUploadButton) {
+
+    const details = await loadCourseDetails(selectedCourse);
+    if (!details) return;
+
+    const pending = hasPendingStepikUploads({
+      course: details,
+      sections: details.sections,
+      lessons: details.lessons,
+      steps: details.steps,
+    });
+
+    if (details.stepikCourseId && !pending && details.fullySynced !== false) {
       toast('Курс уже полностью выгружен на Stepik');
       return;
     }
+
     handleUploadCourse();
   };
 
@@ -615,8 +659,8 @@ export function StepikSync() {
                             Курс синхронизирован не полностью
                           </p>
                           <p className="text-sm text-dark-400">
-                            {selectedUnsyncedCount} элемент(ов) ещё не выгружены на Stepik. Нажмите «Выгрузить на
-                            Stepik» вверху или используйте кнопку загрузки рядом с каждым элементом.
+                            {selectedUnsyncedCount} элемент(ов) нужно выгрузить или обновить на Stepik. Нажмите
+                            «Выгрузить на Stepik» вверху или используйте кнопку рядом с каждым элементом.
                           </p>
                         </div>
                       </div>
@@ -630,7 +674,7 @@ export function StepikSync() {
                             Курс полностью синхронизирован с Stepik
                           </p>
                           <p className="text-sm text-dark-400">
-                            Все модули, уроки и шаги выгружены на Stepik.
+                            Все модули, уроки и шаги актуальны на Stepik.
                           </p>
                         </div>
                       </div>
@@ -642,11 +686,11 @@ export function StepikSync() {
                       <AlertTriangle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="text-sm font-medium text-blue-400 mb-1">
-                          Изменения в уже выгруженных шагах
+                          Выгрузка и обновление
                         </p>
                         <p className="text-sm text-dark-400">
-                          Если вы изменили содержимое шага, который уже есть на Stepik, обновите его
-                          отдельно — кнопкой загрузки рядом с нужным шагом ниже.
+                          Кнопка «Выгрузить на Stepik» вверху создаёт новые элементы и обновляет изменённые.
+                          При необходимости можно выгрузить отдельный модуль, урок или шаг ниже.
                         </p>
                       </div>
                     </div>
@@ -661,11 +705,7 @@ export function StepikSync() {
                             key={section.id}
                             className="flex items-center gap-3 p-3 rounded-lg border border-dark-700 hover:border-dark-600 transition-colors"
                           >
-                            {section.stepikSectionId ? (
-                              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-                            )}
+                            {renderItemSyncIcon(Boolean(section.stepikSectionId), section.needsStepikSync)}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-dark-100 truncate">{section.title}</p>
                               {section.stepikSectionId && (
@@ -675,10 +715,16 @@ export function StepikSync() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className={`p-1 ${section.stepikSectionId ? 'text-green-400 hover:text-green-300' : ''}`}
+                              className={`p-1 ${section.stepikSectionId && !section.needsStepikSync ? 'text-green-400 hover:text-green-300' : section.needsStepikSync ? 'text-amber-400 hover:text-amber-300' : ''}`}
                               onClick={() => handleSyncModel(section.id)}
                               disabled={syncingItems.has(section.id) || deletingItems.has(section.id)}
-                              title={section.stepikSectionId ? 'Обновить в Stepik' : 'Выгрузить на Stepik'}
+                              title={
+                                !section.stepikSectionId
+                                  ? 'Выгрузить на Stepik'
+                                  : section.needsStepikSync
+                                    ? 'Обновить на Stepik'
+                                    : 'Выгрузить на Stepik'
+                              }
                             >
                               {syncingItems.has(section.id) ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -717,11 +763,7 @@ export function StepikSync() {
                             key={lesson.id}
                             className="flex items-center gap-3 p-3 rounded-lg border border-dark-700 hover:border-dark-600 transition-colors"
                           >
-                            {lesson.stepikLessonId ? (
-                              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-                            )}
+                            {renderItemSyncIcon(Boolean(lesson.stepikLessonId), lesson.needsStepikSync)}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-dark-100 truncate">{lesson.title}</p>
                               {lesson.stepikLessonId && (
@@ -731,10 +773,16 @@ export function StepikSync() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className={`p-1 ${lesson.stepikLessonId ? 'text-green-400 hover:text-green-300' : ''}`}
+                              className={`p-1 ${lesson.stepikLessonId && !lesson.needsStepikSync ? 'text-green-400 hover:text-green-300' : lesson.needsStepikSync ? 'text-amber-400 hover:text-amber-300' : ''}`}
                               onClick={() => handleSyncLesson(lesson.id)}
                               disabled={syncingItems.has(lesson.id) || deletingItems.has(lesson.id)}
-                              title={lesson.stepikLessonId ? 'Обновить в Stepik' : 'Выгрузить на Stepik'}
+                              title={
+                                !lesson.stepikLessonId
+                                  ? 'Выгрузить на Stepik'
+                                  : lesson.needsStepikSync
+                                    ? 'Обновить на Stepik'
+                                    : 'Выгрузить на Stepik'
+                              }
                             >
                               {syncingItems.has(lesson.id) ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -773,11 +821,7 @@ export function StepikSync() {
                             key={step.id}
                             className="flex items-center gap-3 p-3 rounded-lg border border-dark-700 hover:border-dark-600 transition-colors"
                           >
-                            {step.stepikStepId ? (
-                              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-                            )}
+                            {renderItemSyncIcon(Boolean(step.stepikStepId), step.needsStepikSync)}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-dark-100">
                                 Шаг {step.position} {getStepDisplayType(step) && `(${getStepDisplayType(step)})`}
@@ -789,10 +833,16 @@ export function StepikSync() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className={`p-1 ${step.stepikStepId ? 'text-green-400 hover:text-green-300' : ''}`}
+                              className={`p-1 ${step.stepikStepId && !step.needsStepikSync ? 'text-green-400 hover:text-green-300' : step.needsStepikSync ? 'text-amber-400 hover:text-amber-300' : ''}`}
                               onClick={() => handleSyncStep(step.id)}
                               disabled={syncingItems.has(step.id) || deletingItems.has(step.id)}
-                              title={step.stepikStepId ? 'Обновить в Stepik' : 'Выгрузить на Stepik'}
+                              title={
+                                !step.stepikStepId
+                                  ? 'Выгрузить на Stepik'
+                                  : step.needsStepikSync
+                                    ? 'Обновить на Stepik'
+                                    : 'Выгрузить на Stepik'
+                              }
                             >
                               {syncingItems.has(step.id) ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />

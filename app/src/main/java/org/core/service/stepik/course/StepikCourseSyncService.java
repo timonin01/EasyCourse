@@ -51,6 +51,7 @@ public class StepikCourseSyncService {
         }
         Course course = mapToCourse(courseDTO);
         StepikCourseResponseData responseData = stepikCourseService.updateCourse(courseDTO.getStepikCourseId(), course);
+        courseService.clearNeedsStepikSync(courseId);
         
         log.info("Course {} successfully updated in Stepik with course ID: {}", courseId, responseData.getId());
         return responseData;

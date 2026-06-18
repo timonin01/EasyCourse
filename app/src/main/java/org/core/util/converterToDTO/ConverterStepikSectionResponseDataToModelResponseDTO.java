@@ -25,6 +25,7 @@ public class ConverterStepikSectionResponseDataToModelResponseDTO {
                 .stepikSectionId(stepikSection.getId())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
+                .needsStepikSync(false)
                 .build();
     }
 }

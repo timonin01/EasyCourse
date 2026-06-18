@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
 import org.core.dto.step.StepResponseDTO;
-import org.core.dto.step.UpdateStepDTO;
 import org.core.dto.stepik.step.StepikStepSourceResponse;
 import org.core.dto.stepik.step.StepikStepSourceResponseData;
 import org.core.exception.exceptions.StepikStepIntegrationException;
@@ -36,7 +35,7 @@ public class StepikStepSyncService {
         StepikStepSourceResponseData stepData = response.getStepSource();
         
         if (stepData != null) {
-            stepService.updateStep(createUpdateDTO(stepId, stepData.getId()));
+            stepService.updateStepStepikStepId(stepId, stepData.getId());
             log.info("Step {} successfully synced with Stepik step ID: {}", stepId, stepData.getId());
         }
         return stepData;
@@ -68,14 +67,17 @@ public class StepikStepSyncService {
         if (currentStepikPosition.equals(currentDbPosition)) {
             log.info("Positions match, performing simple update");
             Step step = mapToStep(stepDTO);
-            stepikStepService.updateStep(step.getStepikStepId());
+            stepikStepService.updateStep(step);
+            stepService.clearNeedsStepikSync(stepId);
             return stepikStepService.getStepikStepById(step.getStepikStepId());
         }
         Step step = mapToStep(stepDTO);
         step.setPosition(currentStepikPosition);
 
         try {
-            return updateStepikStepService.performStepikPositionShift(step, stepDTO.getLessonId(), currentDbPosition);
+            StepikStepSourceResponseData result = updateStepikStepService.performStepikPositionShift(step, stepDTO.getLessonId(), currentDbPosition);
+            stepService.clearNeedsStepikSync(stepId);
+            return result;
         } catch (StepikStepIntegrationException e) {
             log.error("Error updating step in Stepik : {}", e.getMessage());
             throw new StepikStepIntegrationException("Failed to update step in Stepik: " + e.getMessage());
@@ -98,13 +100,6 @@ public class StepikStepSyncService {
 
         stepService.updateStepStepikStepId(stepId, null);
         log.info("Step {} successfully deleted from Stepik with step ID: {}", stepId, stepDTO.getStepikStepId());
-    }
-
-    private UpdateStepDTO createUpdateDTO(Long stepId, Long stepikStepId) {
-        UpdateStepDTO updateDTO = new UpdateStepDTO();
-        updateDTO.setStepId(stepId);
-        updateDTO.setStepikStepId(stepikStepId);
-        return updateDTO;
     }
 
     private Step mapToStep(StepResponseDTO stepDTO) {

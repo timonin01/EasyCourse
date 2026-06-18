@@ -44,6 +44,7 @@ public class StepResponseDTO {
     private Long stepikStepId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean needsStepikSync;
 
     public String getStepikBlockJson() {
         if (stepikBlock == null) {

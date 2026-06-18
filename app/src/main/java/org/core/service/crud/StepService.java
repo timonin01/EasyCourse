@@ -74,6 +74,7 @@ public class StepService {
                 .stepikBlockData(stepResponseDTO.getStepikBlockJson())
                 .createdAt(stepResponseDTO.getCreatedAt())
                 .updatedAt(stepResponseDTO.getUpdatedAt())
+                .needsStepikSync(stepResponseDTO.isNeedsStepikSync())
                 .build();
         return stepRepository.save(step);
     }
@@ -117,8 +118,19 @@ public class StepService {
         if (updateDto.getPosition() != null && !updateDto.getPosition().equals(step.getPosition())) {
             changeStepPosition(step, updateDto.getPosition());
         }
+        if (step.getStepikStepId() != null && hasStepikContentChanges(updateDto)) {
+            step.setNeedsStepikSync(true);
+        }
         log.info("Step updated with ID: {}", updateDto.getStepId());
         return mapToResponseDto(stepRepository.save(step));
+    }
+
+    private boolean hasStepikContentChanges(UpdateStepDTO updateDto) {
+        return updateDto.getType() != null
+                || updateDto.getContent() != null
+                || updateDto.getCost() != null
+                || updateDto.getStepikBlock() != null
+                || updateDto.getPosition() != null;
     }
 
     public void deleteStep(Long stepId) {
@@ -140,8 +152,18 @@ public class StepService {
         }
         Step step = optionalStep.get();
         step.setStepikStepId(stepikStepId);
+        step.setNeedsStepikSync(false);
         Step savedStep = stepRepository.save(step);
-        log.info("Step with stepID: {} saved with stepikStepId: {}", step, stepikStepId);
+        log.info("Step with stepID: {} saved with stepikStepId: {}", savedStep.getId(), stepikStepId);
+    }
+
+    public void clearNeedsStepikSync(Long stepId) {
+        Step step = getStepByStepId(stepId);
+        if (step.isNeedsStepikSync()) {
+            step.setNeedsStepikSync(false);
+            stepRepository.save(step);
+            log.info("Cleared needsStepikSync for step ID: {}", stepId);
+        }
     }
 
     private Step getStepByStepId(Long stepId){
@@ -198,6 +220,7 @@ public class StepService {
                 .createdAt(step.getCreatedAt())
                 .updatedAt(step.getUpdatedAt())
                 .lessonId(step.getLesson().getId())
+                .needsStepikSync(step.isNeedsStepikSync())
                 .build();
     }
 }

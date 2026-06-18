@@ -19,5 +19,6 @@ public class CourseResponseDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean fullySynced;
+    private boolean needsStepikSync;
 
 }

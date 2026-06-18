@@ -23,6 +23,7 @@ public class ConverterStepikLessonResponseDataToLessonResponseDTO {
                 .stepikSectionId(stepikSectionId)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
+                .needsStepikSync(false)
                 .build();
     }
 }

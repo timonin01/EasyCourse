@@ -80,6 +80,7 @@ public class StepikSectionSyncService {
             log.info("Positions match, performing simple update");
             Section section = mapToSection(sectionDTO);
             stepikSectionService.updateSection(section);
+            sectionService.clearNeedsStepikSync(sectionId);
             return stepikSectionService.getSectionByStepikId(sectionDTO.getStepikSectionId());
         }
 
@@ -92,6 +93,7 @@ public class StepikSectionSyncService {
             throw new StepikLessonIntegrationException("Failed to update section in Stepik: " + e.getMessage());
         }
 
+        sectionService.clearNeedsStepikSync(sectionId);
         log.info("Section {} successfully updated in Stepik with section ID: {}", sectionId, sectionData.getId());
         return sectionData;
     }

@@ -53,6 +53,7 @@ public class LessonService {
                 .stepikLessonId(lessonResponseDTO.getStepikLessonId())
                 .createdAt(lessonResponseDTO.getCreatedAt())
                 .updatedAt(lessonResponseDTO.getUpdatedAt())
+                .needsStepikSync(lessonResponseDTO.isNeedsStepikSync())
                 .build();
         return lessonRepository.save(lesson);
     }
@@ -71,11 +72,17 @@ public class LessonService {
 
     public LessonResponseDTO updateLesson(UpdateLessonDTO updateDTO) {
         Lesson lesson = findLessonById(updateDTO.getLessonId());
-        if (updateDTO.getTitle() != null) {
+        boolean contentChanged = false;
+        if (updateDTO.getTitle() != null && !updateDTO.getTitle().equals(lesson.getTitle())) {
             lesson.setTitle(updateDTO.getTitle());
+            contentChanged = true;
         }
         if (updateDTO.getPosition() != null && !updateDTO.getPosition().equals(lesson.getPosition())) {
             changeLessonPosition(lesson, updateDTO.getPosition());
+            contentChanged = true;
+        }
+        if (lesson.getStepikLessonId() != null && contentChanged) {
+            lesson.setNeedsStepikSync(true);
         }
 
         log.info("Updated lesson with ID: {}", updateDTO.getLessonId());
@@ -131,7 +138,10 @@ public class LessonService {
     }
 
     public void updateLessonStepikLessonId(Long lessonId, Long stepikLessonId) {
-        lessonRepository.updateStepikLessonId(lessonId, stepikLessonId);
+        Lesson lesson = findLessonById(lessonId);
+        lesson.setStepikLessonId(stepikLessonId);
+        lesson.setNeedsStepikSync(false);
+        lessonRepository.save(lesson);
         log.info("Updated lesson {} with stepikLessonId: {}", lessonId, stepikLessonId);
     }
 
@@ -146,6 +156,15 @@ public class LessonService {
         log.info("Cleared stepikLessonId for {} lessons in section {}", updatedCount, sectionId);
     }
 
+    public void clearNeedsStepikSync(Long lessonId) {
+        Lesson lesson = findLessonById(lessonId);
+        if (lesson.isNeedsStepikSync()) {
+            lesson.setNeedsStepikSync(false);
+            lessonRepository.save(lesson);
+            log.info("Cleared needsStepikSync for lesson ID: {}", lessonId);
+        }
+    }
+
     private LessonResponseDTO mapToResponseDTO(Lesson lesson) {
         return LessonResponseDTO.builder()
                 .id(lesson.getId())
@@ -155,6 +174,7 @@ public class LessonService {
                 .sectionId(lesson.getSection().getId())
                 .createdAt(lesson.getCreatedAt())
                 .updatedAt(lesson.getUpdatedAt())
+                .needsStepikSync(lesson.isNeedsStepikSync())
                 .build();
     }
 }
