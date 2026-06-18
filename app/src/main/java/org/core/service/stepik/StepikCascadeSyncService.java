@@ -61,7 +61,6 @@ public class StepikCascadeSyncService {
                     virtualExecutor));
         }
         CompletableFuture.allOf(sectionFutures.toArray(new CompletableFuture[0])).join();
-
         return result;
     }
 

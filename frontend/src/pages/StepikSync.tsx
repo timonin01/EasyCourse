@@ -119,8 +119,6 @@ export function StepikSync() {
   const handleUploadCourse = async () => {
     if (!selectedCourse || !selectedCourse.sections) return;
 
-    const isPartialUpload = Boolean(selectedCourse.stepikCourseId);
-
     setIsSyncing(true);
     setSyncProgress(null);
 
@@ -128,11 +126,7 @@ export function StepikSync() {
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
-      toast.success(
-        isPartialUpload
-          ? 'Недостающие элементы выгружены на Stepik!'
-          : 'Курс успешно синхронизирован с Stepik!'
-      );
+      toast.success('Курс успешно выгружен на Stepik!');
       setIsSyncing(false);
     };
 
@@ -403,9 +397,25 @@ export function StepikSync() {
   const showCourseUploadButton =
     selectedCourse != null &&
     (!selectedCourse.stepikCourseId || selectedHasUnsyncedChildren);
-  const courseUploadButtonLabel = selectedCourse?.stepikCourseId
-    ? `Догрузить на Stepik (${selectedUnsyncedCount})`
+  const courseUploadButtonLabel = selectedUnsyncedCount > 0
+    ? `Выгрузить на Stepik (${selectedUnsyncedCount})`
     : 'Выгрузить на Stepik';
+
+  const handleUploadClick = () => {
+    if (activeTab !== 'upload') {
+      setActiveTab('upload');
+      return;
+    }
+    if (!selectedCourse) {
+      toast.error('Выберите курс из списка');
+      return;
+    }
+    if (!showCourseUploadButton) {
+      toast('Курс уже полностью выгружен на Stepik');
+      return;
+    }
+    handleUploadCourse();
+  };
 
   if (isLoading) {
     return (
@@ -452,10 +462,11 @@ export function StepikSync() {
       <div className="flex gap-2 mb-6">
         <Button
           variant={activeTab === 'upload' ? 'primary' : 'secondary'}
-          icon={<Upload className="w-4 h-4" />}
-          onClick={() => setActiveTab('upload')}
+          icon={isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          onClick={handleUploadClick}
+          disabled={isSyncing}
         >
-          Выгрузить на Stepik
+          {isSyncing ? 'Синхронизация...' : courseUploadButtonLabel}
         </Button>
         <Button
           variant={activeTab === 'download' ? 'primary' : 'secondary'}
@@ -592,25 +603,6 @@ export function StepikSync() {
                 </div>
               )}
 
-              {/* Course sync button — first upload or finishing partial sync */}
-              {showCourseUploadButton && (
-                <div className="flex gap-3 mb-6">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setSelectedCourse(null)}
-                  >
-                    Отмена
-                  </Button>
-                  <Button
-                    icon={isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    onClick={handleUploadCourse}
-                    disabled={isSyncing}
-                  >
-                    {isSyncing ? 'Синхронизация...' : courseUploadButtonLabel}
-                  </Button>
-                </div>
-              )}
-
               {/* Individual items sync - only if course is synced */}
               {selectedCourse.stepikCourseId && (
                 <div className="space-y-6">
@@ -623,8 +615,8 @@ export function StepikSync() {
                             Курс синхронизирован не полностью
                           </p>
                           <p className="text-sm text-dark-400">
-                            {selectedUnsyncedCount} элемент(ов) ещё не выгружены на Stepik. Нажмите «Догрузить на
-                            Stepik» выше или используйте кнопку загрузки рядом с каждым элементом.
+                            {selectedUnsyncedCount} элемент(ов) ещё не выгружены на Stepik. Нажмите «Выгрузить на
+                            Stepik» вверху или используйте кнопку загрузки рядом с каждым элементом.
                           </p>
                         </div>
                       </div>
@@ -638,12 +630,27 @@ export function StepikSync() {
                             Курс полностью синхронизирован с Stepik
                           </p>
                           <p className="text-sm text-dark-400">
-                            Все модули, уроки и шаги выгружены. Используйте кнопки загрузки, чтобы обновить элементы.
+                            Все модули, уроки и шаги выгружены на Stepik.
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
+
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-400 mb-1">
+                          Изменения в уже выгруженных шагах
+                        </p>
+                        <p className="text-sm text-dark-400">
+                          Если вы изменили содержимое шага, который уже есть на Stepik, обновите его
+                          отдельно — кнопкой загрузки рядом с нужным шагом ниже.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                   {selectedCourse.sections && selectedCourse.sections.length > 0 && (
                     <div>
