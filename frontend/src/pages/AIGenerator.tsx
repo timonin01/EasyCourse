@@ -24,6 +24,7 @@ import {
   CHAT_PROMPT_SUGGESTIONS,
   GENERATE_PROMPT_SUGGESTIONS,
 } from '../constants/aiPromptSuggestions';
+import { AI_PROMPT_LIMITS, getPromptLimitMessage, clampPromptLength } from '../constants/aiPromptLimits';
 import { useSubscription } from '../hooks/useSubscription';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
 import { MODEL_PRO_MESSAGE } from '../constants/subscription';
@@ -142,6 +143,9 @@ export function AIGenerator() {
 
   const messages = mode === 'batch' ? [] : getMessages(currentSessionId);
 
+  const promptMaxLength =
+    mode === 'chat' ? AI_PROMPT_LIMITS.chat : AI_PROMPT_LIMITS.generate;
+
   useEffect(() => {
     const loadAllLessons = async () => {
       if (!user?.id) return;
@@ -231,7 +235,7 @@ export function AIGenerator() {
         );
         if (!lastWithSteps?.generatedSteps?.length) return;
 
-        setBatchUserInput(lastWithSteps.userInput);
+        setBatchUserInput(clampPromptLength(lastWithSteps.userInput, AI_PROMPT_LIMITS.batch));
         setBatchExplicitSteps(lastWithSteps.plan.steps.map((step) => ({ ...step })));
         setBatchResults(
           lastWithSteps.generatedSteps.map((step, index) => ({ step, index }))
@@ -294,6 +298,10 @@ export function AIGenerator() {
 
   const runGenerateStep = async (prompt: string, options?: { addUserMessage?: boolean }) => {
     if (!prompt.trim() || isLoading) return;
+    if (prompt.length > AI_PROMPT_LIMITS.generate) {
+      toast.error(getPromptLimitMessage(prompt.length, AI_PROMPT_LIMITS.generate, 'генерации шага'));
+      return;
+    }
 
     const sessionId = getOrCreateGenerateSession(stepType);
     if (options?.addUserMessage !== false) {
@@ -379,6 +387,10 @@ export function AIGenerator() {
 
   const handleChat = async () => {
     if (!input.trim() || isLoading) return;
+    if (input.length > AI_PROMPT_LIMITS.chat) {
+      toast.error(getPromptLimitMessage(input.length, AI_PROMPT_LIMITS.chat, 'чата'));
+      return;
+    }
 
     const sessionId = getOrCreateChatSession();
     const userMessage: ChatMessage = { role: 'user', content: input };
@@ -587,7 +599,7 @@ export function AIGenerator() {
       return;
     }
     setBatchExplicitSteps(entry.plan.steps.map((step) => ({ ...step })));
-    setBatchUserInput(entry.userInput);
+    setBatchUserInput(clampPromptLength(entry.userInput, AI_PROMPT_LIMITS.batch));
     setBatchResults(steps.map((step, index) => ({ step, index })));
     toast.success(`Загружено ${steps.length} шагов из истории`);
   };
@@ -870,13 +882,19 @@ export function AIGenerator() {
                 <Card>
                   <BatchGenerator
                     userInput={batchUserInput}
-                    onUserInputChange={setBatchUserInput}
+                    onUserInputChange={(value) =>
+                      setBatchUserInput(clampPromptLength(value, AI_PROMPT_LIMITS.batch))
+                    }
                     explicitSteps={batchExplicitSteps}
                     onExplicitStepsChange={setBatchExplicitSteps}
                     onGenerate={async () => {
                       const userInputString = buildBatchUserInput();
                       if (!userInputString.trim()) {
                         toast.error('Введите запрос или выберите типы шагов');
+                        return;
+                      }
+                      if (userInputString.length > AI_PROMPT_LIMITS.batch) {
+                        toast.error(getPromptLimitMessage(userInputString.length, AI_PROMPT_LIMITS.batch, 'batch-генерации'));
                         return;
                       }
 
@@ -981,7 +999,8 @@ export function AIGenerator() {
                   </p>
                   <PromptSuggestionChips
                     suggestions={mode === 'chat' ? CHAT_PROMPT_SUGGESTIONS : GENERATE_PROMPT_SUGGESTIONS}
-                    onSelect={setInput}
+                    onSelect={(prompt) => setInput(clampPromptLength(prompt, promptMaxLength))}
+                    maxLength={promptMaxLength}
                   />
                 </div>
               ) : (
@@ -1060,6 +1079,8 @@ export function AIGenerator() {
                   onKeyDown={handleKeyPress}
                   rows={2}
                   className="flex-1 min-w-0 resize-none"
+                  maxLength={promptMaxLength}
+                  showCount
                 />
                 {/* LLM Model Selection - visible in chat and generate modes */}
                 {(mode === 'chat' || mode === 'generate') && (

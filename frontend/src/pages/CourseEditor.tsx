@@ -41,6 +41,7 @@ import { coursesApi, sectionsApi, lessonsApi, stepsApi, agentApi, stepikApi } fr
 import { useCourseStore, useAuthStore, useAIGeneratorStore } from '../store';
 import { useSubscription } from '../hooks/useSubscription';
 import { MODEL_PRO_MESSAGE, STEP_TYPE_CHANGE_PRO_MESSAGE } from '../constants/subscription';
+import { AI_PROMPT_LIMITS, getPromptLimitMessage } from '../constants/aiPromptLimits';
 import { extractApiErrorMessage } from '../utils/apiError';
 import type { Model, Lesson, Step, StepType, UpdateStepDTO, StepikBlockRequest } from '../types';
 import { getStepDisplayType, getStepBlockName } from '../types';
@@ -746,6 +747,10 @@ export function CourseEditor() {
   const handleGenerateNewContent = async () => {
     if (!selectedStep || !contentEditData.userInput.trim()) {
       toast.error('Введите запрос для изменения контента');
+      return;
+    }
+    if (contentEditData.userInput.length > AI_PROMPT_LIMITS.generate) {
+      toast.error(getPromptLimitMessage(contentEditData.userInput.length, AI_PROMPT_LIMITS.generate, 'генерации шага'));
       return;
     }
 
@@ -2384,6 +2389,8 @@ export function CourseEditor() {
                   onChange={(e) => setContentEditData(prev => ({ ...prev, userInput: e.target.value }))}
                   rows={4}
                   disabled={isGeneratingContent}
+                  maxLength={AI_PROMPT_LIMITS.generate}
+                  showCount
                 />
               </div>
               <LlmModelSelect

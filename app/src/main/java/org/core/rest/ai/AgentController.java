@@ -6,8 +6,10 @@ import org.core.context.UserContextBean;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.enums.LlmModel;
+import org.core.exception.exceptions.PromptLengthExceededException;
 import org.core.exception.exceptions.SubscriptionLimitExceededException;
 import org.core.service.agent.AgentService;
+import org.core.service.ai.AiPromptLimitService;
 import org.core.service.agent.StepContentModifier;
 import org.core.service.agent.batch.BatchAnalyzerService;
 import org.core.service.agent.batch.BatchGeneratorService;
@@ -38,6 +40,7 @@ public class AgentController {
     private final StepContentModifier stepContentModifier;
 
     private final SubscriptionService subscriptionService;
+    private final AiPromptLimitService aiPromptLimitService;
     private final UserContextBean userContextBean;
     private final ObjectMapper objectMapper;
 
@@ -49,6 +52,7 @@ public class AgentController {
             @RequestParam(required = false) String llmModel) {
         userContextBean.setUserId(userId);
         try {
+            aiPromptLimitService.validateChatPrompt(userInput);
             LlmModel model = parseLlmModel(llmModel);
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
@@ -63,6 +67,8 @@ public class AgentController {
             }
             log.error("Invalid LLM model: {}", llmModel);
             return ResponseEntity.badRequest().body("Неверная модель LLM: " + llmModel);
+        } catch (PromptLengthExceededException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (SubscriptionLimitExceededException e) {
             return ResponseEntity.status(403).body(e.getMessage());
         } catch (Exception e) {
@@ -82,6 +88,7 @@ public class AgentController {
             @RequestParam(required = false) String llmModel) {
         userContextBean.setUserId(userId);
         try {
+            aiPromptLimitService.validateGeneratePrompt(userInput);
             if (stepType == null || stepType.isEmpty()) {
                 stepType = agentService.classifyStepTypeFromUserInput(userInput);
             }
@@ -100,6 +107,8 @@ public class AgentController {
             }
             log.error("Invalid LLM model: {}", llmModel);
             return ResponseEntity.badRequest().build();
+        } catch (PromptLengthExceededException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (SubscriptionLimitExceededException e) {
             return ResponseEntity.status(403).body(e.getMessage());
         } catch (Exception e) {
@@ -118,6 +127,7 @@ public class AgentController {
         userContextBean.setUserId(userId);
         Long batchGenerationId = null;
         try {
+            aiPromptLimitService.validateBatchPlan(batchStepDTO);
             subscriptionService.validateBatchPlan(userId, batchStepDTO);
 
             int totalSteps = SubscriptionService.countBatchSteps(batchStepDTO);
@@ -132,6 +142,9 @@ public class AgentController {
                     .writerFor(new TypeReference<List<StepikBlockRequest>>() {})
                     .writeValueAsString(results);
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json);
+        } catch (PromptLengthExceededException e) {
+            batchSessionMessageService.markFailed(batchGenerationId, e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (IllegalArgumentException e) {
             batchSessionMessageService.markFailed(batchGenerationId, e.getMessage());
             log.warn("Invalid batch plan: {}", e.getMessage());
@@ -149,11 +162,14 @@ public class AgentController {
     }
 
     @PostMapping("/analyze-batch-request")
-    public ResponseEntity<BatchStepDTO> analyzeBatchRequest(@RequestBody String userInput) {
+    public ResponseEntity<?> analyzeBatchRequest(@RequestBody String userInput) {
         try {
+            aiPromptLimitService.validateBatchPrompt(userInput);
             log.info("Analyzing batch request: {}", userInput);
             BatchStepDTO plan = batchAnalyzerService.analyzeUserInput(userInput);
             return ResponseEntity.ok(plan);
+        } catch (PromptLengthExceededException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             log.error("Error analyzing batch request: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
@@ -170,6 +186,7 @@ public class AgentController {
             @RequestParam(required = false) String llmModel) {
         userContextBean.setUserId(userId);
         try {
+            aiPromptLimitService.validateGeneratePrompt(userInput);
             StepikBlockRequest previousStepikBlockRequest = stepikRequestParser.parseRequest(previousStepikBlockRequestJson, stepType);
             LlmModel model = parseLlmModel(llmModel);
             subscriptionService.validateModelAccess(userId, model);
@@ -180,6 +197,8 @@ public class AgentController {
             subscriptionService.recordAiUsage(userId, 1);
             log.info("Modified step content of type {} for session {} with model {}", stepType, sessionId, model);
             return ResponseEntity.ok(stepikRequest);
+        } catch (PromptLengthExceededException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.error("Invalid LLM model: {}", llmModel);
             return ResponseEntity.badRequest().build();

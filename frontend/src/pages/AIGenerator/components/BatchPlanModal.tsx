@@ -7,6 +7,7 @@ import { countTotalBatchSteps } from '../../../utils/batchSteps';
 import { getBatchStepLimitMessage } from '../../../constants/batchLimits';
 import { useSubscription } from '../../../hooks/useSubscription';
 import { PRO_MAX_BATCH_STEPS } from '../../../constants/subscription';
+import { AI_PROMPT_LIMITS, clampPromptLength } from '../../../constants/aiPromptLimits';
 
 const stepTypeOptions = [
   { value: 'text', label: '📝 Текстовый контент' },
@@ -71,7 +72,11 @@ export function BatchPlanModal({
     value: string | number | boolean
   ) => {
     const newSteps = [...localPlan.steps];
-    newSteps[index] = { ...newSteps[index], [field]: value };
+    let nextValue: string | number | boolean = value;
+    if (field === 'specificInput' && typeof value === 'string') {
+      nextValue = clampPromptLength(value, AI_PROMPT_LIMITS.generate);
+    }
+    newSteps[index] = { ...newSteps[index], [field]: nextValue };
     setLocalPlan({ steps: newSteps });
   };
 
@@ -152,6 +157,8 @@ export function BatchPlanModal({
                     onChange={(e) => handleUpdateStep(index, 'specificInput', e.target.value)}
                     rows={3}
                     className="text-sm resize-y min-h-[5.5rem]"
+                    maxLength={AI_PROMPT_LIMITS.generate}
+                    showCount
                   />
 
                   {step.type !== 'text' && (
