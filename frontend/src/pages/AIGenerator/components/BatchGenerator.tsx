@@ -2,9 +2,10 @@ import { Button, Textarea, Input, Toggle } from '../../../components/ui';
 import { CheckCircle, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { CountStepDTO } from '../../../types';
-import { buildExplicitStepsQuery, countTotalBatchSteps } from '../../../utils/batchSteps';
+import { AI_PROMPT_LIMITS, clampPromptLength } from '../../../constants/aiPromptLimits';
 import { getBatchGenerationHint, getBatchStepLimitMessage } from '../../../constants/batchLimits';
 import { BATCH_PROMPT_SUGGESTIONS } from '../../../constants/aiPromptSuggestions';
+import { buildExplicitStepsQuery, countTotalBatchSteps } from '../../../utils/batchSteps';
 import { useSubscription } from '../../../hooks/useSubscription';
 import { PromptSuggestionChips } from './PromptSuggestionChips';
 
@@ -58,7 +59,11 @@ export function BatchGenerator({
 
   const handleUpdateExplicitStep = (index: number, field: keyof CountStepDTO, value: string | number | boolean) => {
     const newSteps = [...explicitSteps];
-    newSteps[index] = { ...newSteps[index], [field]: value };
+    let nextValue: string | number | boolean = value;
+    if (field === 'specificInput' && typeof value === 'string') {
+      nextValue = clampPromptLength(value, AI_PROMPT_LIMITS.generate);
+    }
+    newSteps[index] = { ...newSteps[index], [field]: nextValue };
     onExplicitStepsChange(newSteps);
   };
 
@@ -107,11 +112,14 @@ export function BatchGenerator({
           value={userInput}
           onChange={(e) => onUserInputChange(e.target.value)}
           rows={3}
+          maxLength={AI_PROMPT_LIMITS.batch}
+          showCount
         />
         {!userInput.trim() && explicitSteps.length === 0 && (
           <PromptSuggestionChips
             suggestions={BATCH_PROMPT_SUGGESTIONS}
             onSelect={onUserInputChange}
+            maxLength={AI_PROMPT_LIMITS.batch}
             className="justify-start mt-2"
           />
         )}
@@ -194,6 +202,8 @@ export function BatchGenerator({
                     onChange={(e) => handleUpdateExplicitStep(index, 'specificInput', e.target.value)}
                     rows={3}
                     className="text-sm resize-y min-h-[5.5rem]"
+                    maxLength={AI_PROMPT_LIMITS.generate}
+                    showCount
                   />
 
                   {step.type !== 'text' && (
