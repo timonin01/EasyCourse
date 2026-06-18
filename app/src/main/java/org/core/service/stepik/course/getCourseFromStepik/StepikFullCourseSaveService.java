@@ -92,6 +92,7 @@ public class StepikFullCourseSaveService {
         if (existingCourse != null) {
             existingCourse.setTitle(courseResponseDTO.getTitle());
             existingCourse.setDescription(courseResponseDTO.getDescription());
+            existingCourse.setNeedsStepikSync(false);
             existingCourse.setUpdatedAt(courseResponseDTO.getUpdatedAt() != null ? courseResponseDTO.getUpdatedAt() : LocalDateTime.now());
             return courseRepository.save(existingCourse);
         }
@@ -111,6 +112,7 @@ public class StepikFullCourseSaveService {
                         .orElseThrow(() -> new org.core.exception.exceptions.CourseNotFoundException("Course not found")));
             }
             existingSection.setUpdatedAt(sectionDTO.getUpdatedAt() != null ? sectionDTO.getUpdatedAt() : LocalDateTime.now());
+            existingSection.setNeedsStepikSync(false);
             return sectionRepository.save(existingSection);
         }
         else return sectionService.createSectionFromDTO(sectionDTO);
@@ -128,6 +130,7 @@ public class StepikFullCourseSaveService {
                         .orElseThrow(() -> new org.core.exception.exceptions.SectionNotFoundException("Section not found")));
             }
             existingLesson.setUpdatedAt(lessonDTO.getUpdatedAt() != null ? lessonDTO.getUpdatedAt() : LocalDateTime.now());
+            existingLesson.setNeedsStepikSync(false);
             return lessonRepository.save(existingLesson);
         }
         else return lessonService.createLessonFromDTO(lessonDTO);
@@ -148,6 +151,7 @@ public class StepikFullCourseSaveService {
                         .orElseThrow(() -> new org.core.exception.exceptions.LessonNotFoundException("Lesson not found")));
             }
             existingStep.setUpdatedAt(stepDTO.getUpdatedAt() != null ? stepDTO.getUpdatedAt() : LocalDateTime.now());
+            existingStep.setNeedsStepikSync(false);
             return stepRepository.save(existingStep);
         }
         else return stepService.createStepFromDTO(stepDTO);

@@ -21,6 +21,7 @@ public class FullCourseResponseDTO {
     private Long stepikCourseId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean needsStepikSync;
 
     private List<SectionResponseDTO> models;
     private List<LessonResponseDTO> lessons;

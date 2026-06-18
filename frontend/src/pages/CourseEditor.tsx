@@ -46,6 +46,10 @@ import { extractApiErrorMessage } from '../utils/apiError';
 import type { Model, Lesson, Step, StepType, UpdateStepDTO, StepikBlockRequest } from '../types';
 import { getStepDisplayType, getStepBlockName } from '../types';
 import { stepMatchesStepik, getStepDiff, type StepDiffInfo } from '../utils/stepikCompare';
+import {
+  hasPendingStepikUploads,
+  stepNeedsUpload,
+} from '../utils/stepikSyncStatus';
 import { stepTypeToAIString, EDIT_TASK_BLOCK_NAMES } from './CourseEditor/types';
 import { CreateModelModal, CreateLessonModal, CreateStepModal, StepViewModal, StepTypeChangeModal, StepDiffModal } from './CourseEditor/modals';
 import { ModelsColumn, LessonsColumn, StepsColumn } from './CourseEditor/columns';
@@ -79,15 +83,10 @@ export function CourseEditor() {
     removeStep,
     reorderSteps,
     updateStep,
-    unsyncedSteps,
-    unsyncedLessons,
-    unsyncedSections,
+    updateCourse,
     lessonsWithNewSteps,
     sectionsWithNewSteps,
-    markStepAsUnsynced,
-    markModelAsUnsynced,
     markModelAsSynced,
-    markLessonAsUnsynced,
     markLessonAsSynced,
     markStepAsSynced,
     saveSyncedModelPositions,
@@ -291,6 +290,26 @@ export function CourseEditor() {
   useEffect(() => {
     saveStepsDiffDetailsToStorage(stepsDiffDetails);
   }, [stepsDiffDetails, courseId]);
+
+  const applyStepUpdate = (updatedStep: Step) => {
+    updateStep(updatedStep);
+    if (updatedStep.stepikStepId) {
+      setStepsDiffersFromStepik((prev) => {
+        const next = new Set(prev);
+        if (updatedStep.needsStepikSync) {
+          next.add(updatedStep.id);
+        } else {
+          next.delete(updatedStep.id);
+        }
+        return next;
+      });
+    }
+    if (selectedCourse && updatedStep.needsStepikSync) {
+      const patched = { ...selectedCourse, fullySynced: false };
+      setSelectedCourse(patched);
+      updateCourse(patched);
+    }
+  };
 
   useEffect(() => {
     const loadCourse = async () => {
@@ -612,7 +631,7 @@ export function CourseEditor() {
         lessonSteps.forEach(step => {
           if (step.stepikStepId) {
             const updatedStep = { ...step, stepikStepId: undefined };
-            updateStep(updatedStep);
+            applyStepUpdate(updatedStep);
           }
         });
       });
@@ -665,7 +684,7 @@ export function CourseEditor() {
       lessonSteps.forEach(step => {
         if (step.stepikStepId) {
           const updatedStep = { ...step, stepikStepId: undefined };
-          updateStep(updatedStep);
+          applyStepUpdate(updatedStep);
         }
       });
       
@@ -705,7 +724,7 @@ export function CourseEditor() {
       
       // Обновляем локальное состояние
       const updatedStep = { ...step, stepikStepId: undefined };
-      updateStep(updatedStep);
+      applyStepUpdate(updatedStep);
       setStepsDiffersFromStepik((prev) => {
         const next = new Set(prev);
         next.delete(stepId);
@@ -812,10 +831,9 @@ export function CourseEditor() {
       };
 
       const updatedStep = await stepsApi.updateStep(updateData);
-      updateStep(updatedStep);
+      applyStepUpdate(updatedStep);
       
       if (selectedStep.stepikStepId && selectedModel) {
-        markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
       }
       
       toast.success('Контент шага обновлен!');
@@ -912,9 +930,8 @@ export function CourseEditor() {
         if (!isNaN(n)) payload.cost = n;
       }
       const updatedStep = await stepsApi.updateStep(payload);
-      updateStep(updatedStep);
+      applyStepUpdate(updatedStep);
       if (selectedStep.stepikStepId && selectedModel) {
-        markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
       }
       toast.success('Задача по программированию обновлена');
       setIsCodeStepEditModalOpen(false);
@@ -993,9 +1010,8 @@ export function CourseEditor() {
         if (!isNaN(n)) payload.cost = n;
       }
       const updatedStep = await stepsApi.updateStep(payload);
-      updateStep(updatedStep);
+      applyStepUpdate(updatedStep);
       if (selectedStep.stepikStepId && selectedModel) {
-        markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
       }
       toast.success('Задание обновлено');
       setIsChoiceEditModalOpen(false);
@@ -1098,9 +1114,8 @@ export function CourseEditor() {
         if (!isNaN(n)) payload.cost = n;
       }
       const updatedStep = await stepsApi.updateStep(payload);
-      updateStep(updatedStep);
+      applyStepUpdate(updatedStep);
       if (selectedStep.stepikStepId && selectedModel) {
-        markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
       }
       toast.success('Задание обновлено');
       setIsMatchingEditModalOpen(false);
@@ -1152,9 +1167,8 @@ export function CourseEditor() {
         if (!isNaN(n)) payload.cost = n;
       }
       const updatedStep = await stepsApi.updateStep(payload);
-      updateStep(updatedStep);
+      applyStepUpdate(updatedStep);
       if (selectedStep.stepikStepId && selectedModel) {
-        markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
       }
       toast.success('Задание обновлено');
       setIsTextEditModalOpen(false);
@@ -1235,8 +1249,7 @@ export function CourseEditor() {
         if (!isNaN(n)) payload.cost = n;
       }
       const updatedStep = await stepsApi.updateStep(payload);
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsFreeAnswerEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -1297,8 +1310,7 @@ export function CourseEditor() {
         content: mathEditData.text,
         stepikBlock: block,
       });
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsMathEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -1344,8 +1356,7 @@ export function CourseEditor() {
         content: numberEditData.text,
         stepikBlock: block,
       });
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsNumberEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -1392,8 +1403,7 @@ export function CourseEditor() {
         content: sortingEditData.text,
         stepikBlock: block,
       });
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsSortingEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -1454,8 +1464,7 @@ export function CourseEditor() {
         if (!isNaN(n)) payload.cost = n;
       }
       const updatedStep = await stepsApi.updateStep(payload);
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsStringEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -1598,8 +1607,7 @@ export function CourseEditor() {
         content: fillBlanksEditData.text,
         stepikBlock: block,
       });
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsFillBlanksEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -1674,8 +1682,7 @@ export function CourseEditor() {
         if (!isNaN(n)) payload.cost = n;
       }
       const updatedStep = await stepsApi.updateStep(payload);
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsTableEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -1727,8 +1734,7 @@ export function CourseEditor() {
         content: randomTasksEditData.text,
         stepikBlock: block,
       });
-      updateStep(updatedStep);
-      if (selectedStep.stepikStepId && selectedModel) markStepAsUnsynced(selectedStep.id, selectedStep.lessonId, selectedModel.id);
+      applyStepUpdate(updatedStep);
       toast.success('Задание обновлено');
       setIsRandomTasksEditModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -2044,7 +2050,7 @@ export function CourseEditor() {
         sessionId
       );
       
-      updateStep(updatedStep);
+      applyStepUpdate(updatedStep);
       toast.success('Тип шага изменен! AI создал новую структуру шага.', { id: 'change-step-type' });
       setIsStepTypeChangeModalOpen(false);
       setIsStepViewModalOpen(false);
@@ -2059,46 +2065,27 @@ export function CourseEditor() {
     }
   };
 
-  const isStepUnsynced = (step: Step): boolean => {
-    return step.stepikStepId !== undefined && step.stepikStepId !== null && unsyncedSteps.has(step.id);
-  };
+  const isStepUnsynced = (step: Step): boolean => stepNeedsUpload(step) && Boolean(step.stepikStepId);
 
-  const isLessonUnsynced = (lesson: Lesson): boolean => {
-    // Урок оранжевый, если в нём есть невыгруженный шаг
-    // или сам урок был изменён после синхронизации со Stepik.
-    return (
-      lessonsWithNewSteps.has(lesson.id) ||
-      (lesson.stepikLessonId !== undefined && lesson.stepikLessonId !== null && unsyncedLessons.has(lesson.id))
-    );
-  };
+  const isLessonUnsynced = (lesson: Lesson): boolean =>
+    lessonsWithNewSteps.has(lesson.id) || (Boolean(lesson.stepikLessonId) && Boolean(lesson.needsStepikSync));
 
-  const isModelUnsynced = (section: Model): boolean => {
-    // Модуль оранжевый, если в одном из его уроков есть невыгруженный шаг
-    // или сам модуль был изменён после синхронизации.
-    return (
-      sectionsWithNewSteps.has(section.id) ||
-      (section.stepikSectionId !== undefined && section.stepikSectionId !== null && unsyncedSections.has(section.id))
-    );
-  };
+  const isModelUnsynced = (section: Model): boolean =>
+    sectionsWithNewSteps.has(section.id) || (Boolean(section.stepikSectionId) && Boolean(section.needsStepikSync));
 
-  // Есть ли в курсе что-то невыгруженное/несинхронизированное (для индикатора в шапке).
-  const hasUnsyncedContent =
-    sectionsWithNewSteps.size > 0 ||
-    lessonsWithNewSteps.size > 0 ||
-    unsyncedSections.size > 0 ||
-    unsyncedLessons.size > 0 ||
-    unsyncedSteps.size > 0;
+  const hasUnsyncedContent = hasPendingStepikUploads({
+    course: selectedCourse ?? undefined,
+    sections,
+    lessons,
+    steps,
+  });
 
   const handleUpdateModelTitle = async (id: number, title: string) => {
     const section = sections.find((s) => s.id === id);
     if (!section) return;
     try {
-      await sectionsApi.updateSection({ sectionId: id, title });
-      updateModel({ ...section, title, needsSync: true });
-      // Помечаем модуль как требующий синхронизации, если он синхронизирован со Stepik
-      if (section.stepikSectionId) {
-        markModelAsUnsynced(id);
-      }
+      const updated = await sectionsApi.updateSection({ sectionId: id, title });
+      updateModel(updated);
       toast.success('Название модуля обновлено');
     } catch (error) {
       console.error('Failed to update section title:', error);
@@ -2110,12 +2097,8 @@ export function CourseEditor() {
     const lesson = lessons.find((l) => l.id === id);
     if (!lesson) return;
     try {
-      await lessonsApi.updateLesson({ lessonId: id, title });
-      updateLesson({ ...lesson, title, needsSync: true });
-      // Помечаем урок и его модуль как требующие синхронизации, если урок синхронизирован со Stepik
-      if (lesson.stepikLessonId) {
-        markLessonAsUnsynced(id, lesson.sectionId);
-      }
+      const updated = await lessonsApi.updateLesson({ lessonId: id, title });
+      updateLesson(updated);
       toast.success('Название урока обновлено');
     } catch (error) {
       console.error('Failed to update lesson title:', error);

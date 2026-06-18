@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.core.annotation.RequiresStepikToken;
@@ -122,10 +123,31 @@ public class StepikStepService {
     }
 
     @RequiresStepikToken
+    @Transactional(readOnly = true)
     public StepikStepSourceResponse updateStep(Long stepikStepId) {
-        Step step = stepRepository.findByStepikStepId(stepikStepId);
+        Step step = stepRepository.findWithLessonByStepikStepId(stepikStepId)
+                .orElseThrow(() -> new StepikStepIntegrationException(
+                        "Step not found for Stepik step ID: " + stepikStepId));
+        return updateStepWithStepikToken(step);
+    }
 
-        StepikStepSourceRequest request = new StepikStepSourceRequest(stepikStepSourceDataRequestBuilder.createRequestDataForUpdate(step));
+    @RequiresStepikToken
+    public StepikStepSourceResponse updateStep(Step step) {
+        return updateStepWithStepikToken(step);
+    }
+
+    private StepikStepSourceResponse updateStepWithStepikToken(Step step) {
+        if (step.getStepikStepId() == null) {
+            throw new StepikStepIntegrationException("Step must have stepikStepId for update");
+        }
+        if (step.getLesson() == null || step.getLesson().getStepikLessonId() == null) {
+            throw new StepikStepIntegrationException(
+                    "Lesson must be synced with Stepik before updating step ID: " + step.getId());
+        }
+
+        Long stepikStepId = step.getStepikStepId();
+        StepikStepSourceRequest request = new StepikStepSourceRequest(
+                stepikStepSourceDataRequestBuilder.createRequestDataForUpdate(step));
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
 

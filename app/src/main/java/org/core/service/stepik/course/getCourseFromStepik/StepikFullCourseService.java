@@ -50,6 +50,7 @@ public class StepikFullCourseService {
                 .stepikCourseId(stepikCourseResponseData.getId())
                 .createdAt(existingCreatedAt)
                 .updatedAt(existingUpdatedAt)
+                .needsStepikSync(false)
                 .models(sectionResponseDTOS)
                 .lessons(lessonsResponseDTOS)
                 .steps(stepResponseDTOS)
@@ -61,6 +62,7 @@ public class StepikFullCourseService {
             fullCourseResponseDTO.setId(savedCourse.getId());
             fullCourseResponseDTO.setCreatedAt(savedCourse.getCreatedAt());
             fullCourseResponseDTO.setUpdatedAt(savedCourse.getUpdatedAt());
+            fullCourseResponseDTO.setNeedsStepikSync(savedCourse.isNeedsStepikSync());
         }
         return fullCourseResponseDTO;
     }

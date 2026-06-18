@@ -54,6 +54,7 @@ public class CourseService {
                 .stepikCourseId(courseResponseDTO.getStepikCourseId())
                 .createdAt(courseResponseDTO.getCreatedAt())
                 .updatedAt(courseResponseDTO.getUpdatedAt())
+                .needsStepikSync(courseResponseDTO.isNeedsStepikSync())
                 .build();
         return courseRepository.save(course);
     }
@@ -80,11 +81,17 @@ public class CourseService {
 
     public CourseResponseDTO updateCourse(UpdateCourseDTO updateDTO){
         Course course = findCourseByCourseId(updateDTO.getId());
+        boolean contentChanged = false;
         if(updateDTO.getTitle() != null && !updateDTO.getTitle().equals(course.getTitle())){
             course.setTitle(updateDTO.getTitle());
+            contentChanged = true;
         }
         if(updateDTO.getDescription() != null && !updateDTO.getDescription().equals(course.getDescription())){
             course.setDescription(updateDTO.getDescription());
+            contentChanged = true;
+        }
+        if (course.getStepikCourseId() != null && contentChanged) {
+            course.setNeedsStepikSync(true);
         }
         Course savedCourse = courseRepository.save(course);
         return mapToResponseDTO(savedCourse);
@@ -99,9 +106,19 @@ public class CourseService {
     public CourseResponseDTO updateCourseStepikId(Long courseId, Long stepikCourseId) {
         Course course = findCourseByCourseId(courseId);
         course.setStepikCourseId(stepikCourseId);
+        course.setNeedsStepikSync(false);
         Course savedCourse = courseRepository.save(course);
         log.info("Updated course ID: {} with Stepik course ID: {}", courseId, stepikCourseId);
         return mapToResponseDTO(savedCourse);
+    }
+
+    public void clearNeedsStepikSync(Long courseId) {
+        Course course = findCourseByCourseId(courseId);
+        if (course.isNeedsStepikSync()) {
+            course.setNeedsStepikSync(false);
+            courseRepository.save(course);
+            log.info("Cleared needsStepikSync for course ID: {}", courseId);
+        }
     }
 
     public CourseResponseDTO updateCourseStepikCaptchaToken(Long courseId, String captchaToken) {
@@ -127,18 +144,21 @@ public class CourseService {
                 .createdAt(course.getCreatedAt())
                 .updatedAt(course.getUpdatedAt())
                 .fullySynced(isFullySynced(course))
+                .needsStepikSync(course.isNeedsStepikSync())
                 .build();
     }
 
     private boolean isFullySynced(Course course){
-        if (course.getStepikCourseId() == null) {
+        if (course.getStepikCourseId() == null || course.isNeedsStepikSync()) {
             return false;
         }
         return course.getSections().stream().allMatch(section ->
-                section.getStepikSectionId() != null &&
+                section.getStepikSectionId() != null && !section.isNeedsStepikSync() &&
                 section.getLessons().stream().allMatch(lesson ->
-                        lesson.getStepikLessonId() != null &&
-                        lesson.getSteps().stream().allMatch(step -> step.getStepikStepId() != null)
+                        lesson.getStepikLessonId() != null && !lesson.isNeedsStepikSync() &&
+                        lesson.getSteps().stream().allMatch(step ->
+                                step.getStepikStepId() != null && !step.isNeedsStepikSync()
+                        )
                 )
         );
     }

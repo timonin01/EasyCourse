@@ -41,15 +41,18 @@ public class UpdateStepikStepService {
             stepRepository.incrementPositionsFromTo(lessonId, newPosition, oldPosition - 1);
             shiftStepsDownInStepik(stepsByLesson, newPosition, oldPosition - 1);
             stepService.updateStep(createUpdateDTO(step.getId(), newPosition));
-            stepikStepService.updateStep(step.getStepikStepId());
+            step.setPosition(newPosition);
+            stepikStepService.updateStep(step);
         } else if (newPosition > oldPosition) {
             stepRepository.decrementPositionsFromTo(lessonId, oldPosition + 1, newPosition);
             shiftStepsUpInStepik(stepsByLesson, oldPosition + 1, newPosition);
             stepService.updateStep(createUpdateDTO(step.getId(), newPosition));
-            stepikStepService.updateStep(step.getStepikStepId());
+            step.setPosition(newPosition);
+            stepikStepService.updateStep(step);
         } else {
             stepService.updateStep(createUpdateDTO(step.getId(), newPosition));
-            stepikStepService.updateStep(step.getStepikStepId());
+            step.setPosition(newPosition);
+            stepikStepService.updateStep(step);
         }
 
         return stepikStepService.getStepikStepById(step.getStepikStepId());

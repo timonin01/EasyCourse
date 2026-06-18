@@ -43,6 +43,8 @@ export interface Course {
   updatedAt: string;
   /** true, если курс и всё его содержимое выгружены на Stepik */
   fullySynced?: boolean;
+  /** локальные изменения, требующие update в Stepik */
+  needsStepikSync?: boolean;
 }
 
 export interface CreateCourseDTO {
@@ -67,7 +69,7 @@ export interface Model {
   stepikSectionId?: number;
   createdAt: string;
   updatedAt: string;
-  needsSync?: boolean;
+  needsStepikSync?: boolean;
 }
 
 export interface CreateModelDTO {
@@ -93,7 +95,7 @@ export interface Lesson {
   stepikLessonId?: number;
   createdAt: string;
   updatedAt: string;
-  needsSync?: boolean;
+  needsStepikSync?: boolean;
 }
 
 export interface CreateLessonDTO {
@@ -136,7 +138,7 @@ export interface Step {
   stepikStepId?: number;
   createdAt: string;
   updatedAt: string;
-  needsSync?: boolean;
+  needsStepikSync?: boolean;
 }
 
 export interface ChangeStepTypeDTO {

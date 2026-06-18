@@ -55,6 +55,7 @@ public class SectionService {
                 .stepikSectionId(sectionResponseDTO.getStepikSectionId())
                 .createdAt(sectionResponseDTO.getCreatedAt())
                 .updatedAt(sectionResponseDTO.getUpdatedAt())
+                .needsStepikSync(sectionResponseDTO.isNeedsStepikSync())
                 .build();
         return sectionRepository.save(section);
     }
@@ -81,14 +82,21 @@ public class SectionService {
 
     public SectionResponseDTO updateSection(UpdateSectionDTO updateDTO){
         Section section = findSectionBySectionId(updateDTO.getSectionId());
-        if(updateDTO.getTitle() != null){
+        boolean contentChanged = false;
+        if(updateDTO.getTitle() != null && !updateDTO.getTitle().equals(section.getTitle())){
             section.setTitle(updateDTO.getTitle());
+            contentChanged = true;
         }
-        if(updateDTO.getDescription() != null){
+        if(updateDTO.getDescription() != null && !updateDTO.getDescription().equals(section.getDescription())){
             section.setDescription(updateDTO.getDescription());
+            contentChanged = true;
         }
         if (updateDTO.getPosition() != null && !updateDTO.getPosition().equals(section.getPosition())){
             changeLessonPosition(section,updateDTO.getPosition());
+            contentChanged = true;
+        }
+        if (section.getStepikSectionId() != null && contentChanged) {
+            section.setNeedsStepikSync(true);
         }
         Section savedSection = sectionRepository.save(section);
         log.info("Updated section with ID: {}", updateDTO.getSectionId());
@@ -109,9 +117,19 @@ public class SectionService {
     public void updateSectionStepikSectionId(Long sectionId, Long stepikSectionId) {
         Section section = findSectionBySectionId(sectionId);
         section.setStepikSectionId(stepikSectionId);
+        section.setNeedsStepikSync(false);
         Section savedSection = sectionRepository.save(section);
         log.info("Updated section ID: {} with Stepik section ID: {}", sectionId, stepikSectionId);
         mapToResponseDTO(savedSection);
+    }
+
+    public void clearNeedsStepikSync(Long sectionId) {
+        Section section = findSectionBySectionId(sectionId);
+        if (section.isNeedsStepikSync()) {
+            section.setNeedsStepikSync(false);
+            sectionRepository.save(section);
+            log.info("Cleared needsStepikSync for section ID: {}", sectionId);
+        }
     }
 
     private Section findSectionBySectionId(Long sectionId){
@@ -154,6 +172,7 @@ public class SectionService {
                 .stepikSectionId(section.getStepikSectionId())
                 .createdAt(section.getCreatedAt())
                 .updatedAt(section.getUpdatedAt())
+                .needsStepikSync(section.isNeedsStepikSync())
                 .build();
     }
 

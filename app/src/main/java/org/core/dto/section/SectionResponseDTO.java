@@ -19,5 +19,6 @@ public class SectionResponseDTO {
     private Long stepikSectionId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean needsStepikSync;
 
 }

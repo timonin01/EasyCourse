@@ -38,6 +38,10 @@ public class Lesson {
     @Column(name = "stepik_lesson_id")
     private Long stepikLessonId;
 
+    @Column(name = "needs_stepik_sync", nullable = false)
+    @Builder.Default
+    private boolean needsStepikSync = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

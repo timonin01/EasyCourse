@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface StepRepository extends JpaRepository<Step, Long> {
@@ -15,6 +16,9 @@ public interface StepRepository extends JpaRepository<Step, Long> {
     List<Step> findByLessonIdOrderByPositionAsc(Long lessonId);
     
     Step findByStepikStepId(Long stepikStepId);
+
+    @Query("SELECT s FROM Step s JOIN FETCH s.lesson WHERE s.stepikStepId = :stepikStepId")
+    Optional<Step> findWithLessonByStepikStepId(@Param("stepikStepId") Long stepikStepId);
 
     @Query("SELECT MAX(s.position) FROM Step s WHERE s.lesson.id = :lessonId")
     Integer findMaxPositionByLessonId(@Param("lessonId") Long lessonId);

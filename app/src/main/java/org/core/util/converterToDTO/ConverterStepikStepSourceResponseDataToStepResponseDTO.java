@@ -41,7 +41,8 @@ public class ConverterStepikStepSourceResponseDataToStepResponseDTO {
                 .cost(stepikStep.getCost() != null ? stepikStep.getCost() : 0L)
                 .stepikStepId(stepikStep.getId())
                 .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now());
+                .updatedAt(LocalDateTime.now())
+                .needsStepikSync(false);
 
         if (stepikStep.getBlock() != null) {
             StepType stepType = qualifiedStepTypeFromBlock(stepikStep.getBlock());

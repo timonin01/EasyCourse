@@ -65,6 +65,7 @@ public class StepikLessonSyncService {
             Lesson lesson = mapToLesson(lessonDTO);
             stepikLessonService.updateLesson(lesson.getStepikLessonId());
             stepikUnitService.updateUnitPosition(unitData.getId(), currentDbPosition, unitData);
+            lessonService.clearNeedsStepikSync(lessonId);
             return stepikLessonService.getLessonByStepikId(lessonDTO.getStepikLessonId());
         }
         
@@ -72,7 +73,9 @@ public class StepikLessonSyncService {
         lesson.setPosition(currentStepikPosition);
 
         try {
-            return updateStepikLessonService.performStepikPositionShift(lesson, lessonDTO.getSectionId(), currentDbPosition);
+            StepikLessonResponseData result = updateStepikLessonService.performStepikPositionShift(lesson, lessonDTO.getSectionId(), currentDbPosition);
+            lessonService.clearNeedsStepikSync(lessonId);
+            return result;
         } catch (StepikLessonIntegrationException e) {
             log.error("Error updating lesson in Stepik : {}", e.getMessage());
             throw new StepikLessonIntegrationException("Failed to update lesson in Stepik: " + e.getMessage());
