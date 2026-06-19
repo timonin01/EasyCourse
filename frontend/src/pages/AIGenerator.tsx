@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw, Pencil, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
@@ -146,43 +146,56 @@ export function AIGenerator() {
   const promptMaxLength =
     mode === 'chat' ? AI_PROMPT_LIMITS.chat : AI_PROMPT_LIMITS.generate;
 
-  useEffect(() => {
-    const loadAllLessons = async () => {
-      if (!user?.id) return;
-      
-      setIsLoadingLessons(true);
-      try {
-        const courses = await coursesApi.getUserCourses(user.id);
-        const allLessonsWithContext: Array<Lesson & { modelTitle?: string; courseTitle?: string }> = [];
-        
-        for (const course of courses) {
-          const sections = await sectionsApi.getCourseSections(course.id);
-          
-          for (const section of sections) {
-            const lessons = await lessonsApi.getSectionLessons(section.id);
-            
-            for (const lesson of lessons) {
-              allLessonsWithContext.push({
-                ...lesson,
-                modelTitle: section.title,
-                courseTitle: course.title,
-              });
-            }
+  const loadAllLessons = useCallback(async (showSuccessToast = false) => {
+    if (!user?.id) return;
+
+    setIsLoadingLessons(true);
+    try {
+      const courses = await coursesApi.getUserCourses(user.id);
+      const allLessonsWithContext: Array<Lesson & { modelTitle?: string; courseTitle?: string }> = [];
+
+      for (const course of courses) {
+        const sections = await sectionsApi.getCourseSections(course.id);
+
+        for (const section of sections) {
+          const lessons = await lessonsApi.getSectionLessons(section.id);
+
+          for (const lesson of lessons) {
+            allLessonsWithContext.push({
+              ...lesson,
+              modelTitle: section.title,
+              courseTitle: course.title,
+            });
           }
         }
-        
-        setAllLessons(allLessonsWithContext);
-      } catch (error) {
-        console.error('Failed to load lessons:', error);
-      } finally {
-        setIsLoadingLessons(false);
       }
-    };
-    
-    if (allLessons.length === 0) {
-      loadAllLessons();
+
+      setAllLessons(allLessonsWithContext);
+      if (showSuccessToast) {
+        toast.success('Список уроков обновлен');
+      }
+    } catch (error) {
+      console.error('Failed to load lessons:', error);
+      if (showSuccessToast) {
+        toast.error('Не удалось загрузить уроки');
+      }
+    } finally {
+      setIsLoadingLessons(false);
     }
-  }, [user?.id, allLessons.length, setAllLessons]);
+  }, [user?.id, setAllLessons]);
+
+  useEffect(() => {
+    void loadAllLessons();
+  }, [loadAllLessons]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void loadAllLessons();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadAllLessons]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -546,37 +559,8 @@ export function AIGenerator() {
     }
   };
 
-  const handleRefreshLessons = async () => {
-    if (!user?.id) return;
-    
-    setIsLoadingLessons(true);
-    try {
-      const courses = await coursesApi.getUserCourses(user.id);
-      const allLessonsWithContext: Array<Lesson & { modelTitle?: string; courseTitle?: string }> = [];
-      
-      for (const course of courses) {
-        const sections = await sectionsApi.getCourseSections(course.id);
-        
-        for (const section of sections) {
-          const lessons = await lessonsApi.getSectionLessons(section.id);
-          
-          for (const lesson of lessons) {
-            allLessonsWithContext.push({
-              ...lesson,
-              modelTitle: section.title,
-              courseTitle: course.title,
-            });
-          }
-        }
-      }
-      
-      setAllLessons(allLessonsWithContext);
-      toast.success('Список уроков обновлен');
-    } catch (error) {
-      toast.error('Не удалось загрузить уроки');
-    } finally {
-      setIsLoadingLessons(false);
-    }
+  const handleRefreshLessons = () => {
+    void loadAllLessons(true);
   };
 
   // Batch generation handlers

@@ -1,9 +1,11 @@
 import axios from 'axios';
+import { API_TIMEOUT_MS } from '../config/api';
 
 const API_BASE_URL = '/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },

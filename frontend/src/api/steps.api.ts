@@ -1,4 +1,5 @@
 import api from './axios';
+import { aiRequestConfig } from '../config/api';
 import type {
   Step,
   CreateStepDTO,
@@ -33,7 +34,9 @@ export const stepsApi = {
 
   changeStepType: async (stepId: number, newStepType: StepType, sessionId: string): Promise<Step> => {
     const response = await api.put<Step>(
-      `/v1/steps/change-stepType?stepId=${stepId}&newStepType=${newStepType}&sessionId=${sessionId}`
+      `/v1/steps/change-stepType?stepId=${stepId}&newStepType=${newStepType}&sessionId=${sessionId}`,
+      undefined,
+      aiRequestConfig
     );
     return response.data;
   },
