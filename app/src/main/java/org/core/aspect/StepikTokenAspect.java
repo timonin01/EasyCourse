@@ -40,7 +40,6 @@ public class StepikTokenAspect {
                 throw new RuntimeException("No OAuth configuration found for user: " + userId + 
                         ". Please configure Stepik OAuth credentials.");
             }
-            
             return joinPoint.proceed();
         } catch (Exception e) {
             log.error("Failed to get Stepik access token for user: {} before executing method: {}", 

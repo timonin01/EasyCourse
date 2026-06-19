@@ -2283,7 +2283,12 @@ export function CourseEditor() {
         canChangeStepType={canChangeStepType}
         canEditTask={selectedStep ? (EDIT_TASK_BLOCK_NAMES as readonly string[]).includes(getStepBlockName(selectedStep)) : false}
         isCodeBlock={selectedStep ? getStepBlockName(selectedStep) === 'code' : false}
-        onOpenStepTypeChange={() => selectedStep && (handleOpenStepTypeChange(selectedStep), setIsStepViewModalOpen(false))}
+        onOpenStepTypeChange={() => {
+          if (!selectedStep) return;
+          handleOpenStepTypeChange(selectedStep);
+          setIsStepViewModalOpen(false);
+        }}
+        onProStepTypeAttempt={() => toast.error(STEP_TYPE_CHANGE_PRO_MESSAGE)}
         onEditTask={() => {
           if (!selectedStep) return;
           const blockName = getStepBlockName(selectedStep);

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw, Pencil, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, Textarea, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
+import { Button, Card, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
 import { StepView } from '../components/StepView';
 import { StepikBlockEditModal } from '../components/steps/StepikBlockEditModal';
@@ -1067,41 +1067,53 @@ export function AIGenerator() {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-dark-700 flex-shrink-0 min-w-0 overflow-x-hidden">
-              <div className="flex gap-2 items-end min-w-0">
-                <Textarea
-                  placeholder={mode === 'chat' 
-                    ? "Напишите сообщение..." 
-                    : "Опишите шаг, который хотите создать..."
-                  }
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  rows={2}
-                  className="flex-1 min-w-0 resize-none"
-                  maxLength={promptMaxLength}
-                  showCount
-                />
-                {/* LLM Model Selection - visible in chat and generate modes */}
-                {(mode === 'chat' || mode === 'generate') && (
-                  <div className="w-52 flex-shrink-0">
-                    <LlmModelSelect
-                      label="Модель"
-                      value={selectedLlmModel}
-                      onChange={setSelectedLlmModel}
-                      className="h-11"
-                      canSelectModel={canSelectModel}
-                      onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
-                    />
+            <div className="p-4 flex-shrink-0 min-w-0 overflow-x-hidden">
+              <div className="space-y-1.5">
+                <div className="flex justify-end">
+                  <span
+                    className={`text-xs ${
+                      input.length >= promptMaxLength ? 'text-amber-400' : 'text-dark-500'
+                    }`}
+                  >
+                    {input.length}/{promptMaxLength}
+                  </span>
+                </div>
+                <div className="flex min-h-[7rem] flex-col rounded-xl border border-dark-600 bg-dark-800/80 transition-all duration-200 hover:border-dark-500 focus-within:border-primary-500/50 focus-within:ring-2 focus-within:ring-primary-500/50">
+                  <textarea
+                    placeholder={
+                      mode === 'chat'
+                        ? 'Напишите сообщение...'
+                        : 'Опишите шаг, который хотите создать...'
+                    }
+                    value={input}
+                    onChange={(e) => setInput(clampPromptLength(e.target.value, promptMaxLength))}
+                    onKeyDown={handleKeyPress}
+                    rows={4}
+                    maxLength={promptMaxLength}
+                    className="block min-h-[4.5rem] max-h-40 w-full flex-1 resize-none overflow-y-auto bg-transparent px-4 pt-3 pb-2 text-dark-100 placeholder-dark-500 focus:outline-none scrollbar-thin scrollbar-thumb-dark-700 scrollbar-track-transparent"
+                  />
+                  <div className="flex flex-shrink-0 items-center justify-between gap-2 px-2 pb-2 pt-2">
+                    {(mode === 'chat' || mode === 'generate') && (
+                      <div className="w-40 min-w-0 sm:w-44">
+                        <LlmModelSelect
+                          value={selectedLlmModel}
+                          onChange={setSelectedLlmModel}
+                          menuPlacement="top"
+                          className="h-9 border-dark-600/80 bg-dark-700/60 py-1.5"
+                          canSelectModel={canSelectModel}
+                          onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
+                        />
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleSend}
+                      disabled={!input.trim() || isLoading}
+                      className="ml-auto h-9 w-9 flex-shrink-0"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
                   </div>
-                )}
-                <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
-                  className="h-11 w-11 flex-shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
+                </div>
               </div>
             </div>
           </Card>
