@@ -796,7 +796,7 @@ export function AIGenerator() {
 
   return (
     <MainLayout>
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)] min-h-0 overflow-x-hidden">
+      <div className="flex flex-col xl:flex-row gap-6 min-h-0 h-[calc(100dvh-7rem)] max-h-[calc(100dvh-7rem)] overflow-x-hidden">
         {/* Chat Section */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header */}
@@ -829,10 +829,10 @@ export function AIGenerator() {
           </div>
 
           {/* Mode Toggle */}
-          <div className="mb-4 flex gap-2 flex-shrink-0 min-w-0 overflow-x-hidden">
+          <div className="mb-4 flex gap-2 flex-shrink-0 min-w-0 overflow-x-auto scrollbar-thin scrollbar-thumb-dark-700">
             <button
               onClick={() => handleModeChange('chat')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`flex-1 min-w-[7.5rem] px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 mode === 'chat'
                   ? 'bg-primary-600 text-white'
                   : 'bg-dark-800 text-dark-400 hover:bg-dark-700'
@@ -842,7 +842,7 @@ export function AIGenerator() {
             </button>
             <button
               onClick={() => handleModeChange('generate')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`flex-1 min-w-[7.5rem] px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 mode === 'generate'
                   ? 'bg-primary-600 text-white'
                   : 'bg-dark-800 text-dark-400 hover:bg-dark-700'
@@ -852,7 +852,7 @@ export function AIGenerator() {
             </button>
             <button
               onClick={() => handleModeChange('batch')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`flex-1 min-w-[7.5rem] px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 mode === 'batch'
                   ? 'bg-primary-600 text-white'
                   : 'bg-dark-800 text-dark-400 hover:bg-dark-700'
@@ -1123,7 +1123,7 @@ export function AIGenerator() {
 
         {/* Preview Section - only in generate mode */}
         {mode === 'generate' && (
-          <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
+          <div className="w-full xl:w-72 2xl:w-80 xl:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] xl:max-h-none">
             <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">Предпросмотр</h2>
             <Card className="flex-1 overflow-auto min-h-0">
               {generatedStep && previewStep ? (
@@ -1227,7 +1227,7 @@ export function AIGenerator() {
 
         {/* Batch Settings Section - only in batch mode */}
         {mode === 'batch' && (
-          <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
+          <div className="w-full xl:w-72 2xl:w-80 xl:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] xl:max-h-none">
             <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">
               Настройки
             </h2>

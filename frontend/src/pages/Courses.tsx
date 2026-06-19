@@ -227,7 +227,7 @@ export function Courses() {
           )}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3">
           {filteredCourses.map((course) => (
             <CourseCard
               key={course.id}
