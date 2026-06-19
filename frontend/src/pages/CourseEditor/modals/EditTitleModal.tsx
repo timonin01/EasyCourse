@@ -1,6 +1,9 @@
 import { Modal, Button, Input } from '../../../components/ui';
 import { useState, useEffect, useRef } from 'react';
 import { Pencil } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { extractApiErrorMessage } from '../../../utils/apiError';
+import { validateTitle } from '../../../utils/validation';
 
 interface EditTitleModalProps {
   isOpen: boolean;
@@ -34,15 +37,23 @@ export function EditTitleModal({
 
   const handleSave = async () => {
     const trimmed = title.trim();
-    if (!trimmed || trimmed === currentTitle) {
+    if (trimmed === currentTitle) {
       onClose();
       return;
     }
+
+    const validationError = validateTitle(trimmed, `Название ${label}`);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setIsSaving(true);
     try {
       await onSave(trimmed);
       onClose();
     } catch (error) {
+      toast.error(extractApiErrorMessage(error, `Не удалось сохранить название ${label}`));
       console.error('Failed to save title:', error);
     } finally {
       setIsSaving(false);

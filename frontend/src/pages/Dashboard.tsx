@@ -54,9 +54,11 @@ export function Dashboard() {
   return (
     <MainLayout>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-dark-100">
-          Привет, <span className="gradient-text">{user?.name || 'Пользователь'}</span>! 👋
+      <div className="mb-8 min-w-0">
+        <h1 className="text-3xl font-bold text-dark-100 break-words">
+          Привет,{' '}
+          <span className="gradient-text break-words">{user?.name || 'Пользователь'}</span>
+          ! 👋
         </h1>
         <p className="text-dark-400 mt-2">
           {isNewUser

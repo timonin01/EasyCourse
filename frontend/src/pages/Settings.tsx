@@ -6,6 +6,8 @@ import { Card, Button, Input, Badge } from '../components/ui';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
+import { extractApiErrorMessage, getApiErrorStatus } from '../utils/apiError';
+import { validateEmail, validateUserName } from '../utils/validation';
 
 export function Settings() {
   const { user, updateUser } = useAuthStore();
@@ -50,18 +52,36 @@ export function Settings() {
 
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
+
+    const nameError = validateUserName(profileData.name);
+    if (nameError) {
+      toast.error(nameError);
+      return;
+    }
+
+    const emailError = validateEmail(profileData.email);
+    if (emailError) {
+      toast.error(emailError);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const updatedUser = await authApi.updateUser({
         userId: user.id,
-        name: profileData.name,
-        email: profileData.email,
+        name: profileData.name.trim(),
+        email: profileData.email.trim(),
       });
       updateUser(updatedUser);
       toast.success('Профиль обновлен!');
     } catch (error) {
-      toast.error('Не удалось обновить профиль');
+      const status = getApiErrorStatus(error);
+      if (status === 409) {
+        toast.error('Этот email уже используется другим аккаунтом');
+      } else {
+        toast.error(extractApiErrorMessage(error, 'Не удалось обновить профиль'));
+      }
       console.error('Update profile error:', error);
     } finally {
       setIsLoading(false);
@@ -91,7 +111,7 @@ export function Settings() {
       toast.success('Пароль обновлен!');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      toast.error('Не удалось обновить пароль');
+      toast.error(extractApiErrorMessage(error, 'Не удалось обновить пароль'));
       console.error('Update password error:', error);
     } finally {
       setIsLoading(false);

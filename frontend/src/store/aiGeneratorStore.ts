@@ -166,6 +166,7 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
         chatSessionId: state.chatSessionId,
         generateSessions: state.generateSessions,
         stepType: state.stepType,
+        selectedLessonId: state.selectedLessonId,
       }),
     }
   )

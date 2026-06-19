@@ -38,7 +38,6 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // Stepik OAuth2
     @Column(name = "stepik_client_id", length = 100)
     private String stepikClientId;
 

@@ -24,7 +24,7 @@ public class UserService {
 
     public UserResponseDTO createNewUser(CreateUserDTO createDto) {
         if (validationService.checkUserInDBByEmail(createDto.getEmail())) {
-            throw new UserAlreadyExistsException("User with email " + createDto.getEmail() + " already exists");
+            throw new UserAlreadyExistsException("Пользователь с email " + createDto.getEmail() + " уже зарегистрирован");
         }
         User user = new User();
         user.setName(createDto.getName());
@@ -61,7 +61,7 @@ public class UserService {
         }
         if(updateDTO.getEmail() != null && !updateDTO.getEmail().equals(user.getEmail())){
             if(validationService.checkUserInDBByEmail(updateDTO.getEmail())){
-                throw new UserAlreadyExistsException("User with email " + updateDTO.getEmail() + " already exists");
+                throw new UserAlreadyExistsException("Пользователь с email " + updateDTO.getEmail() + " уже зарегистрирован");
             }
             user.setEmail(updateDTO.getEmail());
         }

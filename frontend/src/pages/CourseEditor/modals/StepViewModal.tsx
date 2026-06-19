@@ -1,5 +1,6 @@
 import { Edit, Repeat, Sparkles, Code, Lock } from 'lucide-react';
-import { Modal, Button, Badge } from '../../../components/ui';
+import { clsx } from 'clsx';
+import { Modal, Button } from '../../../components/ui';
 import { StepView } from '../../../components/StepView';
 import { STEP_TYPE_CHANGE_PRO_MESSAGE } from '../../../constants/subscription';
 import type { Step } from '../../../types';
@@ -13,6 +14,7 @@ interface StepViewModalProps {
   canEditTask: boolean;
   isCodeBlock: boolean;
   onOpenStepTypeChange: () => void;
+  onProStepTypeAttempt?: () => void;
   onEditTask: () => void;
   onOpenContentEdit: () => void;
 }
@@ -26,6 +28,7 @@ export function StepViewModal({
   canEditTask,
   isCodeBlock,
   onOpenStepTypeChange,
+  onProStepTypeAttempt,
   onEditTask,
   onOpenContentEdit,
 }: StepViewModalProps) {
@@ -44,18 +47,27 @@ export function StepViewModal({
             {canChangeType && (
               <Button
                 variant="secondary"
-                onClick={onOpenStepTypeChange}
+                onClick={() => {
+                  if (!canChangeStepType) {
+                    onProStepTypeAttempt?.();
+                    return;
+                  }
+                  onOpenStepTypeChange();
+                }}
                 title={!canChangeStepType ? STEP_TYPE_CHANGE_PRO_MESSAGE : undefined}
-                className={!canChangeStepType ? 'opacity-80' : undefined}
+                className={clsx(
+                  !canChangeStepType &&
+                    'border-amber-500/30 bg-amber-500/5 text-amber-400/90 hover:bg-amber-500/10 hover:border-amber-500/40 hover:text-amber-300'
+                )}
               >
                 {canChangeStepType ? (
                   <Repeat className="w-4 h-4 mr-2" />
                 ) : (
-                  <Lock className="w-4 h-4 mr-2" />
+                  <Lock className="w-4 h-4 mr-2 text-amber-400" />
                 )}
                 Изменить тип
                 {!canChangeStepType && (
-                  <Badge variant="info" className="ml-2 text-xs">Pro</Badge>
+                  <span className="ml-2 text-xs font-medium text-amber-400/90">Pro</span>
                 )}
               </Button>
             )}

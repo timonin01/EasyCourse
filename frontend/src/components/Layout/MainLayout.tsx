@@ -95,8 +95,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main
         className={
           collapsed
-            ? 'min-h-screen pt-14 lg:pt-0'
-            : 'min-h-screen pt-14 lg:ml-64 lg:pt-0'
+            ? 'min-h-screen overflow-x-hidden pt-14 lg:pt-0'
+            : 'min-h-screen overflow-x-hidden pt-14 lg:ml-64 lg:pt-0'
         }
       >
         <div className="p-4 lg:p-8">{children}</div>

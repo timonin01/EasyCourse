@@ -1,4 +1,5 @@
 import api from './axios';
+import { aiRequestConfig } from '../config/api';
 import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory } from '../types';
 
 export const agentApi = {
@@ -10,6 +11,7 @@ export const agentApi = {
     }
     const response = await api.post<string>(`/agent/chat?${params}`, userInput, {
       headers: { 'Content-Type': 'text/plain' },
+      ...aiRequestConfig,
     });
     return response.data;
   },
@@ -50,7 +52,7 @@ export const agentApi = {
     const response = await api.post<StepikBlockRequest>(
       `/agent/generate-step?${params}`, 
       userInput,
-      { headers: { 'Content-Type': 'text/plain' } }
+      { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
     );
     return response.data;
   },
@@ -74,7 +76,8 @@ export const agentApi = {
       { 
         headers: { 
           'Content-Type': 'application/json'
-        } 
+        },
+        ...aiRequestConfig,
       }
     );
     return response.data;
@@ -91,7 +94,7 @@ export const agentApi = {
     const response = await api.post<BatchStepDTO>(
       `/agent/analyze-batch-request`,
       userInput,
-      { headers: { 'Content-Type': 'text/plain' } }
+      { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
     );
     return response.data;
   },
@@ -107,14 +110,14 @@ export const agentApi = {
       const response = await api.post<StepikBlockRequest[]>(
         `/agent/generate-batch-steps?sessionId=${sessionId}`,
         plan,
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { 'Content-Type': 'application/json' }, ...aiRequestConfig }
       );
       return response.data;
     } else {
       const response = await api.post<StepikBlockRequest[]>(
         `/agent/generate-batch-steps?sessionId=${sessionId}`,
         userInput,
-        { headers: { 'Content-Type': 'text/plain' } }
+        { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
       );
       return response.data;
     }
@@ -147,7 +150,7 @@ export const agentApi = {
 
   // Direct AI chat (without agent)
   directChat: async (message: string, aiName: 'DeepSeek' | 'YandexGPT' = 'YandexGPT'): Promise<string> => {
-    const response = await api.post<string>('/v1/ai/chat', { message, aiName });
+    const response = await api.post<string>('/v1/ai/chat', { message, aiName }, aiRequestConfig);
     return response.data;
   },
 };

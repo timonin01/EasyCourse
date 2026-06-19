@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Send, Sparkles, Trash2, Copy, Save, Bot, User, FolderOpen, RefreshCw, Pencil, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, Textarea, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
+import { Button, Card, Select, LlmModelSelect, Badge, Spinner } from '../components/ui';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
 import { StepView } from '../components/StepView';
 import { StepikBlockEditModal } from '../components/steps/StepikBlockEditModal';
@@ -146,43 +146,56 @@ export function AIGenerator() {
   const promptMaxLength =
     mode === 'chat' ? AI_PROMPT_LIMITS.chat : AI_PROMPT_LIMITS.generate;
 
-  useEffect(() => {
-    const loadAllLessons = async () => {
-      if (!user?.id) return;
-      
-      setIsLoadingLessons(true);
-      try {
-        const courses = await coursesApi.getUserCourses(user.id);
-        const allLessonsWithContext: Array<Lesson & { modelTitle?: string; courseTitle?: string }> = [];
-        
-        for (const course of courses) {
-          const sections = await sectionsApi.getCourseSections(course.id);
-          
-          for (const section of sections) {
-            const lessons = await lessonsApi.getSectionLessons(section.id);
-            
-            for (const lesson of lessons) {
-              allLessonsWithContext.push({
-                ...lesson,
-                modelTitle: section.title,
-                courseTitle: course.title,
-              });
-            }
+  const loadAllLessons = useCallback(async (showSuccessToast = false) => {
+    if (!user?.id) return;
+
+    setIsLoadingLessons(true);
+    try {
+      const courses = await coursesApi.getUserCourses(user.id);
+      const allLessonsWithContext: Array<Lesson & { modelTitle?: string; courseTitle?: string }> = [];
+
+      for (const course of courses) {
+        const sections = await sectionsApi.getCourseSections(course.id);
+
+        for (const section of sections) {
+          const lessons = await lessonsApi.getSectionLessons(section.id);
+
+          for (const lesson of lessons) {
+            allLessonsWithContext.push({
+              ...lesson,
+              modelTitle: section.title,
+              courseTitle: course.title,
+            });
           }
         }
-        
-        setAllLessons(allLessonsWithContext);
-      } catch (error) {
-        console.error('Failed to load lessons:', error);
-      } finally {
-        setIsLoadingLessons(false);
       }
-    };
-    
-    if (allLessons.length === 0) {
-      loadAllLessons();
+
+      setAllLessons(allLessonsWithContext);
+      if (showSuccessToast) {
+        toast.success('Список уроков обновлен');
+      }
+    } catch (error) {
+      console.error('Failed to load lessons:', error);
+      if (showSuccessToast) {
+        toast.error('Не удалось загрузить уроки');
+      }
+    } finally {
+      setIsLoadingLessons(false);
     }
-  }, [user?.id, allLessons.length, setAllLessons]);
+  }, [user?.id, setAllLessons]);
+
+  useEffect(() => {
+    void loadAllLessons();
+  }, [loadAllLessons]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void loadAllLessons();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadAllLessons]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -546,37 +559,8 @@ export function AIGenerator() {
     }
   };
 
-  const handleRefreshLessons = async () => {
-    if (!user?.id) return;
-    
-    setIsLoadingLessons(true);
-    try {
-      const courses = await coursesApi.getUserCourses(user.id);
-      const allLessonsWithContext: Array<Lesson & { modelTitle?: string; courseTitle?: string }> = [];
-      
-      for (const course of courses) {
-        const sections = await sectionsApi.getCourseSections(course.id);
-        
-        for (const section of sections) {
-          const lessons = await lessonsApi.getSectionLessons(section.id);
-          
-          for (const lesson of lessons) {
-            allLessonsWithContext.push({
-              ...lesson,
-              modelTitle: section.title,
-              courseTitle: course.title,
-            });
-          }
-        }
-      }
-      
-      setAllLessons(allLessonsWithContext);
-      toast.success('Список уроков обновлен');
-    } catch (error) {
-      toast.error('Не удалось загрузить уроки');
-    } finally {
-      setIsLoadingLessons(false);
-    }
+  const handleRefreshLessons = () => {
+    void loadAllLessons(true);
   };
 
   // Batch generation handlers
@@ -796,7 +780,7 @@ export function AIGenerator() {
 
   return (
     <MainLayout>
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)] min-h-0 overflow-x-hidden">
+      <div className="flex flex-col xl:flex-row gap-6 min-h-0 h-[calc(100dvh-7rem)] max-h-[calc(100dvh-7rem)] overflow-x-hidden">
         {/* Chat Section */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header */}
@@ -829,10 +813,10 @@ export function AIGenerator() {
           </div>
 
           {/* Mode Toggle */}
-          <div className="mb-4 flex gap-2 flex-shrink-0 min-w-0 overflow-x-hidden">
+          <div className="mb-4 flex gap-2 flex-shrink-0 min-w-0 overflow-x-auto scrollbar-thin scrollbar-thumb-dark-700">
             <button
               onClick={() => handleModeChange('chat')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`flex-1 min-w-[7.5rem] px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 mode === 'chat'
                   ? 'bg-primary-600 text-white'
                   : 'bg-dark-800 text-dark-400 hover:bg-dark-700'
@@ -842,7 +826,7 @@ export function AIGenerator() {
             </button>
             <button
               onClick={() => handleModeChange('generate')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`flex-1 min-w-[7.5rem] px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 mode === 'generate'
                   ? 'bg-primary-600 text-white'
                   : 'bg-dark-800 text-dark-400 hover:bg-dark-700'
@@ -852,7 +836,7 @@ export function AIGenerator() {
             </button>
             <button
               onClick={() => handleModeChange('batch')}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`flex-1 min-w-[7.5rem] px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 mode === 'batch'
                   ? 'bg-primary-600 text-white'
                   : 'bg-dark-800 text-dark-400 hover:bg-dark-700'
@@ -1067,41 +1051,53 @@ export function AIGenerator() {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-dark-700 flex-shrink-0 min-w-0 overflow-x-hidden">
-              <div className="flex gap-2 items-end min-w-0">
-                <Textarea
-                  placeholder={mode === 'chat' 
-                    ? "Напишите сообщение..." 
-                    : "Опишите шаг, который хотите создать..."
-                  }
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  rows={2}
-                  className="flex-1 min-w-0 resize-none"
-                  maxLength={promptMaxLength}
-                  showCount
-                />
-                {/* LLM Model Selection - visible in chat and generate modes */}
-                {(mode === 'chat' || mode === 'generate') && (
-                  <div className="w-52 flex-shrink-0">
-                    <LlmModelSelect
-                      label="Модель"
-                      value={selectedLlmModel}
-                      onChange={setSelectedLlmModel}
-                      className="h-11"
-                      canSelectModel={canSelectModel}
-                      onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
-                    />
+            <div className="p-4 flex-shrink-0 min-w-0 overflow-x-hidden">
+              <div className="space-y-1.5">
+                <div className="flex justify-end">
+                  <span
+                    className={`text-xs ${
+                      input.length >= promptMaxLength ? 'text-amber-400' : 'text-dark-500'
+                    }`}
+                  >
+                    {input.length}/{promptMaxLength}
+                  </span>
+                </div>
+                <div className="flex min-h-[7rem] flex-col rounded-xl border border-dark-600 bg-dark-800/80 transition-all duration-200 hover:border-dark-500 focus-within:border-primary-500/50 focus-within:ring-2 focus-within:ring-primary-500/50">
+                  <textarea
+                    placeholder={
+                      mode === 'chat'
+                        ? 'Напишите сообщение...'
+                        : 'Опишите шаг, который хотите создать...'
+                    }
+                    value={input}
+                    onChange={(e) => setInput(clampPromptLength(e.target.value, promptMaxLength))}
+                    onKeyDown={handleKeyPress}
+                    rows={4}
+                    maxLength={promptMaxLength}
+                    className="block min-h-[4.5rem] max-h-40 w-full flex-1 resize-none overflow-y-auto bg-transparent px-4 pt-3 pb-2 text-dark-100 placeholder-dark-500 focus:outline-none scrollbar-thin scrollbar-thumb-dark-700 scrollbar-track-transparent"
+                  />
+                  <div className="flex flex-shrink-0 items-center justify-between gap-2 px-2 pb-2 pt-2">
+                    {(mode === 'chat' || mode === 'generate') && (
+                      <div className="w-40 min-w-0 sm:w-44">
+                        <LlmModelSelect
+                          value={selectedLlmModel}
+                          onChange={setSelectedLlmModel}
+                          menuPlacement="top"
+                          className="h-9 border-dark-600/80 bg-dark-700/60 py-1.5"
+                          canSelectModel={canSelectModel}
+                          onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
+                        />
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleSend}
+                      disabled={!input.trim() || isLoading}
+                      className="ml-auto h-9 w-9 flex-shrink-0"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
                   </div>
-                )}
-                <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
-                  className="h-11 w-11 flex-shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
+                </div>
               </div>
             </div>
           </Card>
@@ -1111,7 +1107,7 @@ export function AIGenerator() {
 
         {/* Preview Section - only in generate mode */}
         {mode === 'generate' && (
-          <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
+          <div className="w-full xl:w-72 2xl:w-80 xl:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] xl:max-h-none">
             <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">Предпросмотр</h2>
             <Card className="flex-1 overflow-auto min-h-0">
               {generatedStep && previewStep ? (
@@ -1215,7 +1211,7 @@ export function AIGenerator() {
 
         {/* Batch Settings Section - only in batch mode */}
         {mode === 'batch' && (
-          <div className="w-full lg:w-72 xl:w-80 2xl:w-96 lg:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] lg:max-h-none">
+          <div className="w-full xl:w-72 2xl:w-80 xl:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] xl:max-h-none">
             <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">
               Настройки
             </h2>

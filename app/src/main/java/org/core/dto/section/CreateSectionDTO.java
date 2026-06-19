@@ -14,8 +14,8 @@ public class CreateSectionDTO {
     @NotNull(message = "Course ID is required")
     private Long courseId;
 
-    @NotBlank(message = "Title is required")
-    @Size(min = 3, max = 64)
+    @NotBlank(message = "Название модуля не может быть пустым")
+    @Size(min = 1, max = 64, message = "Название модуля должно быть от 1 до 64 символов")
     private String title;
 
     private String description;
