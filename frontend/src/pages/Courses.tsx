@@ -10,6 +10,8 @@ import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
 import type { Course, Model, Lesson, Step } from '../types';
 import { getStepDisplayType } from '../types';
+import { extractApiErrorMessage } from '../utils/apiError';
+import { validateTitle } from '../utils/validation';
 
 export function Courses() {
   const navigate = useNavigate();
@@ -58,13 +60,20 @@ export function Courses() {
   );
 
   const handleCreateCourse = async () => {
-    if (!user?.id || !formData.title.trim()) return;
+    if (!user?.id) return;
+
+    const titleError = validateTitle(formData.title, 'Название курса');
+    if (titleError) {
+      toast.error(titleError);
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       const newCourse = await coursesApi.createCourse({
         userId: user.id,
-        title: formData.title,
+        title: formData.title.trim(),
         description: formData.description,
       });
       addCourse(newCourse);
@@ -72,7 +81,7 @@ export function Courses() {
       setIsCreateModalOpen(false);
       setFormData({ title: '', description: '' });
     } catch (error) {
-      toast.error('Не удалось создать курс');
+      toast.error(extractApiErrorMessage(error, 'Не удалось создать курс'));
       console.error('Failed to create course:', error);
     } finally {
       setIsSaving(false);
@@ -80,13 +89,20 @@ export function Courses() {
   };
 
   const handleUpdateCourse = async () => {
-    if (!selectedCourse || !formData.title.trim()) return;
+    if (!selectedCourse) return;
+
+    const titleError = validateTitle(formData.title, 'Название курса');
+    if (titleError) {
+      toast.error(titleError);
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       const updated = await coursesApi.updateCourse({
         id: selectedCourse.id,
-        title: formData.title,
+        title: formData.title.trim(),
         description: formData.description,
       });
       updateCourse(updated);
@@ -94,7 +110,7 @@ export function Courses() {
       setIsEditModalOpen(false);
       setSelectedCourse(null);
     } catch (error) {
-      toast.error('Не удалось обновить курс');
+      toast.error(extractApiErrorMessage(error, 'Не удалось обновить курс'));
       console.error('Failed to update course:', error);
     } finally {
       setIsSaving(false);

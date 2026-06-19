@@ -14,15 +14,16 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateUserDTO {
     
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must be under 100 characters")
+    @NotBlank(message = "Имя не может быть пустым")
+    @Size(min = 1, max = 100, message = "Имя должно быть от 1 до 100 символов")
     private String name;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "Email не может быть пустым")
+    @Email(message = "Некорректный формат email")
+    @Size(max = 100, message = "Email не должен превышать 100 символов")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @NotBlank(message = "Пароль не может быть пустым")
+    @Size(min = 6, max = 100, message = "Пароль должен быть не менее 6 символов")
     private String password;
 }

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Button, Input, PasswordInput } from '../components/ui';
 import { authApi } from '../api';
 import { extractApiErrorMessage, getApiErrorStatus, isNetworkError } from '../utils/apiError';
+import { validateEmail, validateUserName } from '../utils/validation';
 
 export function Register() {
   const navigate = useNavigate();
@@ -18,6 +19,18 @@ export function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const nameError = validateUserName(formData.name);
+    if (nameError) {
+      toast.error(nameError);
+      return;
+    }
+
+    const emailError = validateEmail(formData.email);
+    if (emailError) {
+      toast.error(emailError);
+      return;
+    }
     
     if (formData.password !== formData.confirmPassword) {
       toast.error('Пароли не совпадают');

@@ -43,6 +43,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import { MODEL_PRO_MESSAGE, STEP_TYPE_CHANGE_PRO_MESSAGE } from '../constants/subscription';
 import { AI_PROMPT_LIMITS, getPromptLimitMessage } from '../constants/aiPromptLimits';
 import { extractApiErrorMessage } from '../utils/apiError';
+import { validateTitle } from '../utils/validation';
 import type { Model, Lesson, Step, StepType, UpdateStepDTO, StepikBlockRequest } from '../types';
 import { getStepDisplayType, getStepBlockName } from '../types';
 import { stepMatchesStepik, getStepDiff, type StepDiffInfo } from '../utils/stepikCompare';
@@ -410,12 +411,19 @@ export function CourseEditor() {
   }, [selectedLesson, setSteps, saveSyncedStepPositions, checkAndMarkPositionChanges]);
 
   const handleCreateModel = async () => {
-    if (!courseId || !formData.title.trim()) return;
+    if (!courseId) return;
+
+    const titleError = validateTitle(formData.title, 'Название модуля');
+    if (titleError) {
+      toast.error(titleError);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const newModel = await sectionsApi.createSection({
         courseId: parseInt(courseId),
-        title: formData.title,
+        title: formData.title.trim(),
         description: formData.description,
       });
       addModel(newModel);
@@ -423,26 +431,33 @@ export function CourseEditor() {
       setIsModelModalOpen(false);
       setFormData({ title: '', description: '', type: 'TEXT' });
     } catch (error) {
-      toast.error('Не удалось создать модуль');
+      toast.error(extractApiErrorMessage(error, 'Не удалось создать модуль'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCreateLesson = async () => {
-    if (!selectedModel || !formData.title.trim()) return;
+    if (!selectedModel) return;
+
+    const titleError = validateTitle(formData.title, 'Название урока');
+    if (titleError) {
+      toast.error(titleError);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const newLesson = await lessonsApi.createLesson({
         sectionId: selectedModel.id,
-        title: formData.title,
+        title: formData.title.trim(),
       });
       addLesson(newLesson);
       toast.success('Урок создан!');
       setIsLessonModalOpen(false);
       setFormData({ title: '', description: '', type: 'TEXT' });
     } catch (error) {
-      toast.error('Не удалось создать урок');
+      toast.error(extractApiErrorMessage(error, 'Не удалось создать урок'));
     } finally {
       setIsSaving(false);
     }
@@ -2089,7 +2104,7 @@ export function CourseEditor() {
       toast.success('Название модуля обновлено');
     } catch (error) {
       console.error('Failed to update section title:', error);
-      toast.error('Не удалось обновить название модуля');
+      throw error;
     }
   };
 
@@ -2102,7 +2117,7 @@ export function CourseEditor() {
       toast.success('Название урока обновлено');
     } catch (error) {
       console.error('Failed to update lesson title:', error);
-      toast.error('Не удалось обновить название урока');
+      throw error;
     }
   };
 
