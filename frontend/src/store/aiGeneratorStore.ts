@@ -20,6 +20,9 @@ interface AIGeneratorState {
   
   // All user lessons (for lesson selection dropdown)
   allLessons: Array<Lesson & { modelTitle?: string; courseTitle?: string }>;
+
+  /** Prefill batch prompt after navigation from course audit */
+  pendingBatchUserInput: string | null;
   
   // Actions
   setMode: (mode: 'chat' | 'generate' | 'batch') => void;
@@ -27,8 +30,8 @@ interface AIGeneratorState {
   setGeneratedStep: (step: StepikBlockRequest | null) => void;
   setSelectedLessonId: (lessonId: number | null) => void;
   setAllLessons: (lessons: Array<Lesson & { modelTitle?: string; courseTitle?: string }>) => void;
-  
-  // Session management
+  setPendingBatchUserInput: (input: string | null) => void;
+  consumePendingBatchUserInput: () => string | null;
   getOrCreateChatSession: () => string;
   setChatSession: (sessionId: string) => void;
   getOrCreateGenerateSession: (stepType: string) => string;
@@ -60,6 +63,7 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
       generatedStep: null,
       selectedLessonId: null,
       allLessons: [],
+      pendingBatchUserInput: null,
       
       // Actions
       setMode: (mode) => set({ mode }),
@@ -71,6 +75,16 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
       setSelectedLessonId: (lessonId) => set({ selectedLessonId: lessonId }),
       
       setAllLessons: (lessons) => set({ allLessons: lessons }),
+
+      setPendingBatchUserInput: (input) => set({ pendingBatchUserInput: input }),
+
+      consumePendingBatchUserInput: () => {
+        const pending = get().pendingBatchUserInput;
+        if (pending) {
+          set({ pendingBatchUserInput: null });
+        }
+        return pending;
+      },
       
       // Session management
       getOrCreateChatSession: () => {

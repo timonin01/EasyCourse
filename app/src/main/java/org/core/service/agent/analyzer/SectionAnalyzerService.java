@@ -30,6 +30,7 @@ public class SectionAnalyzerService {
         sectionSummery.append("Модуль ")
                 .append(section.getPosition()).append(": ")
                 .append(section.getTitle());
+
         if (section.getDescription() != null && !section.getDescription().isBlank()) {
             sectionSummery.append(" — ").append(section.getDescription().trim());
         }
@@ -42,19 +43,28 @@ public class SectionAnalyzerService {
         }
 
         for (Lesson lesson : lessonList) {
-            sectionSummery.append(lessonSummeryBuilder(lesson)).append("\n");
+            sectionSummery.append(lessonSummeryBuilder(lesson, section)).append("\n");
         }
 
         return sectionSummery.toString();
     }
 
-    public String lessonSummeryBuilder(Lesson lesson) {
+    public String lessonSummeryBuilder(Lesson lesson, Section section) {
         StringBuilder lessonSummery = new StringBuilder();
         List<Step> stepList = stepRepository.findByLessonIdOrderByPositionAsc(lesson.getId());
-        lessonSummery.append("Урок ")
-                .append(lesson.getPosition()).append(" «")
-                .append(lesson.getTitle()).append("», количество шагов: ")
-                .append(stepList.size()).append("\n");
+
+        lessonSummery.append("Модуль ")
+                .append(section.getPosition())
+                .append(" «")
+                .append(section.getTitle())
+                .append("» → Урок ")
+                .append(lesson.getPosition())
+                .append(" «")
+                .append(lesson.getTitle())
+                .append("», количество шагов: ")
+                .append(stepList.size())
+                .append("\n");
+
         if (stepList.isEmpty()) {
             lessonSummery.append("  (урок пустой)\n");
             return lessonSummery.toString();
@@ -63,9 +73,12 @@ public class SectionAnalyzerService {
         lessonSummery.append("Типы шагов и их описание:\n");
         for (Step step : stepList) {
             lessonSummery.append("  ")
-                    .append(step.getPosition()).append(". [")
-                    .append(step.getType()).append("] ")
-                    .append(buildStepExcerpt(step)).append("\n");
+                    .append(step.getPosition())
+                    .append(". [")
+                    .append(step.getType())
+                    .append("] ")
+                    .append(buildStepExcerpt(step))
+                    .append("\n");
         }
 
         return lessonSummery.toString();
@@ -76,6 +89,7 @@ public class SectionAnalyzerService {
         if (content == null || content.isBlank()) {
             return "(без описания)";
         }
+
         String plain = content
                 .replaceAll("<[^>]+>", " ")
                 .replaceAll("\\s+", " ")

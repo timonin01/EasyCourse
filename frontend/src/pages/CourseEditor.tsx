@@ -2083,10 +2083,12 @@ export function CourseEditor() {
   const isStepUnsynced = (step: Step): boolean => stepNeedsUpload(step) && Boolean(step.stepikStepId);
 
   const isLessonUnsynced = (lesson: Lesson): boolean =>
-    lessonsWithNewSteps.has(lesson.id) || (Boolean(lesson.stepikLessonId) && Boolean(lesson.needsStepikSync));
+    Boolean(lesson.stepikLessonId) &&
+    (lessonsWithNewSteps.has(lesson.id) || Boolean(lesson.needsStepikSync));
 
   const isModelUnsynced = (section: Model): boolean =>
-    sectionsWithNewSteps.has(section.id) || (Boolean(section.stepikSectionId) && Boolean(section.needsStepikSync));
+    Boolean(section.stepikSectionId) &&
+    (sectionsWithNewSteps.has(section.id) || Boolean(section.needsStepikSync));
 
   const hasUnsyncedContent = hasPendingStepikUploads({
     course: selectedCourse ?? undefined,

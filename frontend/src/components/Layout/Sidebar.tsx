@@ -8,6 +8,7 @@ import {
   GraduationCap,
   RefreshCw,
   PanelLeftClose,
+  ClipboardCheck,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../store';
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/courses', icon: BookOpen, label: 'Мои курсы' },
   { to: '/stepik-sync', icon: RefreshCw, label: 'Stepik Sync' },
   { to: '/ai-generator', icon: Sparkles, label: 'AI Генератор' },
+  { to: '/course-audit', icon: ClipboardCheck, label: 'Аудит курса' },
   { to: '/settings', icon: Settings, label: 'Настройки' },
 ];
 
