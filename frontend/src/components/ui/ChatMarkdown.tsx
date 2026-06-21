@@ -41,6 +41,15 @@ export function ChatMarkdown({ content, className = '' }: ChatMarkdownProps) {
             {children}
           </a>
         ),
+        h2: ({ children }) => (
+          <h2 className="mb-3 mt-6 text-xl font-bold text-dark-100 first:mt-0">{children}</h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="mb-2 mt-5 text-lg font-semibold text-dark-100">{children}</h3>
+        ),
+        h4: ({ children }) => (
+          <h4 className="mb-2 mt-4 text-base font-semibold text-primary-200">{children}</h4>
+        ),
         }}
       >
         {content}

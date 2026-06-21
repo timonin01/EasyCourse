@@ -41,7 +41,7 @@ export function extractApiErrorMessage(error: unknown, fallback: string): string
   }
 
   if (isNetworkError(error)) {
-    return 'Сервер недоступен. Проверьте, что backend запущен на порту 8080.';
+    return 'Сервер недоступен. Проверьте, что backend запущен (Docker: порт 80, локально: 8080).';
   }
 
   if (!error || typeof error !== 'object' || !('response' in error)) {

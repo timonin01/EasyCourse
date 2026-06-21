@@ -8,7 +8,8 @@ import {
   CourseEditor, 
   AIGenerator, 
   Settings,
-  StepikSync 
+  StepikSync,
+  CourseAudit,
 } from './pages';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -65,6 +66,11 @@ export default function App() {
       <Route path="/ai-generator" element={
         <PrivateRoute>
           <AIGenerator />
+        </PrivateRoute>
+      } />
+      <Route path="/course-audit" element={
+        <PrivateRoute>
+          <CourseAudit />
         </PrivateRoute>
       } />
       <Route path="/settings" element={

@@ -1,6 +1,6 @@
 import api from './axios';
 import { aiRequestConfig } from '../config/api';
-import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory } from '../types';
+import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse } from '../types';
 
 export const agentApi = {
   // Chat with AI
@@ -146,6 +146,19 @@ export const agentApi = {
         ...entry,
         id: Number(entry.id),
       }));
+  },
+
+  analyzeCourse: async (courseId: number): Promise<CourseAnalyzerResponse> => {
+    const params = new URLSearchParams({
+      courseId: courseId.toString(),
+      llmModel: 'YANDEX_GPT_PRO',
+    });
+    const response = await api.post<CourseAnalyzerResponse>(
+      `/agent/analyzer/course?${params}`,
+      null,
+      aiRequestConfig
+    );
+    return response.data;
   },
 
   // Direct AI chat (without agent)

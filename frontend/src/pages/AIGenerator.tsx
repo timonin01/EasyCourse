@@ -67,6 +67,7 @@ export function AIGenerator() {
     getMessages,
     setMessages,
     clearSession,
+    consumePendingBatchUserInput,
   } = useAIGeneratorStore();
 
   const [input, setInput] = useState('');
@@ -187,6 +188,19 @@ export function AIGenerator() {
   useEffect(() => {
     void loadAllLessons();
   }, [loadAllLessons]);
+
+  useEffect(() => {
+    const pendingBatchPrompt = consumePendingBatchUserInput();
+    if (!pendingBatchPrompt) return;
+
+    setMode('batch');
+    setBatchUserInput(pendingBatchPrompt);
+    setBatchExplicitSteps([]);
+    setBatchPlan(null);
+    setBatchResults([]);
+    setBatchPlanItems([]);
+    setBatchActiveIndex(0);
+  }, [consumePendingBatchUserInput, setMode]);
 
   useEffect(() => {
     const handleFocus = () => {

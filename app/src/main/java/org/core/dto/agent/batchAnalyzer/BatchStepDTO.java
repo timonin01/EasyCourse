@@ -15,6 +15,6 @@ import java.util.List;
 public class BatchStepDTO {
 
     @JsonProperty("steps")
-    List<CountStepDTO> steps;
+    private List<CountStepDTO> steps;
 
 }

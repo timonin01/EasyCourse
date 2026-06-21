@@ -37,7 +37,7 @@ ext {
 
 dependencies {
 
-    implementation('mysql:mysql-connector-java:8.0.33')
+    implementation('org.mariadb.jdbc:mariadb-java-client:3.4.1')
     implementation('org.hibernate:hibernate-core:6.5.0.Final')
     implementation ('org.liquibase:liquibase-core:4.27.0')
     implementation('com.h2database:h2:2.2.224')
@@ -115,10 +115,10 @@ liquibase {
     activities {
         main {
             changeLogFile 'classpath:db/changelog/changelog-master.xml'
-            url 'jdbc:mysql://localhost:3306/easy_course_db'
+            url 'jdbc:mariadb://localhost:3306/easy_course_db'
             username 'root'
             password 'Lalka123'
-            driver 'com.mysql.cj.jdbc.Driver'
+            driver 'org.mariadb.jdbc.Driver'
         }
     }
 }

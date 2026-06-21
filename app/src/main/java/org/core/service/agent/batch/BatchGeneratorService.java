@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
-import org.core.dto.agent.batchAnalyzer.BatchStepParser;
 import org.core.dto.agent.batchAnalyzer.CountStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.service.agent.AgentService;

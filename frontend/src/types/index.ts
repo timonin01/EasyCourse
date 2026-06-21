@@ -212,6 +212,10 @@ export interface BatchStepDTO {
   steps: CountStepDTO[];
 }
 
+export interface CourseAnalyzerResponse {
+  analyzeResult: string;
+}
+
 export interface BatchGenerationHistory {
   id: number;
   userInput: string;
