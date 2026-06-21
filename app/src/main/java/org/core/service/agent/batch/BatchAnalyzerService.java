@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
-import org.core.dto.agent.batchAnalyzer.BatchStepParser;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.exception.exceptions.YandexGptException;
@@ -42,7 +41,7 @@ public class BatchAnalyzerService {
     }
 
     public BatchStepDTO analyzeUserInput(String userInput) {
-        String systemPrompt = systemPromptService.getPromptForQuery("batch-analyzer");
+        String systemPrompt = systemPromptService.getAnalyzerPromptByQuery("batch-analyzer");
         List<ChatMessage> messages = List.of(
                 ChatMessage.builder()
                         .role("system")

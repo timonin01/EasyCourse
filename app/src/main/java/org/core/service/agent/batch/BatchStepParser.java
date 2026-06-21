@@ -1,4 +1,4 @@
-package org.core.dto.agent.batchAnalyzer;
+package org.core.service.agent.batch;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

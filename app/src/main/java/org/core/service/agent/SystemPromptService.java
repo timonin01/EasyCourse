@@ -43,4 +43,15 @@ public class SystemPromptService {
         });
     }
 
+    public String getAnalyzerPromptByQuery(String query) {
+        return promptCache.computeIfAbsent(query, type -> {
+            try {
+                Resource resource = resourceLoader.getResource("classpath:prompts/stepik/analyzer/" + type + ".txt");
+                return resource.getContentAsString(StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new RuntimeException("Prompt not found for type: {}, using default");
+            }
+        });
+    }
+
 }
