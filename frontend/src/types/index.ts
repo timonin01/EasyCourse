@@ -216,6 +216,18 @@ export interface CourseAnalyzerResponse {
   analyzeResult: string;
 }
 
+export interface CourseAuditPdfExportRequest {
+  courseId: number;
+  courseTitle: string;
+  summary: string;
+  plan: string;
+  improvements: string;
+  newContent: string;
+  includeReport: boolean;
+  includeImprovements: boolean;
+  includeNewContent: boolean;
+}
+
 export interface BatchGenerationHistory {
   id: number;
   userInput: string;

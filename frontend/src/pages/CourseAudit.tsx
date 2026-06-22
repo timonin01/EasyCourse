@@ -11,6 +11,7 @@ import {
   RotateCcw,
   PenLine,
   PlusCircle,
+  FileDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
@@ -19,6 +20,10 @@ import { CoursePickerList } from '../components/courses/CoursePickerList';
 import { LessonPickerSelect } from '../components/courses/LessonPickerSelect';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
 import { ProUpgradeModal } from '../components/subscription/ProUpgradeModal';
+import {
+  CourseAuditPdfExportModal,
+  type CourseAuditPdfExportOptions,
+} from '../components/courseAudit/CourseAuditPdfExportModal';
 import { agentApi, coursesApi, lessonsApi, sectionsApi } from '../api';
 import { useAuthStore, useAIGeneratorStore } from '../store';
 import { useSubscription } from '../hooks/useSubscription';
@@ -167,6 +172,8 @@ export function CourseAudit() {
   const [auditedCourseId, setAuditedCourseId] = useState<string | null>(null);
   const [hintLessonIds, setHintLessonIds] = useState<Record<string, string>>({});
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [activeTab, setActiveTab] = useState<AuditTab>('report');
 
   useEffect(() => {
@@ -329,6 +336,45 @@ export function CourseAudit() {
     }
   };
 
+  const handleExportPdf = async (options: CourseAuditPdfExportOptions) => {
+    if (!auditSections || !auditedCourseId) {
+      toast.error('Нет данных для экспорта');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const { blob, filename } = await agentApi.exportCourseAuditPdf({
+        courseId: Number(auditedCourseId),
+        courseTitle: auditedCourse?.title ?? '',
+        summary: normalizeAuditMarkdown(auditSections.summary),
+        plan: normalizeAuditMarkdown(auditSections.plan),
+        improvements: existingTabContent,
+        newContent: newContentTabContent,
+        includeReport: options.includeReport,
+        includeImprovements: options.includeImprovements,
+        includeNewContent: options.includeNewContent,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF скачан');
+      setIsPdfModalOpen(false);
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : extractApiErrorMessage(error, 'Не удалось сформировать PDF');
+      toast.error(message);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const renderHintGroup = (
     title: string,
     items: typeof groupedHints.existing,
@@ -450,16 +496,33 @@ export function CourseAudit() {
             Аудит курса{' '}
             <span className="font-medium text-dark-100">{auditedCourse?.title ?? '—'}</span>
           </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RotateCcw className="h-4 w-4" />}
-            onClick={handleClearAudit}
-          >
-            Очистить
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<FileDown className="h-4 w-4" />}
+              onClick={() => setIsPdfModalOpen(true)}
+            >
+              PDF
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RotateCcw className="h-4 w-4" />}
+              onClick={handleClearAudit}
+            >
+              Очистить
+            </Button>
+          </div>
         </Card>
       )}
+
+      <CourseAuditPdfExportModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onExport={handleExportPdf}
+        isExporting={isExportingPdf}
+      />
 
       {analyzeResult && (
         <div className={`grid gap-6 ${showHintsSidebar ? 'xl:grid-cols-[2fr_1fr]' : ''}`}>
