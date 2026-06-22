@@ -13,6 +13,7 @@ import org.core.repository.SectionRepository;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.llmProvider.LlmProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,9 @@ public class CourseAnalyzerService {
     private final LlmProvider llmProvider;
     private final LlmModelConfig llmModelConfig;
 
+    @Value("${course.analyzer.max-output-tokens:16000}")
+    private int analyzerMaxOutputTokens;
+
     public CourseAnalyzerService(@Qualifier("yandexProvider") LlmProvider llmProvider,
                                  SystemPromptService systemPromptService,
                                  CourseRepository courseRepository,
@@ -45,16 +49,25 @@ public class CourseAnalyzerService {
     }
 
     public CourseAnalyzerDTO courseAnalyze(Long userId, Long courseId, LlmModel llmModel) {
+        validateCourseAccess(userId, courseId);
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new CourseNotFoundException("Course not found"));
-        if (!course.getAuthor().getId().equals(userId)) {
-            throw new IllegalArgumentException("Course does not belong to user");
-        }
 
         String courseSnapshot = buildCourseSnapshot(course);
         log.info("Built course snapshot for courseId={}, length={}", courseId, courseSnapshot.length());
 
         return analyzeSectionsSummeryByLLMChat(courseSnapshot, llmModel);
+    }
+
+    public void validateCourseAccess(Long userId, Long courseId) {
+        if (courseId == null) {
+            throw new IllegalArgumentException("Course id is required");
+        }
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+        if (!course.getAuthor().getId().equals(userId)) {
+            throw new IllegalArgumentException("Course does not belong to user");
+        }
     }
 
     private String buildCourseSnapshot(Course course) {
@@ -92,11 +105,12 @@ public class CourseAnalyzerService {
         );
 
         String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
-        String aiResponse = modelUri != null && !modelUri.isBlank()
-                ? llmProvider.chat(messages, modelUri)
-                : llmProvider.chat(messages);
+        String aiResponse = llmProvider.chat(messages, modelUri, analyzerMaxOutputTokens);
 
-        log.info("Received course analyzer response, length={}", aiResponse != null ? aiResponse.length() : 0);
+        log.info("Received course analyzer response, length={}, maxOutputTokens={}",
+                aiResponse != null ? aiResponse.length() : 0,
+                analyzerMaxOutputTokens
+        );
         return new CourseAnalyzerDTO(aiResponse);
     }
 }

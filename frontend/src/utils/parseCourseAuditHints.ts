@@ -21,13 +21,52 @@ export interface AuditBatchHint {
 }
 
 const EXISTING_LESSON_RE =
-  /^#{1,4}\s*(?!.*\[НОВЫЙ\])Модуль\s+(\d+)\s*[«"]([^»"]+)[»"]\s*→\s*Урок\s+(\d+)\s*[«"]([^»"]+)[»"]/i;
+  /^(?:#{1,4}\s*)?(?!.*\[НОВЫЙ\])Модуль\s+(\d+)\s*[«"]([^»"]+)[»"]\s*→\s*Урок\s+(\d+)\s*[«"]([^»"]+)[»"]/i;
 const NEW_LESSON_IN_MODULE_RE =
-  /^#{1,4}\s*\[НОВЫЙ\]\s*Модуль\s+(\d+)\s*[«"]([^»"]+)[»"]\s*→\s*Урок:\s*[«"]?([^»"\n]+)[»"]?/i;
-const NEW_MODULE_RE = /^#{1,4}\s*\[НОВЫЙ\]\s*Модуль:\s*[«"]?([^»"\n]+)[»"]?/i;
+  /^(?:#{1,4}\s*)?\[НОВЫЙ\]\s*Модуль\s+(\d+)\s*[«"]([^»"]+)[»"]\s*→\s*Урок:\s*[«"]?([^»"\n]+)[»"]?/i;
+const NEW_MODULE_RE = /^(?:#{1,4}\s*)?\[НОВЫЙ\]\s*Модуль:\s*[«"]?([^»"\n]+)[»"]?/i;
+const NEW_LESSON_IN_NEW_MODULE_RE =
+  /^(?:#{1,5}\s*)?\[НОВЫЙ\]\s*Урок\s+(\d+):\s*[«"]?([^»"\n]+)[»"]?/i;
 const QUOTED_HINT_RE = /^\s*[-*•]\s+[«"]([^»"]+)[»"]/;
 const QUOTED_HINT_ALT_RE = /^\s*[-*•]\s+"([^"]+)"/;
 const CREAT_HINT_RE = /^\s*[-*•]\s+(.*Создай.+)$/i;
+const STRUCTURE_STEP_RE = /^\s*(?:[-*•]\s*)?\[([A-Za-z][A-Za-z0-9-]*)\]\s*(.+)$/;
+
+const STEP_TYPE_ALIASES: Record<string, string> = {
+  TEXT: 'text',
+  CHOICE: 'choice',
+  CODE: 'code',
+  MATCHING: 'matching',
+  SORTING: 'sorting',
+  TABLE: 'table',
+  'FILL-BLANKS': 'fill-blanks',
+  FILL_BLANKS: 'fill-blanks',
+  STRING: 'string',
+  NUMBER: 'number',
+  MATH: 'math',
+  'FREE-ANSWER': 'free-answer',
+  FREE_ANSWER: 'free-answer',
+  'RANDOM-TASKS': 'random-tasks',
+  RANDOM_TASKS: 'random-tasks',
+};
+
+const BATCH_STEP_TYPES = new Set(Object.values(STEP_TYPE_ALIASES));
+
+export function structureStepToBatchPrompt(stepType: string, description: string): string | null {
+  const normalizedType = stepType.trim().toUpperCase().replace(/_/g, '-');
+  const batchType = STEP_TYPE_ALIASES[normalizedType];
+  if (!batchType) return null;
+
+  const body = description.trim().replace(/[.;]\s*$/, '');
+  if (!body) return null;
+
+  return `Создай 1 ${batchType}: ${body}`;
+}
+
+export function isBatchStepType(type: string): boolean {
+  const normalizedType = type.trim().toUpperCase().replace(/_/g, '-');
+  return BATCH_STEP_TYPES.has(STEP_TYPE_ALIASES[normalizedType] ?? '');
+}
 
 interface ParseContext {
   sectionTitle?: string;
@@ -36,6 +75,43 @@ interface ParseContext {
   lessonTitle?: string;
   newModuleTitle?: string;
   target: AuditHintTarget;
+  structureStepCount: number;
+}
+
+function resetLessonContext(ctx: ParseContext, patch: Partial<ParseContext>): ParseContext {
+  return {
+    ...ctx,
+    ...patch,
+    structureStepCount: 0,
+  };
+}
+
+function pushHint(
+  hints: AuditBatchHint[],
+  ctx: ParseContext,
+  prompt: string,
+  lessons: CourseLessonContext[]
+): void {
+  const isNew = ctx.target === 'new_module' || ctx.target === 'new_lesson';
+
+  hints.push({
+    sectionTitle: ctx.sectionTitle,
+    sectionPosition: ctx.sectionPosition,
+    lessonPosition: ctx.lessonPosition,
+    lessonTitle: ctx.lessonTitle,
+    newModuleTitle: ctx.newModuleTitle,
+    target: ctx.target,
+    prompt,
+    suggestedLessonId: isNew
+      ? null
+      : matchLessonId(
+          lessons,
+          ctx.sectionTitle,
+          ctx.sectionPosition,
+          ctx.lessonPosition,
+          ctx.lessonTitle
+        ),
+  });
 }
 
 export function parseCourseAuditHints(
@@ -43,48 +119,75 @@ export function parseCourseAuditHints(
   lessons: CourseLessonContext[]
 ): AuditBatchHint[] {
   const hints: AuditBatchHint[] = [];
-  let ctx: ParseContext = { target: 'existing' };
+  let ctx: ParseContext = { target: 'existing', structureStepCount: 0 };
 
   for (const rawLine of markdown.split('\n')) {
     const line = rawLine.trim();
     if (!line) continue;
 
+    if (/^batch-подсказки\s*:?\s*$/i.test(line)) {
+      continue;
+    }
+
     const newModuleMatch = line.match(NEW_MODULE_RE);
     if (newModuleMatch) {
-      ctx = {
+      ctx = resetLessonContext(ctx, {
         target: 'new_module',
         newModuleTitle: newModuleMatch[1].trim(),
         sectionTitle: undefined,
         sectionPosition: undefined,
         lessonPosition: undefined,
         lessonTitle: undefined,
-      };
+      });
       continue;
     }
 
     const newLessonMatch = line.match(NEW_LESSON_IN_MODULE_RE);
     if (newLessonMatch) {
-      ctx = {
+      ctx = resetLessonContext(ctx, {
         target: 'new_lesson',
         sectionPosition: Number.parseInt(newLessonMatch[1], 10),
         sectionTitle: newLessonMatch[2].trim(),
         lessonTitle: newLessonMatch[3].trim(),
         lessonPosition: undefined,
         newModuleTitle: undefined,
-      };
+      });
+      continue;
+    }
+
+    const newLessonInNewModuleMatch = line.match(NEW_LESSON_IN_NEW_MODULE_RE);
+    if (newLessonInNewModuleMatch) {
+      ctx = resetLessonContext(ctx, {
+        target: 'new_lesson',
+        lessonPosition: Number.parseInt(newLessonInNewModuleMatch[1], 10),
+        lessonTitle: newLessonInNewModuleMatch[2].trim(),
+        sectionTitle: ctx.newModuleTitle,
+        sectionPosition: undefined,
+        newModuleTitle: ctx.newModuleTitle,
+      });
       continue;
     }
 
     const existingMatch = line.match(EXISTING_LESSON_RE);
     if (existingMatch) {
-      ctx = {
+      ctx = resetLessonContext(ctx, {
         target: 'existing',
         sectionPosition: Number.parseInt(existingMatch[1], 10),
         sectionTitle: existingMatch[2].trim(),
         lessonPosition: Number.parseInt(existingMatch[3], 10),
         lessonTitle: existingMatch[4].trim(),
         newModuleTitle: undefined,
-      };
+      });
+      continue;
+    }
+
+    const structureMatch = line.match(STRUCTURE_STEP_RE);
+    if (structureMatch && isBatchStepType(structureMatch[1])) {
+      const prompt = structureStepToBatchPrompt(structureMatch[1], structureMatch[2]);
+      if (prompt) {
+        ctx = { ...ctx, structureStepCount: ctx.structureStepCount + 1 };
+        pushHint(hints, ctx, prompt, lessons);
+      }
       continue;
     }
 
@@ -96,26 +199,11 @@ export function parseCourseAuditHints(
       continue;
     }
 
-    const isNew = ctx.target === 'new_module' || ctx.target === 'new_lesson';
+    if (ctx.structureStepCount > 0) {
+      continue;
+    }
 
-    hints.push({
-      sectionTitle: ctx.sectionTitle,
-      sectionPosition: ctx.sectionPosition,
-      lessonPosition: ctx.lessonPosition,
-      lessonTitle: ctx.lessonTitle,
-      newModuleTitle: ctx.newModuleTitle,
-      target: ctx.target,
-      prompt,
-      suggestedLessonId: isNew
-        ? null
-        : matchLessonId(
-            lessons,
-            ctx.sectionTitle,
-            ctx.sectionPosition,
-            ctx.lessonPosition,
-            ctx.lessonTitle
-          ),
-    });
+    pushHint(hints, ctx, prompt, lessons);
   }
 
   return hints;
@@ -197,7 +285,9 @@ export function formatHintLocation(hint: AuditBatchHint): string | null {
     parts.push('[Новый урок]');
   }
 
-  if (hint.sectionTitle) {
+  if (hint.newModuleTitle && hint.target === 'new_lesson' && !hint.sectionPosition) {
+    parts.push(`[Новый модуль] «${hint.newModuleTitle}»`);
+  } else if (hint.sectionTitle) {
     parts.push(
       hint.sectionPosition != null
         ? `Модуль ${hint.sectionPosition} «${hint.sectionTitle}»`
@@ -216,20 +306,62 @@ export function formatHintLocation(hint: AuditBatchHint): string | null {
   return parts.length > 0 ? parts.join(' → ') : null;
 }
 
-export function groupAuditHints(hints: AuditBatchHint[]): {
-  existing: Array<{ hint: AuditBatchHint; index: number }>;
-  newContent: Array<{ hint: AuditBatchHint; index: number }>;
-} {
-  const existing: Array<{ hint: AuditBatchHint; index: number }> = [];
-  const newContent: Array<{ hint: AuditBatchHint; index: number }> = [];
-
-  hints.forEach((hint, index) => {
-    if (hint.target === 'existing') {
-      existing.push({ hint, index });
-    } else {
-      newContent.push({ hint, index });
+export function getHintLessonKey(hint: AuditBatchHint): string {
+  if (hint.target === 'new_module') {
+    return `new_module:${hint.newModuleTitle ?? ''}`;
+  }
+  if (hint.target === 'new_lesson') {
+    if (hint.newModuleTitle) {
+      return `new_lesson:module:${hint.newModuleTitle}:${hint.lessonPosition ?? ''}:${hint.lessonTitle ?? ''}`;
     }
-  });
+    return `new_lesson:${hint.sectionPosition ?? ''}:${hint.sectionTitle ?? ''}:${hint.lessonTitle ?? ''}`;
+  }
+  if (hint.suggestedLessonId != null) {
+    return `existing:lesson:${hint.suggestedLessonId}`;
+  }
+  return `existing:${hint.sectionPosition ?? ''}:${hint.lessonPosition ?? ''}:${hint.sectionTitle ?? ''}:${hint.lessonTitle ?? ''}`;
+}
 
-  return { existing, newContent };
+export interface MergedAuditHintGroup {
+  hint: AuditBatchHint;
+  prompts: string[];
+}
+
+function mergeHintsByLesson(hints: AuditBatchHint[]): MergedAuditHintGroup[] {
+  const groups = new Map<string, MergedAuditHintGroup>();
+  const order: string[] = [];
+
+  for (const hint of hints) {
+    const key = getHintLessonKey(hint);
+    const existing = groups.get(key);
+    if (existing) {
+      existing.prompts.push(hint.prompt);
+    } else {
+      groups.set(key, { hint, prompts: [hint.prompt] });
+      order.push(key);
+    }
+  }
+
+  return order.map((key) => groups.get(key)!);
+}
+
+export function groupAuditHints(hints: AuditBatchHint[]): {
+  existing: MergedAuditHintGroup[];
+  newContent: MergedAuditHintGroup[];
+} {
+  const existing: AuditBatchHint[] = [];
+  const newContent: AuditBatchHint[] = [];
+
+  for (const hint of hints) {
+    if (hint.target === 'existing') {
+      existing.push(hint);
+    } else {
+      newContent.push(hint);
+    }
+  }
+
+  return {
+    existing: mergeHintsByLesson(existing),
+    newContent: mergeHintsByLesson(newContent),
+  };
 }

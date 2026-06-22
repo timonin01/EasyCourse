@@ -1,6 +1,7 @@
 import api from './axios';
+import axios from 'axios';
 import { aiRequestConfig } from '../config/api';
-import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse } from '../types';
+import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse, CourseAuditPdfExportRequest } from '../types';
 
 export const agentApi = {
   // Chat with AI
@@ -159,6 +160,34 @@ export const agentApi = {
       aiRequestConfig
     );
     return response.data;
+  },
+
+  exportCourseAuditPdf: async (
+    payload: CourseAuditPdfExportRequest
+  ): Promise<{ blob: Blob; filename: string }> => {
+    try {
+      const response = await api.post<Blob>('/agent/analyzer/export-pdf', payload, {
+        responseType: 'blob',
+        ...aiRequestConfig,
+      });
+
+      const disposition = response.headers['content-disposition'] as string | undefined;
+      let filename = 'аудит.pdf';
+      if (disposition) {
+        const match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (match?.[1]) {
+          filename = decodeURIComponent(match[1]);
+        }
+      }
+
+      return { blob: response.data, filename };
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+        const message = await error.response.data.text();
+        throw new Error(message || 'Не удалось сформировать PDF');
+      }
+      throw error;
+    }
   },
 
   // Direct AI chat (without agent)
