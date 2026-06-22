@@ -34,6 +34,14 @@ public class DeepSeekStrategy implements LlmProvider {
         }
         return chat(messages);
     }
+
+    @Override
+    public String chat(List<ChatMessage> messages, String modelUri, int maxTokens) {
+        if (maxTokens > 0) {
+            log.debug("DeepSeek ignores custom maxTokens: {}", maxTokens);
+        }
+        return chat(messages, modelUri);
+    }
     
     private String buildPrompt(List<ChatMessage> messages) {
         StringBuilder prompt = new StringBuilder();

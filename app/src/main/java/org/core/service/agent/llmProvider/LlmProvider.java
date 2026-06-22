@@ -7,4 +7,6 @@ public interface LlmProvider {
     String chat(List<ChatMessage> messages);
 
     String chat(List<ChatMessage> messages, String modelUri);
+
+    String chat(List<ChatMessage> messages, String modelUri, int maxTokens);
 }

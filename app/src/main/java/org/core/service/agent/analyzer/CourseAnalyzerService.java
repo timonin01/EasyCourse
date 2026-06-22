@@ -13,6 +13,7 @@ import org.core.repository.SectionRepository;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.llmProvider.LlmProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,9 @@ public class CourseAnalyzerService {
     private final SystemPromptService systemPromptService;
     private final LlmProvider llmProvider;
     private final LlmModelConfig llmModelConfig;
+
+    @Value("${course.analyzer.max-output-tokens}")
+    private int analyzerMaxOutputTokens;
 
     public CourseAnalyzerService(@Qualifier("yandexProvider") LlmProvider llmProvider,
                                  SystemPromptService systemPromptService,
@@ -92,11 +96,12 @@ public class CourseAnalyzerService {
         );
 
         String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
-        String aiResponse = modelUri != null && !modelUri.isBlank()
-                ? llmProvider.chat(messages, modelUri)
-                : llmProvider.chat(messages);
+        String aiResponse = llmProvider.chat(messages, modelUri, analyzerMaxOutputTokens);
 
-        log.info("Received course analyzer response, length={}", aiResponse != null ? aiResponse.length() : 0);
+        log.info("Received course analyzer response, length={}, maxOutputTokens={}",
+                aiResponse != null ? aiResponse.length() : 0,
+                analyzerMaxOutputTokens
+        );
         return new CourseAnalyzerDTO(aiResponse);
     }
 }
