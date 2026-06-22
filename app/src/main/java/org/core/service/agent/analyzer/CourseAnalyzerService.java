@@ -31,7 +31,7 @@ public class CourseAnalyzerService {
     private final LlmProvider llmProvider;
     private final LlmModelConfig llmModelConfig;
 
-    @Value("${course.analyzer.max-output-tokens}")
+    @Value("${course.analyzer.max-output-tokens:16000}")
     private int analyzerMaxOutputTokens;
 
     public CourseAnalyzerService(@Qualifier("yandexProvider") LlmProvider llmProvider,
@@ -49,16 +49,25 @@ public class CourseAnalyzerService {
     }
 
     public CourseAnalyzerDTO courseAnalyze(Long userId, Long courseId, LlmModel llmModel) {
+        validateCourseAccess(userId, courseId);
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new CourseNotFoundException("Course not found"));
-        if (!course.getAuthor().getId().equals(userId)) {
-            throw new IllegalArgumentException("Course does not belong to user");
-        }
 
         String courseSnapshot = buildCourseSnapshot(course);
         log.info("Built course snapshot for courseId={}, length={}", courseId, courseSnapshot.length());
 
         return analyzeSectionsSummeryByLLMChat(courseSnapshot, llmModel);
+    }
+
+    public void validateCourseAccess(Long userId, Long courseId) {
+        if (courseId == null) {
+            throw new IllegalArgumentException("Course id is required");
+        }
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+        if (!course.getAuthor().getId().equals(userId)) {
+            throw new IllegalArgumentException("Course does not belong to user");
+        }
     }
 
     private String buildCourseSnapshot(Course course) {

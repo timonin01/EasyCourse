@@ -65,6 +65,8 @@ dependencies {
 
     implementation "org.springframework.boot:spring-boot-starter-mail:$springBootVersion"
 
+    implementation 'com.github.librepdf:openpdf:2.0.3'
+
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.7.0'
