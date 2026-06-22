@@ -1,4 +1,4 @@
-import { Bot, Crown, Layers, RefreshCw, Sparkles } from 'lucide-react';
+import { Bot, ClipboardCheck, Crown, Layers, RefreshCw, Sparkles } from 'lucide-react';
 import { Modal, Button, Badge } from '../ui';
 import { PRO_LLM_MODEL_LABELS } from '../../constants/llmModels';
 import { PRO_MAX_BATCH_STEPS } from '../../constants/subscription';
@@ -28,6 +28,11 @@ const features = [
     icon: RefreshCw,
     title: 'Смена типа шага',
     description: 'Конвертация типа шага с помощью AI',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'AI-аудит курса',
+    description: 'Анализ курса, план доработки уроков и идеи нового контента',
   },
 ];
 

@@ -1,4 +1,4 @@
-import { Bot, Check, Crown, Layers, Lock, RefreshCw, Sparkles } from 'lucide-react';
+import { Bot, Check, ClipboardCheck, Crown, Layers, Lock, RefreshCw, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useState, type ReactNode } from 'react';
 import { Button, Badge, Card } from '../../components/ui';
@@ -230,6 +230,12 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
             value={isPro ? 'Доступна' : 'Только в Pro'}
             active={isPro}
           />
+          <FeatureRow
+            icon={<ClipboardCheck className="h-3.5 w-3.5" />}
+            label="AI-аудит курса"
+            value={isPro ? 'Доступен' : 'Только в Pro'}
+            active={isPro}
+          />
         </div>
 
         {/* Upgrade hint — Free only */}
@@ -238,7 +244,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
             <p className="text-xs leading-relaxed text-dark-300">
               <span className="font-semibold text-primary-400">Pro</span>
               {' — '}
-              безлимитные генерации, все модели и расширенная batch генерация
+              безлимитные генерации, все модели, расширенная batch-генерация и AI-аудит курса
             </p>
             <Button
               size="sm"

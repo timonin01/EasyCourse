@@ -7,12 +7,16 @@ import {
   Layers,
   Lock,
   Sparkles,
-  Lightbulb,
   FileText,
+  RotateCcw,
+  PenLine,
+  PlusCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, PageLoader, Select, Spinner } from '../components/ui';
+import { Button, Card, PageLoader, Spinner } from '../components/ui';
+import { CoursePickerList } from '../components/courses/CoursePickerList';
+import { LessonPickerSelect } from '../components/courses/LessonPickerSelect';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
 import { ProUpgradeModal } from '../components/subscription/ProUpgradeModal';
 import { agentApi, coursesApi, lessonsApi, sectionsApi } from '../api';
@@ -25,38 +29,41 @@ import {
   parseCourseAuditHints,
   formatHintLocation,
   groupAuditHints,
+  getHintLessonKey,
   type CourseLessonContext,
 } from '../utils/parseCourseAuditHints';
 import {
   splitAuditReport,
   buildReportTabContent,
-  buildImprovementsTabContent,
   normalizeAuditMarkdown,
+  stripSectionHeading,
 } from '../utils/parseCourseAuditSections';
 
-type AuditTab = 'report' | 'ideas';
+type AuditTab = 'report' | 'existing' | 'newContent';
 
 function HintCard({
-  hintIndex,
+  groupKey,
   location,
-  prompt,
+  prompts,
   isNewContent,
-  lessonSelectOptions,
+  courseLessons,
   selectedLessonId,
   onLessonChange,
   onOpenBatch,
   onCopyPrompt,
 }: {
-  hintIndex: number;
+  groupKey: string;
   location: string | null;
-  prompt: string;
+  prompts: string[];
   isNewContent: boolean;
-  lessonSelectOptions: { value: string; label: string }[];
+  courseLessons: CourseLessonContext[];
   selectedLessonId: string;
-  onLessonChange: (index: number, lessonId: string) => void;
-  onOpenBatch: (index: number, prompt: string) => void;
+  onLessonChange: (groupKey: string, lessonId: string) => void;
+  onOpenBatch: (groupKey: string, combinedPrompt: string) => void;
   onCopyPrompt: (prompt: string) => void;
 }) {
+  const combinedPrompt = prompts.join('\n');
+
   return (
     <div
       className={`rounded-xl border p-4 ${
@@ -76,7 +83,17 @@ function HintCard({
         )}
       </div>
 
-      <p className="mb-3 text-sm leading-relaxed text-dark-200">{prompt}</p>
+      {prompts.length === 1 ? (
+        <p className="mb-3 text-sm leading-relaxed text-dark-200">{prompts[0]}</p>
+      ) : (
+        <ul className="mb-3 list-disc space-y-1.5 pl-4">
+          {prompts.map((prompt, i) => (
+            <li key={i} className="text-sm leading-relaxed text-dark-200">
+              {prompt}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {isNewContent ? (
         <>
@@ -84,11 +101,11 @@ function HintCard({
             Сначала создайте модуль/урок в редакторе курса, затем выберите его ниже или скопируйте
             промпт.
           </p>
-          <Select
+          <LessonPickerSelect
             label="Урок (после создания)"
             value={selectedLessonId}
-            onChange={(e) => onLessonChange(hintIndex, e.target.value)}
-            options={lessonSelectOptions}
+            onChange={(lessonId) => onLessonChange(groupKey, lessonId)}
+            lessons={courseLessons}
           />
           <div className="mt-3 flex gap-2">
             <Button
@@ -96,7 +113,7 @@ function HintCard({
               size="sm"
               className="flex-1"
               icon={<ClipboardCopy className="h-3.5 w-3.5" />}
-              onClick={() => onCopyPrompt(prompt)}
+              onClick={() => onCopyPrompt(combinedPrompt)}
             >
               Копировать
             </Button>
@@ -105,7 +122,7 @@ function HintCard({
               size="sm"
               className="flex-1"
               disabled={!selectedLessonId}
-              onClick={() => onOpenBatch(hintIndex, prompt)}
+              onClick={() => onOpenBatch(groupKey, combinedPrompt)}
             >
               Открыть batch
             </Button>
@@ -113,18 +130,18 @@ function HintCard({
         </>
       ) : (
         <>
-          <Select
+          <LessonPickerSelect
             label="Урок для генерации"
             value={selectedLessonId}
-            onChange={(e) => onLessonChange(hintIndex, e.target.value)}
-            options={lessonSelectOptions}
+            onChange={(lessonId) => onLessonChange(groupKey, lessonId)}
+            lessons={courseLessons}
           />
           <Button
             variant="secondary"
             size="sm"
             className="mt-3 w-full"
             disabled={!selectedLessonId}
-            onClick={() => onOpenBatch(hintIndex, prompt)}
+            onClick={() => onOpenBatch(groupKey, combinedPrompt)}
           >
             Открыть batch
           </Button>
@@ -147,7 +164,8 @@ export function CourseAudit() {
   const [isLoadingLessons, setIsLoadingLessons] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<string | null>(null);
-  const [hintLessonIds, setHintLessonIds] = useState<Record<number, string>>({});
+  const [auditedCourseId, setAuditedCourseId] = useState<string | null>(null);
+  const [hintLessonIds, setHintLessonIds] = useState<Record<string, string>>({});
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AuditTab>('report');
 
@@ -226,20 +244,34 @@ export function CourseAudit() {
     return normalizeAuditMarkdown(buildReportTabContent(auditSections));
   }, [auditSections]);
 
-  const improvementsTabContent = useMemo(() => {
-    if (!auditSections) return '';
-    return normalizeAuditMarkdown(buildImprovementsTabContent(auditSections));
+  const existingTabContent = useMemo(() => {
+    if (!auditSections?.improvements) return '';
+    return normalizeAuditMarkdown(stripSectionHeading(auditSections.improvements, 'improvements'));
   }, [auditSections]);
 
+  const newContentTabContent = useMemo(() => {
+    if (!auditSections?.newContent) return '';
+    return normalizeAuditMarkdown(stripSectionHeading(auditSections.newContent, 'newContent'));
+  }, [auditSections]);
+
+  const showHintsSidebar = activeTab !== 'report';
+  const activeHintGroups =
+    activeTab === 'existing'
+      ? groupedHints.existing
+      : activeTab === 'newContent'
+        ? groupedHints.newContent
+        : [];
+
   useEffect(() => {
-    const defaults: Record<number, string> = {};
-    batchHints.forEach((hint, index) => {
-      if (hint.suggestedLessonId != null) {
-        defaults[index] = String(hint.suggestedLessonId);
+    const defaults: Record<string, string> = {};
+    for (const group of [...groupedHints.existing, ...groupedHints.newContent]) {
+      const key = getHintLessonKey(group.hint);
+      if (group.hint.suggestedLessonId != null) {
+        defaults[key] = String(group.hint.suggestedLessonId);
       }
-    });
+    }
     setHintLessonIds(defaults);
-  }, [batchHints]);
+  }, [groupedHints]);
 
   const handleAnalyze = async () => {
     if (!selectedCourseId) {
@@ -249,10 +281,12 @@ export function CourseAudit() {
 
     setIsAnalyzing(true);
     setAnalyzeResult(null);
+    setAuditedCourseId(null);
     setActiveTab('report');
     try {
       const response = await agentApi.analyzeCourse(Number(selectedCourseId));
       setAnalyzeResult(response.analyzeResult);
+      setAuditedCourseId(selectedCourseId);
       await refreshSubscription();
       toast.success('Аудит курса завершён');
     } catch (error) {
@@ -262,8 +296,18 @@ export function CourseAudit() {
     }
   };
 
-  const handleOpenBatch = (hintIndex: number, prompt: string) => {
-    const lessonId = hintLessonIds[hintIndex];
+  const handleClearAudit = () => {
+    setAnalyzeResult(null);
+    setAuditedCourseId(null);
+    setHintLessonIds({});
+    setActiveTab('report');
+  };
+
+  const auditedCourse = courses.find((c) => String(c.id) === auditedCourseId);
+  const showCoursePicker = !isAnalyzing && !analyzeResult;
+
+  const handleOpenBatch = (groupKey: string, prompt: string) => {
+    const lessonId = hintLessonIds[groupKey];
     if (!lessonId) {
       toast.error('Выберите урок для batch-генерации');
       return;
@@ -285,24 +329,9 @@ export function CourseAudit() {
     }
   };
 
-  const courseOptions = courses.length > 0
-    ? courses.map((course) => ({
-        value: String(course.id),
-        label: course.title,
-      }))
-    : [{ value: '', label: 'Нет курсов' }];
-
-  const lessonSelectOptions = [
-    { value: '', label: 'Выберите урок' },
-    ...courseLessons.map((lesson) => ({
-      value: String(lesson.id),
-      label: `${lesson.sectionTitle} · Урок ${lesson.position}: ${lesson.title}`,
-    })),
-  ];
-
   const renderHintGroup = (
     title: string,
-    items: Array<{ hint: (typeof batchHints)[0]; index: number }>,
+    items: typeof groupedHints.existing,
     emptyText: string
   ) => (
     <div className="space-y-3">
@@ -310,22 +339,25 @@ export function CourseAudit() {
       {items.length === 0 ? (
         <p className="text-xs text-dark-500">{emptyText}</p>
       ) : (
-        items.map(({ hint, index }) => (
-          <HintCard
-            key={`${hint.prompt}-${index}`}
-            hintIndex={index}
-            location={formatHintLocation(hint)}
-            prompt={hint.prompt}
-            isNewContent={hint.target !== 'existing'}
-            lessonSelectOptions={lessonSelectOptions}
-            selectedLessonId={hintLessonIds[index] ?? ''}
-            onLessonChange={(idx, lessonId) =>
-              setHintLessonIds((prev) => ({ ...prev, [idx]: lessonId }))
-            }
-            onOpenBatch={handleOpenBatch}
-            onCopyPrompt={handleCopyPrompt}
-          />
-        ))
+        items.map((group) => {
+          const groupKey = getHintLessonKey(group.hint);
+          return (
+            <HintCard
+              key={groupKey}
+              groupKey={groupKey}
+              location={formatHintLocation(group.hint)}
+              prompts={group.prompts}
+              isNewContent={group.hint.target !== 'existing'}
+              courseLessons={courseLessons}
+              selectedLessonId={hintLessonIds[groupKey] ?? ''}
+              onLessonChange={(key, lessonId) =>
+                setHintLessonIds((prev) => ({ ...prev, [key]: lessonId }))
+              }
+              onOpenBatch={handleOpenBatch}
+              onCopyPrompt={handleCopyPrompt}
+            />
+          );
+        })
       )}
     </div>
   );
@@ -367,8 +399,8 @@ export function CourseAudit() {
               <ClipboardCheck className="h-8 w-8 text-primary-400" />
               Аудит курса
             </h1>
-            <p className="mt-2 max-w-2xl text-dark-400">
-              AI проанализирует курс, предложит улучшения и batch-подсказки. Yandex GPT Pro.
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-dark-300">
+              AI проанализирует курс, предложит доработку существующих уроков и план нового контента.
             </p>
           </div>
           <div className="rounded-xl border border-primary-500/25 bg-primary-900/20 px-4 py-2 text-sm text-primary-200">
@@ -377,38 +409,60 @@ export function CourseAudit() {
         </div>
       </div>
 
-      <Card className="mb-6 p-6">
-        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
-          <Select
-            label="Курс"
-            value={selectedCourseId}
-            onChange={(e) => {
-              setSelectedCourseId(e.target.value);
-              setAnalyzeResult(null);
-            }}
-            options={courseOptions}
-            disabled={courses.length === 0 || isAnalyzing}
-          />
-          <Button
-            onClick={() => void handleAnalyze()}
-            disabled={!selectedCourseId || isAnalyzing || isLoadingLessons}
-            icon={isAnalyzing ? undefined : <Sparkles className="h-4 w-4" />}
-            className="md:min-w-[180px]"
-          >
-            {isAnalyzing ? (
-              <span className="flex items-center gap-2">
-                <Spinner size="sm" />
-                Анализ...
-              </span>
-            ) : (
-              'Запустить аудит'
-            )}
-          </Button>
-        </div>
-      </Card>
+      {showCoursePicker && (
+        <Card className="mb-6 p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 flex-1">
+              <h3 className="mb-2 text-sm font-medium text-dark-300">Курс</h3>
+              <CoursePickerList
+                courses={courses}
+                selectedCourseId={selectedCourseId}
+                onSelect={setSelectedCourseId}
+                disabled={courses.length === 0}
+              />
+            </div>
+            <Button
+              onClick={() => void handleAnalyze()}
+              disabled={!selectedCourseId || isLoadingLessons}
+              icon={<Sparkles className="h-4 w-4" />}
+              className="w-full shrink-0 md:w-auto md:min-w-[180px]"
+            >
+              Запустить аудит
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {isAnalyzing && (
+        <Card className="mb-6 p-6">
+          <div className="flex items-center gap-3 text-dark-200">
+            <Spinner size="sm" />
+            <span>
+              Анализируем курс «{courses.find((c) => String(c.id) === selectedCourseId)?.title ?? '…'}»…
+            </span>
+          </div>
+        </Card>
+      )}
 
       {analyzeResult && (
-        <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+        <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 p-4">
+          <p className="text-sm text-dark-300">
+            Аудит курса{' '}
+            <span className="font-medium text-dark-100">{auditedCourse?.title ?? '—'}</span>
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<RotateCcw className="h-4 w-4" />}
+            onClick={handleClearAudit}
+          >
+            Очистить
+          </Button>
+        </Card>
+      )}
+
+      {analyzeResult && (
+        <div className={`grid gap-6 ${showHintsSidebar ? 'xl:grid-cols-[2fr_1fr]' : ''}`}>
           <Card className="p-6">
             <div className="mb-5 flex flex-wrap gap-2 border-b border-dark-700 pb-4">
               <button
@@ -425,71 +479,75 @@ export function CourseAudit() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('ideas')}
+                onClick={() => setActiveTab('existing')}
                 className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === 'ideas'
+                  activeTab === 'existing'
+                    ? 'bg-primary-500/20 text-primary-200'
+                    : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'
+                }`}
+              >
+                <PenLine className="h-4 w-4" />
+                Доработка курса
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('newContent')}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === 'newContent'
                     ? 'bg-amber-500/15 text-amber-200'
                     : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'
                 }`}
               >
-                <Lightbulb className="h-4 w-4" />
-                Идеи для улучшения
+                <PlusCircle className="h-4 w-4" />
+                Новый контент
               </button>
             </div>
 
             {activeTab === 'report' ? (
               <ChatMarkdown content={reportTabContent || normalizeAuditMarkdown(analyzeResult)} />
-            ) : improvementsTabContent ? (
-              <div className="space-y-8">
-                {auditSections?.improvements && (
-                  <section>
-                    <h2 className="mb-3 text-base font-semibold text-dark-100">
-                      Улучшения существующих уроков
-                    </h2>
-                    <ChatMarkdown content={normalizeAuditMarkdown(auditSections.improvements)} />
-                  </section>
-                )}
-                {auditSections?.newContent && (
-                  <section className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-4">
-                    <h2 className="mb-3 text-base font-semibold text-amber-200">
-                      Новые модули и уроки
-                    </h2>
-                    <ChatMarkdown content={normalizeAuditMarkdown(auditSections.newContent)} />
-                  </section>
-                )}
-              </div>
+            ) : activeTab === 'existing' ? (
+              existingTabContent ? (
+                <ChatMarkdown content={existingTabContent} />
+              ) : (
+                <p className="text-sm text-dark-500">
+                  Нет рекомендаций по существующим урокам.
+                </p>
+              )
+            ) : newContentTabContent ? (
+              <ChatMarkdown content={newContentTabContent} />
             ) : (
-              <p className="text-sm text-dark-500">Нет раздела с идеями. Запустите аудит повторно.</p>
+              <p className="text-sm text-dark-500">
+                Нет предложений по новым модулям и урокам.
+              </p>
             )}
           </Card>
 
-          <div className="space-y-4">
-            <Card className="p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <Layers className="h-5 w-5 text-primary-400" />
-                <h2 className="text-lg font-semibold text-dark-100">Batch-подсказки</h2>
-              </div>
-
-              {batchHints.length === 0 ? (
-                <p className="text-sm text-dark-500">
-                  Подсказки не найдены. Скопируйте текст из отчёта вручную.
-                </p>
-              ) : (
-                <div className="space-y-6">
-                  {renderHintGroup(
-                    'Для существующих уроков',
-                    groupedHints.existing,
-                    'Нет подсказок для текущих уроков'
-                  )}
-                  {renderHintGroup(
-                    'Для нового контента',
-                    groupedHints.newContent,
-                    'Нет подсказок для новых модулей/уроков'
-                  )}
+          {showHintsSidebar && (
+            <div className="space-y-4">
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-primary-400" />
+                  <h2 className="text-lg font-semibold text-dark-100">Batch-подсказки</h2>
                 </div>
-              )}
-            </Card>
-          </div>
+
+                {activeHintGroups.length === 0 ? (
+                  <p className="text-sm text-dark-500">
+                    {activeTab === 'existing'
+                      ? 'Подсказки для существующих уроков не найдены.'
+                      : 'Подсказки для нового контента не найдены. Создайте урок в редакторе, затем выберите его здесь.'}
+                  </p>
+                ) : (
+                  renderHintGroup(
+                    activeTab === 'existing' ? 'Для существующих уроков' : 'Для нового контента',
+                    activeHintGroups,
+                    activeTab === 'existing'
+                      ? 'Нет подсказок для текущих уроков'
+                      : 'Нет подсказок для новых модулей/уроков'
+                  )
+                )}
+              </Card>
+            </div>
+          )}
         </div>
       )}
     </MainLayout>
