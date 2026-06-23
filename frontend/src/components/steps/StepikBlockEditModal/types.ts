@@ -51,6 +51,6 @@ export interface StepikBlockEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   block: StepikBlockRequest | null;
-  onSave: (block: StepikBlockRequest) => void;
+  onSave: (block: StepikBlockRequest) => void | Promise<void>;
   title?: string;
 }

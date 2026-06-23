@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CheckCircle, FileText } from 'lucide-react';
 import { Modal, Button } from '../../ui';
 import { BLOCK_META } from './blockMeta';
@@ -21,11 +22,18 @@ export function StepikBlockEditModal({
 
   const form = useStepikBlockForm(block, isOpen, blockName);
 
-  const handleSave = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
     const updated = form.buildUpdatedBlock();
-    if (!updated) return;
-    onSave(updated);
-    onClose();
+    if (!updated || isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(updated);
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -38,8 +46,8 @@ export function StepikBlockEditModal({
       size={blockName === 'table' ? 'xl' : 'lg'}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>Отмена</Button>
-          <Button variant="success" onClick={handleSave}>
+          <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>
+          <Button variant="success" onClick={() => void handleSave()} isLoading={isSaving}>
             <CheckCircle className="w-4 h-4" />
             Применить
           </Button>
