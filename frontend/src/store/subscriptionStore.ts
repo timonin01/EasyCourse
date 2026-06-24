@@ -15,7 +15,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   isLoading: false,
 
   fetchStatus: async () => {
-    set({ isLoading: true });
+    set((state) => ({ isLoading: state.status === null }));
     try {
       const status = await subscriptionApi.getStatus();
       set({ status, isLoading: false });

@@ -11,7 +11,7 @@ import {
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
 import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
-import { Card, Button, StatCard, EmptyState, DashboardSkeleton } from '../components/ui';
+import { Card, Button, StatCard, EmptyState, DashboardSkeleton, FadeIn, StaggerList, StaggerItem } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { coursesApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -58,7 +58,7 @@ export function Dashboard() {
 
   return (
     <MainLayout>
-      <div className="animate-fade-in">
+      <FadeIn>
         {/* Header */}
         <div className="mb-8 min-w-0">
           <h1 className="text-3xl font-bold text-dark-100 break-words">
@@ -154,14 +154,16 @@ export function Dashboard() {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StaggerList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentCourses.map((course) => (
-                <CourseCard key={course.id} course={course} variant="compact" />
+                <StaggerItem key={course.id}>
+                  <CourseCard course={course} variant="compact" />
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerList>
           )}
         </div>
-      </div>
+      </FadeIn>
     </MainLayout>
   );
 }

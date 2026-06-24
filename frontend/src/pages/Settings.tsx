@@ -2,17 +2,19 @@ import { useState, useEffect } from 'react';
 import { Save, Key, User, Lock, ExternalLink, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Badge, PageHeader } from '../components/ui';
+import { Card, Button, Input, Badge, PageHeader, FadeIn } from '../components/ui';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
+import { useStepikOAuthStatus } from '../hooks/useStepikOAuthStatus';
 import { extractApiErrorMessage, getApiErrorStatus } from '../utils/apiError';
 import { validateEmail, validateUserName } from '../utils/validation';
 
 export function Settings() {
   const { user, updateUser } = useAuthStore();
+  const { hasConfig, setHasConfig } = useStepikOAuthStatus();
+  const hasStepikConfig = hasConfig === true;
   const [isLoading, setIsLoading] = useState(false);
-  const [hasStepikConfig, setHasStepikConfig] = useState(false);
   
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -31,24 +33,20 @@ export function Settings() {
   });
 
   useEffect(() => {
-    const checkStepikConfig = async () => {
-      if (!user?.id) return;
+    const loadStepikForm = async () => {
+      if (!user?.id || hasConfig !== true) return;
       try {
-        const hasConfig = await authApi.hasStepikOAuthConfig(user.id);
-        setHasStepikConfig(hasConfig);
-        if (hasConfig) {
-          const config = await authApi.getStepikOAuthConfig(user.id);
-          setStepikConfig({
-            clientId: config.clientId || '',
-            clientSecret: '••••••••••••',
-          });
-        }
+        const config = await authApi.getStepikOAuthConfig(user.id);
+        setStepikConfig({
+          clientId: config.clientId || '',
+          clientSecret: '••••••••••••',
+        });
       } catch (error) {
-        console.error('Failed to check Stepik config:', error);
+        console.error('Failed to load Stepik config:', error);
       }
     };
-    checkStepikConfig();
-  }, [user?.id]);
+    void loadStepikForm();
+  }, [user?.id, hasConfig]);
 
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
@@ -135,7 +133,7 @@ export function Settings() {
           ? '' 
           : stepikConfig.clientSecret,
       });
-      setHasStepikConfig(true);
+      setHasConfig(true);
       toast.success('Stepik настройки обновлены!');
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } })?.response?.status;
@@ -153,7 +151,7 @@ export function Settings() {
 
     try {
       await authApi.clearStepikOAuthConfig(user.id);
-      setHasStepikConfig(false);
+      setHasConfig(false);
       setStepikConfig({ clientId: '', clientSecret: '' });
       toast.success('Настройки Stepik удалены');
     } catch (error) {
@@ -163,7 +161,8 @@ export function Settings() {
 
   return (
     <MainLayout>
-      <div className="max-w-2xl animate-fade-in">
+      <div className="max-w-2xl">
+        <FadeIn>
         <PageHeader
           title="Настройки"
           description="Управляйте своим аккаунтом и интеграциями"
@@ -299,6 +298,7 @@ export function Settings() {
             </ol>
           </div>
         </Card>
+        </FadeIn>
       </div>
     </MainLayout>
   );

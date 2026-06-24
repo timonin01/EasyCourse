@@ -13,9 +13,10 @@ import {
   PlusCircle,
   FileDown,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton } from '../components/ui';
+import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton, FadeIn, Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui';
 import { CoursePickerList } from '../components/courses/CoursePickerList';
 import { LessonPickerSelect } from '../components/courses/LessonPickerSelect';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
@@ -26,6 +27,7 @@ import {
 } from '../components/courseAudit/CourseAuditPdfExportModal';
 import { agentApi, coursesApi, lessonsApi, sectionsApi } from '../api';
 import { useAuthStore, useAIGeneratorStore, useCourseStore } from '../store';
+import { fadeInUp } from '../components/ui/motion';
 import { useSubscription } from '../hooks/useSubscription';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import { COURSE_AUDIT_PRO_MESSAGE } from '../constants/subscription';
@@ -451,7 +453,8 @@ export function CourseAudit() {
 
   return (
     <MainLayout>
-      <div className="animate-fade-in">
+      <div>
+      <FadeIn>
       <PageHeader
         title="Аудит курса"
         description="AI проанализирует курс, предложит доработку существующих уроков и план нового контента."
@@ -535,62 +538,58 @@ export function CourseAudit() {
       {analyzeResult && (
         <div className={`grid gap-6 ${showHintsSidebar ? 'xl:grid-cols-[2fr_1fr]' : ''}`}>
           <Card className="p-6">
-            <div className="mb-5 flex flex-wrap gap-2 border-b border-dark-700 pb-4">
-              <button
-                type="button"
-                onClick={() => setActiveTab('report')}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === 'report'
-                    ? 'bg-primary-500/20 text-primary-200'
-                    : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'
-                }`}
-              >
-                <FileText className="h-4 w-4" />
-                Отчёт
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('existing')}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === 'existing'
-                    ? 'bg-primary-500/20 text-primary-200'
-                    : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'
-                }`}
-              >
-                <PenLine className="h-4 w-4" />
-                Доработка курса
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('newContent')}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === 'newContent'
-                    ? 'bg-amber-500/15 text-amber-200'
-                    : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'
-                }`}
-              >
-                <PlusCircle className="h-4 w-4" />
-                Новый контент
-              </button>
-            </div>
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AuditTab)}>
+              <TabsList className="mb-5 w-full pb-4">
+                <TabsTrigger value="report">
+                  <FileText className="h-4 w-4" />
+                  Отчёт
+                </TabsTrigger>
+                <TabsTrigger value="existing">
+                  <PenLine className="h-4 w-4" />
+                  Доработка курса
+                </TabsTrigger>
+                <TabsTrigger value="newContent" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+                  <PlusCircle className="h-4 w-4" />
+                  Новый контент
+                </TabsTrigger>
+              </TabsList>
 
-            {activeTab === 'report' ? (
-              <ChatMarkdown content={reportTabContent || normalizeAuditMarkdown(analyzeResult)} />
-            ) : activeTab === 'existing' ? (
-              existingTabContent ? (
-                <ChatMarkdown content={existingTabContent} />
-              ) : (
-                <p className="text-sm text-dark-500">
-                  Нет рекомендаций по существующим урокам.
-                </p>
-              )
-            ) : newContentTabContent ? (
-              <ChatMarkdown content={newContentTabContent} />
-            ) : (
-              <p className="text-sm text-dark-500">
-                Нет предложений по новым модулям и урокам.
-              </p>
-            )}
+              <TabsContent value="report">
+                <AnimatePresence mode="wait">
+                  <motion.div key="report" {...fadeInUp} transition={{ duration: 0.22 }}>
+                    <ChatMarkdown content={reportTabContent || normalizeAuditMarkdown(analyzeResult)} />
+                  </motion.div>
+                </AnimatePresence>
+              </TabsContent>
+
+              <TabsContent value="existing">
+                <AnimatePresence mode="wait">
+                  <motion.div key="existing" {...fadeInUp} transition={{ duration: 0.22 }}>
+                    {existingTabContent ? (
+                      <ChatMarkdown content={existingTabContent} />
+                    ) : (
+                      <p className="text-sm text-dark-500">
+                        Нет рекомендаций по существующим урокам.
+                      </p>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </TabsContent>
+
+              <TabsContent value="newContent">
+                <AnimatePresence mode="wait">
+                  <motion.div key="newContent" {...fadeInUp} transition={{ duration: 0.22 }}>
+                    {newContentTabContent ? (
+                      <ChatMarkdown content={newContentTabContent} />
+                    ) : (
+                      <p className="text-sm text-dark-500">
+                        Нет предложений по новым модулям и урокам.
+                      </p>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </TabsContent>
+            </Tabs>
           </Card>
 
           {showHintsSidebar && (
@@ -621,6 +620,7 @@ export function CourseAudit() {
           )}
         </div>
       )}
+      </FadeIn>
       </div>
     </MainLayout>
   );
