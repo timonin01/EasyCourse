@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
-import { Card, Button, PageLoader, StatCard } from '../components/ui';
+import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
+import { Card, Button, StatCard, EmptyState, DashboardSkeleton } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { coursesApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -18,7 +19,7 @@ import { useAuthStore, useCourseStore } from '../store';
 export function Dashboard() {
   const { user } = useAuthStore();
   const { setCourses, courses } = useCourseStore();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(courses.length === 0);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -41,112 +42,126 @@ export function Dashboard() {
     { label: 'Не синхронизировано', value: courses.filter(c => !c.fullySynced).length, icon: FileText, accent: 'amber' as const },
   ];
 
+  const recentCourses = [...courses]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 6);
+
   const isNewUser = courses.length === 0;
 
-  if (isLoading) {
+  if (isLoading && courses.length === 0) {
     return (
       <MainLayout>
-        <PageLoader />
+        <DashboardSkeleton />
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
-      {/* Header */}
-      <div className="mb-8 min-w-0">
-        <h1 className="text-3xl font-bold text-dark-100 break-words">
-          Привет,{' '}
-          <span className="gradient-text break-words">{user?.name || 'Пользователь'}</span>
-          ! 👋
-        </h1>
-        <p className="text-dark-400 mt-2">
-          {isNewUser
-            ? 'Начните создавать курсы для Stepik — мы подскажем, с чего начать'
-            : 'Вот что происходит с вашими курсами сегодня'}
-        </p>
-      </div>
-
-      {isNewUser && <OnboardingBanner />}
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {stats.map((stat) => (
-          <StatCard
-            key={stat.label}
-            label={stat.label}
-            value={stat.value}
-            icon={stat.icon}
-            accent={stat.accent}
-          />
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Link to="/courses">
-          <Card hover className="h-full">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-primary-600/20 rounded-xl">
-                  <Plus className="w-8 h-8 text-primary-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-dark-100">Создать курс</h3>
-                  <p className="text-dark-400">Начните новый курс с нуля</p>
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 text-dark-500" />
-            </div>
-          </Card>
-        </Link>
-
-        <Link to="/ai-generator">
-          <Card hover className="h-full">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-purple-600/20 rounded-xl">
-                  <Sparkles className="w-8 h-8 text-purple-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-dark-100">AI Генератор</h3>
-                  <p className="text-dark-400">Создавайте контент с помощью ИИ</p>
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 text-dark-500" />
-            </div>
-          </Card>
-        </Link>
-      </div>
-
-      {/* Recent Courses */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-dark-100">Последние курсы</h2>
-          {!isNewUser && (
-            <Link to="/courses">
-              <Button variant="ghost" size="sm">
-                Все курсы
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
-          )}
+      <div className="animate-fade-in">
+        {/* Header */}
+        <div className="mb-8 min-w-0">
+          <h1 className="text-3xl font-bold text-dark-100 break-words">
+            Привет,{' '}
+            <span className="gradient-text break-words">{user?.name || 'Пользователь'}</span>
+            ! 👋
+          </h1>
+          <p className="text-dark-400 mt-2">
+            {isNewUser
+              ? 'Начните создавать курсы для Stepik — мы подскажем, с чего начать'
+              : 'Вот что происходит с вашими курсами сегодня'}
+          </p>
         </div>
 
-        {isNewUser ? (
-          <Card className="text-center py-8 border-dashed border-dark-600">
-            <BookOpen className="w-10 h-10 text-dark-500 mx-auto mb-3" />
-            <p className="text-dark-400 text-sm">Здесь появятся ваши курсы после создания</p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {courses.slice(0, 6).map((course) => (
-              <CourseCard key={course.id} course={course} variant="compact" />
-            ))}
+        {isNewUser && <OnboardingBanner />}
+
+        <DashboardSubscriptionWidget />
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {stats.map((stat) => (
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              icon={stat.icon}
+              accent={stat.accent}
+            />
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Link to="/courses">
+            <Card hover className="h-full">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-primary-600/20 rounded-xl">
+                    <Plus className="w-8 h-8 text-primary-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-dark-100">Создать курс</h3>
+                    <p className="text-dark-400">Начните новый курс с нуля</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-dark-500" />
+              </div>
+            </Card>
+          </Link>
+
+          <Link to="/ai-generator">
+            <Card hover className="h-full">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-purple-600/20 rounded-xl">
+                    <Sparkles className="w-8 h-8 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-dark-100">AI Генератор</h3>
+                    <p className="text-dark-400">Создавайте контент с помощью ИИ</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-dark-500" />
+              </div>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Recent Courses */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-dark-100">Последние курсы</h2>
+            {!isNewUser && (
+              <Link to="/courses">
+                <Button variant="ghost" size="sm">
+                  Все курсы
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            )}
           </div>
-        )}
+
+          {isNewUser ? (
+            <EmptyState
+              variant="dashed"
+              icon={BookOpen}
+              title="Пока нет курсов"
+              description="Здесь появятся ваши курсы после создания"
+              action={
+                <Link to="/courses">
+                  <Button icon={<Plus className="w-4 h-4" />}>Создать первый курс</Button>
+                </Link>
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentCourses.map((course) => (
+                <CourseCard key={course.id} course={course} variant="compact" />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </MainLayout>
   );
 }
-

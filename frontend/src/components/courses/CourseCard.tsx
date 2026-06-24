@@ -175,6 +175,12 @@ export function CourseCard({
   }
 
   return (
-    <Card className="relative flex h-full min-w-0 flex-col">{cardContent}</Card>
+    <Card
+      hover={Boolean(onOpen)}
+      className="relative flex h-full min-w-0 flex-col"
+      onClick={onOpen ? () => onOpen(course.id) : undefined}
+    >
+      {cardContent}
+    </Card>
   );
 }

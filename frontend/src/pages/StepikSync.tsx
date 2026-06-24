@@ -16,7 +16,7 @@ import {
 import { StepikIcon } from '../components/StepikIcon';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Modal, Badge, PageLoader } from '../components/ui';
+import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton } from '../components/ui';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi, authApi } from '../api';
 import { stepikApi, SyncProgress } from '../api/stepik.api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -41,7 +41,7 @@ export function StepikSync() {
   const { courses, setCourses, updateCourse } = useCourseStore();
   
   const [activeTab, setActiveTab] = useState<TabType>('upload');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(courses.length === 0);
   const [hasStepikConfig, setHasStepikConfig] = useState(false);
   
   const [selectedCourse, setSelectedCourse] = useState<CourseWithDetails | null>(null);
@@ -461,10 +461,10 @@ export function StepikSync() {
     handleUploadCourse();
   };
 
-  if (isLoading) {
+  if (isLoading && courses.length === 0) {
     return (
       <MainLayout>
-        <PageLoader />
+        <StepikSyncSkeleton />
       </MainLayout>
     );
   }
@@ -472,23 +472,20 @@ export function StepikSync() {
   if (!hasStepikConfig) {
     return (
       <MainLayout>
-        <div className="max-w-2xl mx-auto">
-          <Card className="text-center py-12">
-            <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-dark-100 mb-2">
-              Настройте Stepik OAuth
-            </h2>
-            <p className="text-dark-400 mb-6">
-              Для синхронизации курсов со Stepik необходимо настроить OAuth параметры.
-              Получите Client ID и Client Secret в настройках вашего приложения на Stepik.
-            </p>
-            <Button
-              icon={<Settings className="w-4 h-4" />}
-              onClick={() => navigate('/settings')}
-            >
-              Перейти в настройки
-            </Button>
-          </Card>
+        <div className="max-w-2xl mx-auto animate-fade-in">
+          <EmptyState
+            icon={AlertTriangle}
+            title="Настройте Stepik OAuth"
+            description="Для синхронизации курсов со Stepik необходимо настроить OAuth параметры. Получите Client ID и Client Secret в настройках вашего приложения на Stepik."
+            action={
+              <Button
+                icon={<Settings className="w-4 h-4" />}
+                onClick={() => navigate('/settings')}
+              >
+                Перейти в настройки
+              </Button>
+            }
+          />
         </div>
       </MainLayout>
     );
@@ -496,11 +493,11 @@ export function StepikSync() {
 
   return (
     <MainLayout>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-dark-100">Синхронизация со Stepik</h1>
-        <p className="text-dark-400 mt-1">Выгружайте и загружайте курсы с платформы Stepik</p>
-      </div>
+      <div className="animate-fade-in">
+      <PageHeader
+        title="Синхронизация со Stepik"
+        description="Выгружайте и загружайте курсы с платформы Stepik"
+      />
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
@@ -529,17 +526,21 @@ export function StepikSync() {
             <h3 className="text-lg font-semibold text-dark-100 mb-4">Ваши курсы</h3>
             
             {courses.length === 0 ? (
-              <div className="text-center py-8">
-                <BookOpen className="w-12 h-12 text-dark-500 mx-auto mb-4" />
-                <p className="text-dark-400">У вас пока нет курсов</p>
-                <Button
-                  variant="secondary"
-                  className="mt-4"
-                  onClick={() => navigate('/courses')}
-                >
-                  Создать курс
-                </Button>
-              </div>
+              <EmptyState
+                compact
+                icon={BookOpen}
+                title="У вас пока нет курсов"
+                description="Создайте курс, чтобы синхронизировать его со Stepik"
+                action={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate('/courses')}
+                  >
+                    Создать курс
+                  </Button>
+                }
+              />
             ) : (
               <div className="space-y-3">
                 {courses.map((course) => {
@@ -938,10 +939,12 @@ export function StepikSync() {
             <h3 className="text-lg font-semibold text-dark-100 mb-4">Синхронизированные курсы</h3>
             
             {courses.filter(c => c.stepikCourseId).length === 0 ? (
-              <div className="text-center py-8">
-                <RefreshCw className="w-12 h-12 text-dark-500 mx-auto mb-4" />
-                <p className="text-dark-400">Нет синхронизированных курсов</p>
-              </div>
+              <EmptyState
+                compact
+                icon={RefreshCw}
+                title="Нет синхронизированных курсов"
+                description="Выгрузите курс на Stepik во вкладке «Выгрузить на Stepik»"
+              />
             ) : (
               <div className="space-y-3">
                 {courses.filter(c => c.stepikCourseId).map((course) => (
@@ -1034,6 +1037,7 @@ export function StepikSync() {
           </div>
         </div>
       </Modal>
+      </div>
     </MainLayout>
   );
 }

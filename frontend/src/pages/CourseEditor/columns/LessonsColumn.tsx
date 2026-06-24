@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Upload, Loader2, FileText, CheckCircle, AlertTriangle, Pencil } from 'lucide-react';
-import { Button, Card, SortableList, Tooltip } from '../../../components/ui';
+import { Button, Card, SortableList, Tooltip, EmptyState } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { EditTitleModal } from '../modals/EditTitleModal';
 import type { Lesson } from '../../../types';
@@ -145,9 +145,25 @@ export function LessonsColumn({
           }}
         />
       ) : hasSelectedModel ? (
-        <p className="text-dark-500 text-sm text-center py-4">Нет уроков</p>
+        <EmptyState
+          compact
+          icon={FileText}
+          title="Нет уроков"
+          description="Добавьте урок в выбранный модуль"
+          action={
+            <Button size="sm" onClick={onAddClick}>
+              <Plus className="w-4 h-4 mr-1" />
+              Добавить урок
+            </Button>
+          }
+        />
       ) : (
-        <p className="text-dark-500 text-sm text-center py-4">Выберите модуль</p>
+        <EmptyState
+          compact
+          icon={FileText}
+          title="Выберите модуль"
+          description="Сначала выберите модуль слева"
+        />
       )}
 
       {/* Модальное окно редактирования названия */}

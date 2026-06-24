@@ -1,9 +1,13 @@
 import { Copy, Save, Sparkles, FolderOpen, RefreshCw, Pencil } from 'lucide-react';
-import { Button, Card, Badge, Spinner } from '../../../components/ui';
+import { clsx } from 'clsx';
+import type { CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
+import { Button, Card, Badge, Spinner, EmptyState } from '../../../components/ui';
 import { StepView } from '../../../components/StepView';
 import type { Step } from '../../../types';
 import type { LessonWithContext } from '../utils/groupLessons';
 import { LessonSelect } from './LessonSelect';
+import { useResizableWidth } from '../../../hooks/useResizableWidth';
 
 interface GeneratePreviewPanelProps {
   previewStep: Step | null;
@@ -36,8 +40,35 @@ export function GeneratePreviewPanel({
   onLessonChange,
   onSave,
 }: GeneratePreviewPanelProps) {
+  const { width, isResizing, startResize } = useResizableWidth({
+    storageKey: 'ai-generator-preview-width',
+    defaultWidth: 320,
+    minWidth: 260,
+    maxWidth: 560,
+  });
+
   return (
-    <div className="w-full xl:w-72 2xl:w-80 xl:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] xl:max-h-none">
+    <div
+      className={clsx(
+        'relative flex w-full flex-col min-h-0 max-h-[35vh] xl:max-h-none xl:flex-shrink-0 xl:w-[var(--preview-width)]',
+        isResizing && 'select-none'
+      )}
+      style={{ '--preview-width': `${width}px` } as CSSProperties}
+    >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Изменить ширину предпросмотра"
+        title="Потяните, чтобы изменить ширину"
+        onMouseDown={startResize}
+        className={clsx(
+          'absolute -left-3 top-0 z-10 hidden h-full w-6 cursor-col-resize xl:block',
+          'before:absolute before:left-1/2 before:top-0 before:h-full before:w-1 before:-translate-x-1/2 before:rounded-full before:transition-colors',
+          isResizing
+            ? 'before:bg-primary-400'
+            : 'before:bg-transparent hover:before:bg-dark-600'
+        )}
+      />
       <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">Предпросмотр</h2>
       <Card className="flex-1 overflow-auto min-h-0">
         {previewStep ? (
@@ -80,11 +111,18 @@ export function GeneratePreviewPanel({
               </div>
 
               {allLessonsCount === 0 ? (
-                <div className="text-center py-4 bg-dark-800 rounded-lg mb-3">
-                  <FolderOpen className="w-8 h-8 text-dark-500 mx-auto mb-2" />
-                  <p className="text-sm text-dark-400">Нет доступных уроков</p>
-                  <p className="text-xs text-dark-500 mt-1">Создайте курс, модуль и урок</p>
-                </div>
+                <EmptyState
+                  compact
+                  icon={FolderOpen}
+                  title="Нет доступных уроков"
+                  description="Создайте курс, модуль и урок"
+                  action={
+                    <Link to="/courses">
+                      <Button variant="secondary" size="sm">Перейти к курсам</Button>
+                    </Link>
+                  }
+                  className="mb-3 rounded-lg bg-dark-800"
+                />
               ) : (
                 <LessonSelect
                   groupedLessons={groupedLessons}
@@ -105,10 +143,12 @@ export function GeneratePreviewPanel({
             </div>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <Sparkles className="w-12 h-12 text-dark-600 mx-auto mb-4" />
-            <p className="text-dark-500">Сгенерированный контент появится здесь</p>
-          </div>
+          <EmptyState
+            compact
+            icon={Sparkles}
+            title="Сгенерированный контент появится здесь"
+            description="Опишите шаг в чате и нажмите отправить"
+          />
         )}
       </Card>
     </div>
