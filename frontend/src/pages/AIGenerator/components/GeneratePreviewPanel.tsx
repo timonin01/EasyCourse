@@ -1,9 +1,12 @@
 import { Copy, Save, Sparkles, FolderOpen, RefreshCw, Pencil } from 'lucide-react';
+import { clsx } from 'clsx';
+import type { CSSProperties } from 'react';
 import { Button, Card, Badge, Spinner } from '../../../components/ui';
 import { StepView } from '../../../components/StepView';
 import type { Step } from '../../../types';
 import type { LessonWithContext } from '../utils/groupLessons';
 import { LessonSelect } from './LessonSelect';
+import { useResizableWidth } from '../../../hooks/useResizableWidth';
 
 interface GeneratePreviewPanelProps {
   previewStep: Step | null;
@@ -36,8 +39,35 @@ export function GeneratePreviewPanel({
   onLessonChange,
   onSave,
 }: GeneratePreviewPanelProps) {
+  const { width, isResizing, startResize } = useResizableWidth({
+    storageKey: 'ai-generator-preview-width',
+    defaultWidth: 320,
+    minWidth: 260,
+    maxWidth: 560,
+  });
+
   return (
-    <div className="w-full xl:w-72 2xl:w-80 xl:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] xl:max-h-none">
+    <div
+      className={clsx(
+        'relative flex w-full flex-col min-h-0 max-h-[35vh] xl:max-h-none xl:flex-shrink-0 xl:w-[var(--preview-width)]',
+        isResizing && 'select-none'
+      )}
+      style={{ '--preview-width': `${width}px` } as CSSProperties}
+    >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Изменить ширину предпросмотра"
+        title="Потяните, чтобы изменить ширину"
+        onMouseDown={startResize}
+        className={clsx(
+          'absolute -left-3 top-0 z-10 hidden h-full w-6 cursor-col-resize xl:block',
+          'before:absolute before:left-1/2 before:top-0 before:h-full before:w-1 before:-translate-x-1/2 before:rounded-full before:transition-colors',
+          isResizing
+            ? 'before:bg-primary-400'
+            : 'before:bg-transparent hover:before:bg-dark-600'
+        )}
+      />
       <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">Предпросмотр</h2>
       <Card className="flex-1 overflow-auto min-h-0">
         {previewStep ? (

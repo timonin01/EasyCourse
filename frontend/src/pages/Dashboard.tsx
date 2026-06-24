@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
+import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
 import { Card, Button, PageLoader, StatCard } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { coursesApi } from '../api';
@@ -68,6 +69,8 @@ export function Dashboard() {
       </div>
 
       {isNewUser && <OnboardingBanner />}
+
+      <DashboardSubscriptionWidget />
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
