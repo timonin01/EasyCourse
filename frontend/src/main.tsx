@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
 import './index.css'
+import { tokens } from './styles/tokens'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +26,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#1e293b',
-              color: '#f8fafc',
-              borderRadius: '12px',
+              background: tokens.colors.surfaceRaised,
+              color: tokens.colors.text,
+              border: `1px solid ${tokens.colors.border}`,
+              borderRadius: tokens.radius.lg,
+              boxShadow: tokens.shadow.brandSm,
             },
           }}
         />

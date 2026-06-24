@@ -24,7 +24,7 @@ export function Card({
   return (
     <div
       className={clsx(
-        'glass rounded-xl',
+        'glass rounded-brand-lg',
         paddings[padding],
         hover && 'hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/5 transition-all duration-200 cursor-pointer',
         className

@@ -16,7 +16,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton, ContentReveal, Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui';
+import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton, Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui';
 import { CoursePickerList } from '../components/courses/CoursePickerList';
 import { LessonPickerSelect } from '../components/courses/LessonPickerSelect';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
@@ -420,6 +420,14 @@ export function CourseAudit() {
     (isSubscriptionLoading && subscriptionStatus === null) ||
     (isLoadingCourses && courses.length === 0);
 
+  if (showInitialLoader) {
+    return (
+      <MainLayout>
+        <CourseAuditSkeleton />
+      </MainLayout>
+    );
+  }
+
   if (!isPro) {
     return (
       <MainLayout>
@@ -445,10 +453,6 @@ export function CourseAudit() {
 
   return (
     <MainLayout>
-      <ContentReveal
-        isLoading={showInitialLoader}
-        skeleton={<CourseAuditSkeleton />}
-      >
       <PageHeader
         title="Аудит курса"
         description="AI проанализирует курс, предложит доработку существующих уроков и план нового контента."
@@ -614,7 +618,6 @@ export function CourseAudit() {
           )}
         </div>
       )}
-      </ContentReveal>
     </MainLayout>
   );
 }
