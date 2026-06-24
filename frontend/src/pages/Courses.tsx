@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Search, CheckCircle, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, Spinner } from '../components/ui';
+import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, Spinner, FadeIn, StaggerList, StaggerItem } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { StepView } from '../components/StepView';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
@@ -196,7 +196,7 @@ export function Courses() {
 
   return (
     <MainLayout>
-      <div className="animate-fade-in">
+      <FadeIn>
       <PageHeader
         title="Мои курсы"
         description="Управляйте своими курсами"
@@ -241,10 +241,10 @@ export function Courses() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3">
+        <StaggerList className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3">
           {filteredCourses.map((course) => (
+            <StaggerItem key={course.id}>
             <CourseCard
-              key={course.id}
               course={course}
               variant="detailed"
               onOpen={(id) => navigate(`/courses/${id}`)}
@@ -253,8 +253,9 @@ export function Courses() {
               onSync={handleSyncCourse}
               onDelete={handleDeleteCourse}
             />
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerList>
       )}
 
       {/* Create Modal */}
@@ -421,7 +422,7 @@ export function Courses() {
           </div>
         ) : null}
       </Modal>
-      </div>
+      </FadeIn>
     </MainLayout>
   );
 }

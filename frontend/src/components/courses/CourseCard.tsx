@@ -39,6 +39,9 @@ export function CourseCard({
   // На Stepik, но часть модулей/уроков/шагов ещё не выгружена.
   const partiallySynced = hasStepikId && !fullySynced;
 
+  const hoverLiftClass =
+    'transition-all duration-200 ease-out hover:-translate-y-1 active:translate-y-0 active:scale-[0.99]';
+
   const cardContent = (
     <>
       <div
@@ -167,7 +170,7 @@ export function CourseCard({
   if (variant === 'compact') {
     return (
       <Link to={`/courses/${course.id}`}>
-        <Card hover className="relative h-full overflow-hidden transition-transform hover:-translate-y-0.5">
+        <Card hover className={clsx('relative h-full overflow-hidden', hoverLiftClass)}>
           {cardContent}
         </Card>
       </Link>
@@ -177,7 +180,7 @@ export function CourseCard({
   return (
     <Card
       hover={Boolean(onOpen)}
-      className="relative flex h-full min-w-0 flex-col"
+      className={clsx('relative flex h-full min-w-0 flex-col', onOpen && hoverLiftClass)}
       onClick={onOpen ? () => onOpen(course.id) : undefined}
     >
       {cardContent}

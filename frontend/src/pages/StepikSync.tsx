@@ -16,10 +16,11 @@ import {
 import { StepikIcon } from '../components/StepikIcon';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton } from '../components/ui';
-import { coursesApi, sectionsApi, lessonsApi, stepsApi, authApi } from '../api';
+import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton, FadeIn } from '../components/ui';
+import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
 import { stepikApi, SyncProgress } from '../api/stepik.api';
 import { useAuthStore, useCourseStore } from '../store';
+import { useStepikOAuthStatus } from '../hooks/useStepikOAuthStatus';
 import type { Course, Model, Lesson, Step, CaptchaChallenge } from '../types';
 import { getStepDisplayType } from '../types';
 import {
@@ -39,10 +40,10 @@ export function StepikSync() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { courses, setCourses, updateCourse } = useCourseStore();
+  const { hasConfig: hasStepikConfig, isCheckingConfig } = useStepikOAuthStatus();
   
   const [activeTab, setActiveTab] = useState<TabType>('upload');
   const [isLoading, setIsLoading] = useState(courses.length === 0);
-  const [hasStepikConfig, setHasStepikConfig] = useState(false);
   
   const [selectedCourse, setSelectedCourse] = useState<CourseWithDetails | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -60,19 +61,6 @@ export function StepikSync() {
     challenge?: CaptchaChallenge;
     onSubmit?: (token: string) => void;
   }>({ isOpen: false });
-
-  useEffect(() => {
-    const checkConfig = async () => {
-      if (!user?.id) return;
-      try {
-        const hasConfig = await authApi.hasStepikOAuthConfig(user.id);
-        setHasStepikConfig(hasConfig);
-      } catch {
-        setHasStepikConfig(false);
-      }
-    };
-    checkConfig();
-  }, [user?.id]);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -414,11 +402,6 @@ export function StepikSync() {
         steps: selectedCourse.steps,
       })
     : false;
-  const showCourseUploadButton =
-    selectedCourse != null &&
-    (!selectedCourse.stepikCourseId ||
-      selectedHasUnsyncedChildren ||
-      selectedCourse.fullySynced === false);
   const courseUploadButtonLabel = selectedUnsyncedCount > 0
     ? `Выгрузить на Stepik (${selectedUnsyncedCount})`
     : 'Выгрузить на Stepik';
@@ -461,7 +444,7 @@ export function StepikSync() {
     handleUploadCourse();
   };
 
-  if (isLoading && courses.length === 0) {
+  if (isCheckingConfig || (isLoading && courses.length === 0)) {
     return (
       <MainLayout>
         <StepikSyncSkeleton />
@@ -469,10 +452,11 @@ export function StepikSync() {
     );
   }
 
-  if (!hasStepikConfig) {
+  if (hasStepikConfig === false) {
     return (
       <MainLayout>
-        <div className="max-w-2xl mx-auto animate-fade-in">
+        <div className="max-w-2xl mx-auto">
+          <FadeIn>
           <EmptyState
             icon={AlertTriangle}
             title="Настройте Stepik OAuth"
@@ -486,6 +470,7 @@ export function StepikSync() {
               </Button>
             }
           />
+          </FadeIn>
         </div>
       </MainLayout>
     );
@@ -493,7 +478,7 @@ export function StepikSync() {
 
   return (
     <MainLayout>
-      <div className="animate-fade-in">
+      <FadeIn className="space-y-6">
       <PageHeader
         title="Синхронизация со Stepik"
         description="Выгружайте и загружайте курсы с платформы Stepik"
@@ -1037,7 +1022,7 @@ export function StepikSync() {
           </div>
         </div>
       </Modal>
-      </div>
+      </FadeIn>
     </MainLayout>
   );
 }
