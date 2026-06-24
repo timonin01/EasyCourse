@@ -60,6 +60,7 @@ export function LessonsColumn({
         <SortableList
           items={lessons}
           onReorder={onReorder}
+          animateItems
           renderItem={(lesson) => {
             const lessonUnsynced = isUnsynced(lesson);
             const borderColor = lessonUnsynced

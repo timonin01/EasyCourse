@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, Key, User, Lock, ExternalLink, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Badge, PageHeader, FadeIn } from '../components/ui';
+import { Card, Button, Input, Badge, PageHeader } from '../components/ui';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
@@ -162,7 +162,6 @@ export function Settings() {
   return (
     <MainLayout>
       <div className="max-w-2xl">
-        <FadeIn>
         <PageHeader
           title="Настройки"
           description="Управляйте своим аккаунтом и интеграциями"
@@ -298,7 +297,6 @@ export function Settings() {
             </ol>
           </div>
         </Card>
-        </FadeIn>
       </div>
     </MainLayout>
   );

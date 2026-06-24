@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import { MainLayout } from '../../components/Layout';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
 import { BatchPlanModal } from './components/BatchPlanModal';
@@ -8,6 +9,7 @@ import { BatchModePanel } from './components/BatchModePanel';
 import { GeneratePreviewPanel } from './components/GeneratePreviewPanel';
 import { BatchSettingsSidebar } from './components/BatchSettingsSidebar';
 import { useAIGeneratorPage } from './hooks/useAIGeneratorPage';
+import { easeOut, fadeInUp } from '../../components/ui/motion';
 
 export function AIGenerator() {
   const page = useAIGeneratorPage();
@@ -25,6 +27,16 @@ export function AIGenerator() {
 
           <ModeToggle mode={page.mode} onModeChange={page.handleModeChange} />
 
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={page.mode}
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={fadeInUp}
+              transition={{ duration: 0.22, ease: easeOut }}
+            >
           {page.mode === 'batch' ? (
             <BatchModePanel
               batchUserInput={page.batchUserInput}
@@ -65,9 +77,20 @@ export function AIGenerator() {
               onRestoreGeneratedStep={page.handleRestoreGeneratedStep}
             />
           )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
+        <AnimatePresence>
         {page.mode === 'generate' && (
+          <motion.div
+            key="preview"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.25, ease: easeOut }}
+            className="min-h-0"
+          >
           <GeneratePreviewPanel
             previewStep={page.previewStep}
             isLoading={page.isLoading}
@@ -83,9 +106,18 @@ export function AIGenerator() {
             onLessonChange={page.setSelectedLessonId}
             onSave={() => void page.handleSaveStep()}
           />
+          </motion.div>
         )}
 
         {page.mode === 'batch' && (
+          <motion.div
+            key="batch-sidebar"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.25, ease: easeOut }}
+            className="min-h-0"
+          >
           <BatchSettingsSidebar
             groupedLessons={page.groupedLessons}
             allLessonsCount={page.allLessons.length}
@@ -95,7 +127,9 @@ export function AIGenerator() {
             onViewBatchSteps={page.handleViewBatchSteps}
             onRerunBatchHistory={page.handleRerunBatchHistory}
           />
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
 
       <BatchPlanModal

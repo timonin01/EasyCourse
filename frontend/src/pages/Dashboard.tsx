@@ -11,7 +11,7 @@ import {
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
 import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
-import { Card, Button, StatCard, EmptyState, DashboardSkeleton, FadeIn, StaggerList, StaggerItem } from '../components/ui';
+import { Card, Button, StatCard, EmptyState, DashboardSkeleton, StaggerList, StaggerItem, ContentReveal } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { coursesApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -48,17 +48,12 @@ export function Dashboard() {
 
   const isNewUser = courses.length === 0;
 
-  if (isLoading && courses.length === 0) {
-    return (
-      <MainLayout>
-        <DashboardSkeleton />
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
-      <FadeIn>
+      <ContentReveal
+        isLoading={isLoading && courses.length === 0}
+        skeleton={<DashboardSkeleton />}
+      >
         {/* Header */}
         <div className="mb-8 min-w-0">
           <h1 className="text-3xl font-bold text-dark-100 break-words">
@@ -163,7 +158,7 @@ export function Dashboard() {
             </StaggerList>
           )}
         </div>
-      </FadeIn>
+      </ContentReveal>
     </MainLayout>
   );
 }

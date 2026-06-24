@@ -39,7 +39,7 @@ export function StatCard({ label, value, icon: Icon, accent = 'primary' }: StatC
   const styles = accentStyles[accent];
 
   return (
-    <Card padding="none" className={clsx('overflow-hidden hover:shadow-lg transition-shadow', styles.glow)}>
+    <Card padding="none" className={clsx('overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200', styles.glow)}>
       <div className={clsx('h-1 bg-gradient-to-r', styles.bar)} />
       <div className="flex items-center gap-4 p-4">
         <div

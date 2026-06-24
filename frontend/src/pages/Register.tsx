@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Button, Input, PasswordInput } from '../components/ui';
+import { Button, Input, PasswordInput, FadeIn } from '../components/ui';
 import { authApi } from '../api';
 import { extractApiErrorMessage, getApiErrorStatus, isNetworkError } from '../utils/apiError';
 import { validateEmail, validateUserName } from '../utils/validation';
@@ -66,7 +66,7 @@ export function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <FadeIn className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4 pulse-glow">
@@ -135,7 +135,7 @@ export function Register() {
             </p>
           </div>
         </div>
-      </div>
+      </FadeIn>
     </div>
   );
 }

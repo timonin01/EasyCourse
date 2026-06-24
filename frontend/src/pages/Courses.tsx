@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Search, CheckCircle, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, Spinner, FadeIn, StaggerList, StaggerItem } from '../components/ui';
+import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, Spinner, StaggerList, StaggerItem, ContentReveal } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { StepView } from '../components/StepView';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
@@ -186,17 +186,12 @@ export function Courses() {
     setIsStepViewModalOpen(true);
   };
 
-  if (isLoading && courses.length === 0) {
-    return (
-      <MainLayout>
-        <CoursesPageSkeleton />
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
-      <FadeIn>
+      <ContentReveal
+        isLoading={isLoading && courses.length === 0}
+        skeleton={<CoursesPageSkeleton />}
+      >
       <PageHeader
         title="Мои курсы"
         description="Управляйте своими курсами"
@@ -422,7 +417,7 @@ export function Courses() {
           </div>
         ) : null}
       </Modal>
-      </FadeIn>
+      </ContentReveal>
     </MainLayout>
   );
 }

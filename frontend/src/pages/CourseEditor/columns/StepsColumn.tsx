@@ -53,6 +53,7 @@ export function StepsColumn({
         <SortableList
           items={steps}
           onReorder={onReorder}
+          animateItems
           renderItem={(step, index) => {
             const stepUnsynced = isUnsynced(step);
             const stepDiffers = stepsDiffersFromStepik.has(step.id);
