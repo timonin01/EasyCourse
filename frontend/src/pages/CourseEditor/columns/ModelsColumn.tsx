@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Upload, Loader2, Layers, CheckCircle, AlertTriangle, Pencil } from 'lucide-react';
-import { Button, Card, SortableList, Tooltip } from '../../../components/ui';
+import { Button, Card, SortableList, Tooltip, EmptyState } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { EditTitleModal } from '../modals/EditTitleModal';
 import type { Model } from '../../../types';
@@ -140,7 +140,18 @@ export function ModelsColumn({
           }}
         />
       ) : (
-        <p className="text-dark-500 text-sm text-center py-4">Нет модулей</p>
+        <EmptyState
+          compact
+          icon={Layers}
+          title="Нет модулей"
+          description="Добавьте первый модуль для структуры курса"
+          action={
+            <Button size="sm" onClick={onAddClick}>
+              <Plus className="w-4 h-4 mr-1" />
+              Добавить модуль
+            </Button>
+          }
+        />
       )}
 
       {/* Модальное окно редактирования названия */}

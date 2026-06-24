@@ -1,5 +1,5 @@
-import { Plus, Trash2, Upload, Loader2, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
-import { Button, Card, SortableList, Badge, Tooltip } from '../../../components/ui';
+import { Plus, Trash2, Upload, Loader2, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
+import { Button, Card, SortableList, Badge, Tooltip, EmptyState } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { getStepDisplayType } from '../../../types';
 import type { Lesson, Step } from '../../../types';
@@ -157,9 +157,25 @@ export function StepsColumn({
           }}
         />
       ) : selectedLesson ? (
-        <p className="text-dark-500 text-sm text-center py-4">Нет шагов</p>
+        <EmptyState
+          compact
+          icon={Plus}
+          title="Нет шагов"
+          description="Добавьте первый шаг в урок"
+          action={
+            <Button size="sm" onClick={onAddClick}>
+              <Plus className="w-4 h-4 mr-1" />
+              Добавить шаг
+            </Button>
+          }
+        />
       ) : (
-        <p className="text-dark-500 text-sm text-center py-4">Выберите урок</p>
+        <EmptyState
+          compact
+          icon={FileText}
+          title="Выберите урок"
+          description="Сначала выберите урок в средней колонке"
+        />
       )}
     </div>
   );

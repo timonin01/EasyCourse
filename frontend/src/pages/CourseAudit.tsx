@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, PageLoader, Spinner } from '../components/ui';
+import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton } from '../components/ui';
 import { CoursePickerList } from '../components/courses/CoursePickerList';
 import { LessonPickerSelect } from '../components/courses/LessonPickerSelect';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
@@ -25,8 +25,9 @@ import {
   type CourseAuditPdfExportOptions,
 } from '../components/courseAudit/CourseAuditPdfExportModal';
 import { agentApi, coursesApi, lessonsApi, sectionsApi } from '../api';
-import { useAuthStore, useAIGeneratorStore } from '../store';
+import { useAuthStore, useAIGeneratorStore, useCourseStore } from '../store';
 import { useSubscription } from '../hooks/useSubscription';
+import { useSubscriptionStore } from '../store/subscriptionStore';
 import { COURSE_AUDIT_PRO_MESSAGE } from '../constants/subscription';
 import { extractApiErrorMessage } from '../utils/apiError';
 import type { Course } from '../types';
@@ -159,13 +160,17 @@ function HintCard({
 export function CourseAudit() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { isPro, isLoading: isSubscriptionLoading, refresh: refreshSubscription } = useSubscription();
+  const { isPro, refresh: refreshSubscription } = useSubscription();
+  const subscriptionStatus = useSubscriptionStore((state) => state.status);
+  const isSubscriptionLoading = useSubscriptionStore((state) => state.isLoading);
+  const cachedCourses = useCourseStore((state) => state.courses);
+  const setCachedCourses = useCourseStore((state) => state.setCourses);
   const { setMode, setSelectedLessonId, setPendingBatchUserInput } = useAIGeneratorStore();
 
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[]>(cachedCourses);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [courseLessons, setCourseLessons] = useState<CourseLessonContext[]>([]);
-  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(cachedCourses.length === 0);
   const [isLoadingLessons, setIsLoadingLessons] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<string | null>(null);
@@ -183,6 +188,7 @@ export function CourseAudit() {
       try {
         const data = await coursesApi.getUserCourses(user.id);
         setCourses(data);
+        setCachedCourses(data);
         if (data.length > 0) {
           setSelectedCourseId((prev) => prev || String(data[0].id));
         }
@@ -194,7 +200,7 @@ export function CourseAudit() {
     };
 
     void loadCourses();
-  }, [user?.id]);
+  }, [user?.id, setCachedCourses]);
 
   const loadCourseLessons = useCallback(async (courseId: number) => {
     setIsLoadingLessons(true);
@@ -408,10 +414,14 @@ export function CourseAudit() {
     </div>
   );
 
-  if (isSubscriptionLoading || isLoadingCourses) {
+  const showInitialLoader =
+    (isSubscriptionLoading && subscriptionStatus === null) ||
+    (isLoadingCourses && courses.length === 0);
+
+  if (showInitialLoader) {
     return (
       <MainLayout>
-        <PageLoader />
+        <CourseAuditSkeleton />
       </MainLayout>
     );
   }
@@ -419,16 +429,19 @@ export function CourseAudit() {
   if (!isPro) {
     return (
       <MainLayout>
-        <div className="mx-auto max-w-2xl py-12">
-          <Card className="border-primary-500/20 bg-gradient-to-br from-dark-900 to-dark-800 p-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-500/15">
-              <Lock className="h-7 w-7 text-primary-400" />
-            </div>
-            <h1 className="mb-2 text-2xl font-bold text-dark-100">AI-аудит курса</h1>
-            <p className="mb-6 text-dark-400">{COURSE_AUDIT_PRO_MESSAGE}</p>
-            <Button icon={<Crown className="h-4 w-4" />} onClick={() => setIsUpgradeModalOpen(true)}>
-              Перейти на Pro
-            </Button>
+        <div className="mx-auto max-w-2xl py-12 animate-fade-in">
+          <Card className="border-primary-500/20 bg-gradient-to-br from-dark-900 to-dark-800 p-8">
+            <EmptyState
+              compact
+              icon={Lock}
+              title="AI-аудит курса"
+              description={COURSE_AUDIT_PRO_MESSAGE}
+              action={
+                <Button icon={<Crown className="h-4 w-4" />} onClick={() => setIsUpgradeModalOpen(true)}>
+                  Перейти на Pro
+                </Button>
+              }
+            />
           </Card>
         </div>
         <ProUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} />
@@ -438,22 +451,17 @@ export function CourseAudit() {
 
   return (
     <MainLayout>
-      <div className="mb-8 min-w-0">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold text-dark-100">
-              <ClipboardCheck className="h-8 w-8 text-primary-400" />
-              Аудит курса
-            </h1>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-dark-300">
-              AI проанализирует курс, предложит доработку существующих уроков и план нового контента.
-            </p>
-          </div>
+      <div className="animate-fade-in">
+      <PageHeader
+        title="Аудит курса"
+        description="AI проанализирует курс, предложит доработку существующих уроков и план нового контента."
+        icon={<ClipboardCheck className="h-8 w-8 text-primary-400" />}
+        action={
           <div className="rounded-xl border border-primary-500/25 bg-primary-900/20 px-4 py-2 text-sm text-primary-200">
             Yandex GPT Pro
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {showCoursePicker && (
         <Card className="mb-6 p-6">
@@ -613,6 +621,7 @@ export function CourseAudit() {
           )}
         </div>
       )}
+      </div>
     </MainLayout>
   );
 }

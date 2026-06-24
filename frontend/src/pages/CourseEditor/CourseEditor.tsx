@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../../components/Layout';
-import { PageLoader } from '../../components/ui';
+import { CourseEditorSkeleton, Breadcrumbs } from '../../components/ui';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
 import { getStepDisplayType, getStepBlockName } from '../../types';
 import { STEP_TYPE_CHANGE_PRO_MESSAGE } from '../../constants/subscription';
@@ -20,13 +20,21 @@ export function CourseEditor() {
   if (page.isLoading) {
     return (
       <MainLayout>
-        <PageLoader />
+        <CourseEditorSkeleton />
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
+      <div className="animate-fade-in">
+      <Breadcrumbs
+        items={[
+          { label: 'Дашборд', to: '/dashboard' },
+          { label: 'Мои курсы', to: '/courses' },
+          { label: page.selectedCourse?.title || 'Редактор' },
+        ]}
+      />
       <CourseEditorHeader
         course={page.selectedCourse}
         hasUnsyncedContent={page.hasUnsyncedContent}
@@ -220,6 +228,7 @@ export function CourseEditor() {
         setIsDeleteResultModalOpen={page.setIsDeleteResultModalOpen}
         onNeedsRefresh={() => page.setNeedsRefresh(true)}
       />
+      </div>
     </MainLayout>
   );
 }

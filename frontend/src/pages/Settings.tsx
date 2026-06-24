@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, Key, User, Lock, ExternalLink, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Badge } from '../components/ui';
+import { Card, Button, Input, Badge, PageHeader } from '../components/ui';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
@@ -163,9 +163,11 @@ export function Settings() {
 
   return (
     <MainLayout>
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-bold text-dark-100 mb-2">Настройки</h1>
-        <p className="text-dark-400 mb-8">Управляйте своим аккаунтом и интеграциями</p>
+      <div className="max-w-2xl animate-fade-in">
+        <PageHeader
+          title="Настройки"
+          description="Управляйте своим аккаунтом и интеграциями"
+        />
 
         <SubscriptionPanel />
 

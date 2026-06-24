@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Search, CheckCircle, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Modal, Textarea, Badge, PageLoader } from '../components/ui';
+import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, Spinner } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { StepView } from '../components/StepView';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
@@ -17,7 +17,7 @@ export function Courses() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { courses, setCourses, addCourse, removeCourse, updateCourse } = useCourseStore();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(courses.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -186,29 +186,29 @@ export function Courses() {
     setIsStepViewModalOpen(true);
   };
 
-  if (isLoading) {
+  if (isLoading && courses.length === 0) {
     return (
       <MainLayout>
-        <PageLoader />
+        <CoursesPageSkeleton />
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-dark-100">Мои курсы</h1>
-          <p className="text-dark-400 mt-1">Управляйте своими курсами</p>
-        </div>
-        <Button
-          icon={<Plus className="w-4 h-4" />}
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          Создать курс
-        </Button>
-      </div>
+      <div className="animate-fade-in">
+      <PageHeader
+        title="Мои курсы"
+        description="Управляйте своими курсами"
+        action={
+          <Button
+            icon={<Plus className="w-4 h-4" />}
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Создать курс
+          </Button>
+        }
+      />
 
       {/* Search */}
       <div className="mb-6 max-w-md">
@@ -225,23 +225,21 @@ export function Courses() {
 
       {/* Courses Grid */}
       {filteredCourses.length === 0 ? (
-        <Card className="text-center py-12">
-          <BookOpen className="w-12 h-12 text-dark-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-dark-300 mb-2">
-            {searchQuery ? 'Курсы не найдены' : 'У вас пока нет курсов'}
-          </h3>
-          <p className="text-dark-500 mb-4">
-            {searchQuery ? 'Попробуйте изменить запрос' : 'Создайте свой первый курс'}
-          </p>
-          {!searchQuery && (
-            <Button
-              icon={<Plus className="w-4 h-4" />}
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              Создать курс
-            </Button>
-          )}
-        </Card>
+        <EmptyState
+          icon={BookOpen}
+          title={searchQuery ? 'Курсы не найдены' : 'У вас пока нет курсов'}
+          description={searchQuery ? 'Попробуйте изменить запрос' : 'Создайте свой первый курс'}
+          action={
+            !searchQuery ? (
+              <Button
+                icon={<Plus className="w-4 h-4" />}
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                Создать курс
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3">
           {filteredCourses.map((course) => (
@@ -332,7 +330,7 @@ export function Courses() {
       >
         {isLoadingDetails ? (
           <div className="flex justify-center py-8">
-            <PageLoader />
+            <Spinner size="lg" />
           </div>
         ) : courseDetails ? (
           <div className="space-y-6 max-h-[70vh] overflow-y-auto">
@@ -385,9 +383,12 @@ export function Courses() {
             )}
 
             {courseDetails.steps.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-dark-400">В этом курсе пока нет шагов</p>
-              </div>
+              <EmptyState
+                compact
+                icon={Eye}
+                title="В этом курсе пока нет шагов"
+                description="Откройте курс в редакторе, чтобы добавить контент"
+              />
             )}
           </div>
         ) : null}
@@ -420,6 +421,7 @@ export function Courses() {
           </div>
         ) : null}
       </Modal>
+      </div>
     </MainLayout>
   );
 }
