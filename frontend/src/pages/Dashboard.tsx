@@ -56,12 +56,12 @@ export function Dashboard() {
       >
         {/* Header */}
         <div className="mb-8 min-w-0">
-          <h1 className="text-3xl font-bold text-dark-100 break-words">
+          <h1 className="page-title">
             Привет,{' '}
             <span className="gradient-text break-words">{user?.name || 'Пользователь'}</span>
             ! 👋
           </h1>
-          <p className="text-dark-400 mt-2">
+          <p className="page-subtitle mt-2">
             {isNewUser
               ? 'Начните создавать курсы для Stepik — мы подскажем, с чего начать'
               : 'Вот что происходит с вашими курсами сегодня'}
@@ -125,7 +125,7 @@ export function Dashboard() {
         {/* Recent Courses */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-dark-100">Последние курсы</h2>
+            <h2 className="section-heading">Последние курсы</h2>
             {!isNewUser && (
               <Link to="/courses">
                 <Button variant="ghost" size="sm">

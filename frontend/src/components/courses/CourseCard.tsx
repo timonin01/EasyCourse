@@ -98,10 +98,12 @@ export function CourseCard({
               </Badge>
             </a>
           ) : (
-            <Badge variant="warning" className="flex items-center gap-1" title="Курс ещё не выгружен на Stepik">
-              <AlertTriangle className="h-3 w-3" />
-              Не синхронизирован
-            </Badge>
+            <span title="Курс ещё не выгружен на Stepik">
+              <Badge variant="warning" className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Не синхронизирован
+              </Badge>
+            </span>
           )}
         </div>
 

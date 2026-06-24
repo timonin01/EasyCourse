@@ -30,8 +30,8 @@ export function PageHeader({
           {icon}
           <h1
             className={clsx(
-              'font-bold text-dark-100 break-words',
-              size === 'page' ? 'text-3xl' : 'text-2xl'
+              'text-dark-100 break-words',
+              size === 'page' ? 'text-title' : 'text-workspace-title'
             )}
           >
             {title}
@@ -41,7 +41,7 @@ export function PageHeader({
           <p
             className={clsx(
               'text-dark-400 break-words',
-              size === 'page' ? 'mt-1 text-base' : 'mt-1 text-sm'
+              size === 'page' ? 'mt-1 text-body' : 'mt-1 text-caption'
             )}
           >
             {description}
