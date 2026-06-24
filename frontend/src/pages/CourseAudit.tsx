@@ -16,7 +16,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton, FadeIn, Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui';
+import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton, ContentReveal, Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui';
 import { CoursePickerList } from '../components/courses/CoursePickerList';
 import { LessonPickerSelect } from '../components/courses/LessonPickerSelect';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
@@ -420,18 +420,10 @@ export function CourseAudit() {
     (isSubscriptionLoading && subscriptionStatus === null) ||
     (isLoadingCourses && courses.length === 0);
 
-  if (showInitialLoader) {
-    return (
-      <MainLayout>
-        <CourseAuditSkeleton />
-      </MainLayout>
-    );
-  }
-
   if (!isPro) {
     return (
       <MainLayout>
-        <div className="mx-auto max-w-2xl py-12 animate-fade-in">
+        <div className="mx-auto max-w-2xl py-12">
           <Card className="border-primary-500/20 bg-gradient-to-br from-dark-900 to-dark-800 p-8">
             <EmptyState
               compact
@@ -453,8 +445,10 @@ export function CourseAudit() {
 
   return (
     <MainLayout>
-      <div>
-      <FadeIn>
+      <ContentReveal
+        isLoading={showInitialLoader}
+        skeleton={<CourseAuditSkeleton />}
+      >
       <PageHeader
         title="Аудит курса"
         description="AI проанализирует курс, предложит доработку существующих уроков и план нового контента."
@@ -620,8 +614,7 @@ export function CourseAudit() {
           )}
         </div>
       )}
-      </FadeIn>
-      </div>
+      </ContentReveal>
     </MainLayout>
   );
 }

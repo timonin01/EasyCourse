@@ -32,5 +32,5 @@ export {
   StepikSyncSkeleton,
   CourseAuditSkeleton,
 } from './Skeleton';
-export { FadeIn, StaggerList, StaggerItem, fadeInUp, fadeIn, scaleIn } from './motion';
+export { FadeIn, StaggerList, StaggerItem, ContentReveal, fadeInUp, fadeIn, scaleIn, easeOut } from './motion';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';

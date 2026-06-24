@@ -16,7 +16,7 @@ import {
 import { StepikIcon } from '../components/StepikIcon';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton, FadeIn } from '../components/ui';
+import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton, ContentReveal } from '../components/ui';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
 import { stepikApi, SyncProgress } from '../api/stepik.api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -444,19 +444,10 @@ export function StepikSync() {
     handleUploadCourse();
   };
 
-  if (isCheckingConfig || (isLoading && courses.length === 0)) {
-    return (
-      <MainLayout>
-        <StepikSyncSkeleton />
-      </MainLayout>
-    );
-  }
-
   if (hasStepikConfig === false) {
     return (
       <MainLayout>
         <div className="max-w-2xl mx-auto">
-          <FadeIn>
           <EmptyState
             icon={AlertTriangle}
             title="Настройте Stepik OAuth"
@@ -470,7 +461,6 @@ export function StepikSync() {
               </Button>
             }
           />
-          </FadeIn>
         </div>
       </MainLayout>
     );
@@ -478,7 +468,11 @@ export function StepikSync() {
 
   return (
     <MainLayout>
-      <FadeIn className="space-y-6">
+      <ContentReveal
+        isLoading={isCheckingConfig || (isLoading && courses.length === 0)}
+        skeleton={<StepikSyncSkeleton />}
+        className="space-y-6"
+      >
       <PageHeader
         title="Синхронизация со Stepik"
         description="Выгружайте и загружайте курсы с платформы Stepik"
@@ -1022,7 +1016,7 @@ export function StepikSync() {
           </div>
         </div>
       </Modal>
-      </FadeIn>
+      </ContentReveal>
     </MainLayout>
   );
 }

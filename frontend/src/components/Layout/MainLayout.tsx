@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Menu, X, GraduationCap, PanelLeft } from 'lucide-react';
 import { Sidebar } from './Sidebar';
+import { PageTransition } from './PageTransition';
+import { easeOut } from '../ui/motion';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -22,6 +25,12 @@ export function MainLayout({ children }: MainLayoutProps) {
       localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
       return next;
     });
+
+  const sidebarTranslateClass = mobileOpen
+    ? 'translate-x-0'
+    : collapsed
+      ? '-translate-x-full'
+      : '-translate-x-full lg:translate-x-0';
 
   return (
     <div className="min-h-screen">
@@ -45,39 +54,45 @@ export function MainLayout({ children }: MainLayoutProps) {
       </header>
 
       {/* Mobile overlay */}
-      {mobileOpen && (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
-          onClick={closeMobile}
-          aria-label="Закрыть меню"
-        />
-      )}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: easeOut }}
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+            onClick={closeMobile}
+            aria-label="Закрыть меню"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar — drawer on mobile, fixed on desktop */}
       <Sidebar
-        className={
-          mobileOpen
-            ? 'translate-x-0'
-            : collapsed
-              ? '-translate-x-full'
-              : '-translate-x-full lg:translate-x-0'
-        }
+        className={sidebarTranslateClass}
         onNavigate={closeMobile}
         onCollapse={toggleCollapsed}
       />
 
       {/* Close button on mobile drawer */}
-      {mobileOpen && (
-        <button
-          type="button"
-          onClick={closeMobile}
-          className="fixed left-[15.5rem] top-4 z-50 rounded-lg p-2 text-dark-200 hover:bg-dark-800 lg:hidden"
-          aria-label="Закрыть меню"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      )}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.2, ease: easeOut }}
+            onClick={closeMobile}
+            className="fixed left-[15.5rem] top-4 z-50 rounded-lg p-2 text-dark-200 hover:bg-dark-800 lg:hidden"
+            aria-label="Закрыть меню"
+          >
+            <X className="h-5 w-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Desktop handle to reopen the collapsed sidebar */}
       {collapsed && (
@@ -99,7 +114,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             : 'min-h-screen overflow-x-hidden pt-14 lg:ml-64 lg:pt-0'
         }
       >
-        <div className="p-4 lg:p-8">{children}</div>
+        <div className="p-4 lg:p-8">
+          <PageTransition>{children}</PageTransition>
+        </div>
       </main>
     </div>
   );

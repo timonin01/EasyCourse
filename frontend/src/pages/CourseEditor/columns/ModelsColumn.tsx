@@ -56,6 +56,7 @@ export function ModelsColumn({
         <SortableList
           items={sections}
           onReorder={onReorder}
+          animateItems
           renderItem={(section) => {
             const modelUnsynced = isUnsynced(section);
             const borderColor = modelUnsynced

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Button, Input, PasswordInput } from '../components/ui';
+import { Button, Input, PasswordInput, FadeIn } from '../components/ui';
 import { ProductIntro } from '../components/auth/ProductIntro';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
@@ -57,7 +57,7 @@ export function Login() {
 
       {/* Форма входа */}
       <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
-        <div className="w-full max-w-md">
+        <FadeIn className="w-full max-w-md">
           {/* Logo — мобильная версия */}
           <div className="text-center mb-8 lg:mb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4 pulse-glow">
@@ -111,7 +111,7 @@ export function Login() {
               </p>
             </div>
           </div>
-        </div>
+        </FadeIn>
       </div>
     </div>
   );

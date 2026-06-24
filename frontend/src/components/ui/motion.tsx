@@ -1,7 +1,7 @@
-import { motion, type HTMLMotionProps } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { AnimatePresence, motion, type HTMLMotionProps } from 'framer-motion';
+import { useRef, type ReactNode } from 'react';
 
-const easeOut = [0.16, 1, 0.3, 1] as const;
+export const easeOut = [0.16, 1, 0.3, 1] as const;
 
 export const fadeInUp = {
   initial: { opacity: 0, y: 12 },
@@ -79,5 +79,47 @@ export function StaggerItem({ children, className, ...props }: StaggerItemProps)
     >
       {children}
     </motion.div>
+  );
+}
+
+interface ContentRevealProps {
+  isLoading: boolean;
+  skeleton: ReactNode;
+  children: ReactNode;
+  className?: string;
+}
+
+export function ContentReveal({ isLoading, skeleton, children, className }: ContentRevealProps) {
+  const hadSkeleton = useRef(isLoading);
+
+  if (isLoading) {
+    hadSkeleton.current = true;
+  }
+
+  return (
+    <AnimatePresence mode="sync">
+      {isLoading ? (
+        <motion.div
+          key="skeleton"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.1 }}
+          className={className}
+        >
+          {skeleton}
+        </motion.div>
+      ) : (
+        <motion.div
+          key="content"
+          initial={hadSkeleton.current ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, ease: easeOut }}
+          className={className}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

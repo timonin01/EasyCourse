@@ -42,7 +42,7 @@ export function Sidebar({ className, onNavigate, onCollapse }: SidebarProps) {
   return (
     <aside
       className={clsx(
-        'fixed left-0 top-0 z-40 flex h-screen w-64 flex-col glass border-r border-dark-700 transition-transform duration-200 ease-out',
+        'fixed left-0 top-0 z-40 flex h-screen w-64 flex-col glass border-r border-dark-700 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
         className
       )}
     >

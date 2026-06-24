@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import {
   DndContext,
   closestCenter,
@@ -17,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
+import { easeOut } from './motion';
 
 interface SortableItemProps {
   id: string | number;
@@ -59,6 +61,7 @@ interface SortableListProps<T extends { id: number }> {
   onReorder: (items: T[]) => void;
   renderItem: (item: T, index: number) => ReactNode;
   className?: string;
+  animateItems?: boolean;
 }
 
 export function SortableList<T extends { id: number }>({
@@ -66,6 +69,7 @@ export function SortableList<T extends { id: number }>({
   onReorder,
   renderItem,
   className = '',
+  animateItems = false,
 }: SortableListProps<T>) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -102,7 +106,17 @@ export function SortableList<T extends { id: number }>({
         <div className={`space-y-2 pl-6 ${className}`}>
           {items.map((item, index) => (
             <SortableItem key={item.id} id={item.id}>
-              {renderItem(item, index)}
+              {animateItems ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, delay: index * 0.04, ease: easeOut }}
+                >
+                  {renderItem(item, index)}
+                </motion.div>
+              ) : (
+                renderItem(item, index)
+              )}
             </SortableItem>
           ))}
         </div>

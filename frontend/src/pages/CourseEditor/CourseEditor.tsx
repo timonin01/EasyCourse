@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../../components/Layout';
-import { CourseEditorSkeleton, Breadcrumbs } from '../../components/ui';
+import { CourseEditorSkeleton, Breadcrumbs, ContentReveal, StaggerList, StaggerItem } from '../../components/ui';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
 import { getStepDisplayType, getStepBlockName } from '../../types';
 import { STEP_TYPE_CHANGE_PRO_MESSAGE } from '../../constants/subscription';
@@ -17,17 +17,9 @@ export function CourseEditor() {
   const page = useCourseEditorPage();
   const navigate = useNavigate();
 
-  if (page.isLoading) {
-    return (
-      <MainLayout>
-        <CourseEditorSkeleton />
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
-      <div className="animate-fade-in">
+      <ContentReveal isLoading={page.isLoading} skeleton={<CourseEditorSkeleton />}>
       <Breadcrumbs
         items={[
           { label: 'Дашборд', to: '/dashboard' },
@@ -46,8 +38,8 @@ export function CourseEditor() {
         setModels={page.setModels}
       />
 
-      <div className="flex gap-6">
-        <div className="flex-shrink-0 w-80 min-w-[280px]">
+      <StaggerList className="flex gap-6" stagger={0.08}>
+        <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
           <ModelsColumn
             sections={page.sections}
             selectedModel={page.selectedModel}
@@ -61,8 +53,8 @@ export function CourseEditor() {
             deletingItems={page.deletingItems}
             onUpdateTitle={page.handleUpdateModelTitle}
           />
-        </div>
-        <div className="flex-shrink-0 w-80 min-w-[280px]">
+        </StaggerItem>
+        <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
           <LessonsColumn
             lessons={page.lessons}
             selectedLesson={page.selectedLesson}
@@ -78,8 +70,8 @@ export function CourseEditor() {
             syncingItems={page.syncingItems}
             onUpdateTitle={page.handleUpdateLessonTitle}
           />
-        </div>
-        <div className="flex-shrink-0 w-96 min-w-[320px]">
+        </StaggerItem>
+        <StaggerItem className="flex-shrink-0 w-96 min-w-[320px]">
           <StepsColumn
             steps={page.steps}
             selectedLesson={page.selectedLesson}
@@ -107,8 +99,8 @@ export function CourseEditor() {
             deletingItems={page.deletingItems}
             syncingItems={page.syncingItems}
           />
-        </div>
-      </div>
+        </StaggerItem>
+      </StaggerList>
 
       <CreateModelModal
         isOpen={page.isModelModalOpen}
@@ -228,7 +220,7 @@ export function CourseEditor() {
         setIsDeleteResultModalOpen={page.setIsDeleteResultModalOpen}
         onNeedsRefresh={() => page.setNeedsRefresh(true)}
       />
-      </div>
+      </ContentReveal>
     </MainLayout>
   );
 }
