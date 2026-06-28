@@ -35,7 +35,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen">
       {/* Mobile top bar */}
-      <header className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center justify-between border-b border-dark-700 glass px-4 lg:hidden">
+      <header className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center justify-between border-b border-dark-700 surface px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -48,7 +48,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
             <GraduationCap className="h-4 w-4 text-white" />
           </div>
-          <span className="text-sm font-bold gradient-text">EasyCourse</span>
+          <span className="text-sm font-semibold text-dark-100">EasyCourse</span>
         </div>
         <div className="w-9" />
       </header>
@@ -99,7 +99,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <button
           type="button"
           onClick={toggleCollapsed}
-          className="fixed left-0 top-4 z-50 hidden items-center rounded-r-lg border border-l-0 border-dark-700 glass p-2 text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100 lg:flex"
+          className="fixed left-0 top-4 z-50 hidden items-center rounded-r-lg border border-l-0 border-dark-700 surface p-2 text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100 lg:flex"
           aria-label="Показать меню"
           title="Показать меню"
         >

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../../components/Layout';
-import { CourseEditorSkeleton, Breadcrumbs, ContentReveal, StaggerList, StaggerItem } from '../../components/ui';
+import { Breadcrumbs, StaggerList, StaggerItem } from '../../components/ui';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
 import { getStepDisplayType, getStepBlockName } from '../../types';
 import { STEP_TYPE_CHANGE_PRO_MESSAGE } from '../../constants/subscription';
@@ -19,7 +19,6 @@ export function CourseEditor() {
 
   return (
     <MainLayout>
-      <ContentReveal isLoading={page.isLoading} skeleton={<CourseEditorSkeleton />}>
       <Breadcrumbs
         items={[
           { label: 'Дашборд', to: '/dashboard' },
@@ -42,6 +41,7 @@ export function CourseEditor() {
         <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
           <ModelsColumn
             sections={page.sections}
+            isLoading={page.isSectionsLoading}
             selectedModel={page.selectedModel}
             onSelectModel={page.setSelectedModel}
             onAddClick={() => page.setIsModelModalOpen(true)}
@@ -220,7 +220,6 @@ export function CourseEditor() {
         setIsDeleteResultModalOpen={page.setIsDeleteResultModalOpen}
         onNeedsRefresh={() => page.setNeedsRefresh(true)}
       />
-      </ContentReveal>
     </MainLayout>
   );
 }

@@ -17,25 +17,23 @@ export function ProductIntro({ compact = false }: ProductIntroProps) {
   return (
     <div className="flex flex-col justify-center h-full p-8 lg:p-12">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center flex-shrink-0">
-          <GraduationCap className="w-7 h-7 text-white" />
+        <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          <GraduationCap className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold gradient-text">EasyCourse</h1>
+          <h1 className="text-xl font-semibold text-dark-100">EasyCourse</h1>
           <p className="text-sm text-dark-400">{PRODUCT_TAGLINE}</p>
         </div>
       </div>
 
       <p className="text-dark-300 leading-relaxed mb-8">{PRODUCT_DESCRIPTION}</p>
 
-      <ul className="space-y-4">
+      <ul className="space-y-3">
         {PRODUCT_FEATURES.map((feature) => (
           <li key={feature.title} className="flex gap-3">
-            <div className="p-2 rounded-lg bg-dark-800 text-primary-400 flex-shrink-0 h-fit">
-              <feature.icon className="w-4 h-4" />
-            </div>
+            <feature.icon className="w-4 h-4 text-dark-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-dark-100">{feature.title}</p>
+              <p className="text-sm font-medium text-dark-200">{feature.title}</p>
               <p className="text-sm text-dark-400">{feature.description}</p>
             </div>
           </li>

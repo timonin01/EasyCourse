@@ -69,15 +69,15 @@ export function Register() {
       <FadeIn className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4 pulse-glow">
-            <GraduationCap className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg mb-4">
+            <GraduationCap className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-3xl font-bold gradient-text">EasyCourse</h1>
+          <h1 className="text-2xl font-semibold text-dark-100">EasyCourse</h1>
           <p className="text-dark-400 mt-2">Создайте аккаунт</p>
         </div>
 
         {/* Form */}
-        <div className="glass rounded-2xl p-8">
+        <div className="surface rounded-brand-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
               type="text"

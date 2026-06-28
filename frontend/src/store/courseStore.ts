@@ -134,14 +134,19 @@ export const useCourseStore = create<CourseState>((set) => ({
   syncedLessonPositions: new Map<number, number>(),
   syncedStepPositions: new Map<number, number>(),
   
-  setSelectedCourse: (course) => set({ 
-    selectedCourse: course,
-    selectedModel: null,
-    selectedLesson: null,
-    selectedStep: null,
-    sections: [],
-    lessons: [],
-    steps: [],
+  setSelectedCourse: (course) => set((state) => {
+    const isNewCourse = course?.id !== state.selectedCourse?.id;
+    return {
+      selectedCourse: course,
+      ...(isNewCourse ? {
+        selectedModel: null,
+        selectedLesson: null,
+        selectedStep: null,
+        sections: [],
+        lessons: [],
+        steps: [],
+      } : {}),
+    };
   }),
   
   setSelectedModel: (section) => set({

@@ -74,7 +74,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
               ) : (
                 <Sparkles className="h-3.5 w-3.5 text-dark-500" />
               )}
-              <span className={clsx('text-sm font-semibold', isPro ? 'gradient-text' : 'text-dark-200')}>
+              <span className={clsx('text-sm font-semibold', isPro ? 'text-primary-400' : 'text-dark-200')}>
                 {isPro ? 'Pro' : 'Free'}
               </span>
             </div>
@@ -99,9 +99,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
               <div
                 className={clsx(
                   'h-full rounded-full transition-all duration-500',
-                  usageNearLimit
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-400'
-                    : 'bg-gradient-to-r from-primary-600 to-primary-400'
+                  usageNearLimit ? 'bg-amber-500' : 'bg-primary-500'
                 )}
                 style={{ width: `${usagePercent}%` }}
               />
@@ -125,56 +123,25 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
   return (
     <Card
       padding="none"
-      className={clsx(
-        'mb-4 overflow-hidden',
-        isPro
-          ? 'border-primary-500/25 shadow-lg shadow-primary-500/10'
-          : 'border-dark-600/40'
-      )}
+      className={clsx('mb-4 overflow-hidden', isPro && 'border-primary-500/20')}
     >
-      {/* Header */}
-      <div
-        className={clsx(
-          'relative px-4 pt-4 pb-3',
-          isPro
-            ? 'bg-gradient-to-br from-primary-900/40 via-dark-850 to-dark-900/80'
-            : 'bg-gradient-to-br from-dark-800/80 to-dark-900/40'
-        )}
-      >
-        {isPro && (
-          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary-500/10 blur-2xl" />
-        )}
-
-        <div className="relative flex items-start justify-between gap-3">
+      <div className="border-b border-dark-700/60 px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div
-              className={clsx(
-                'flex h-9 w-9 items-center justify-center rounded-xl',
-                isPro
-                  ? 'bg-gradient-to-br from-primary-500 to-primary-700 shadow-md shadow-primary-500/30'
-                  : 'bg-dark-700 border border-dark-600'
-              )}
-            >
-              {isPro ? (
-                <Crown className="h-4 w-4 text-white" />
-              ) : (
-                <Sparkles className="h-4 w-4 text-dark-400" />
-              )}
-            </div>
+            {isPro ? (
+              <Crown className="h-4 w-4 text-primary-400" />
+            ) : (
+              <Sparkles className="h-4 w-4 text-dark-500" />
+            )}
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-dark-500">
-                Подписка
-              </p>
-              <p className={clsx('text-base font-semibold', isPro ? 'gradient-text' : 'text-dark-200')}>
+              <p className="text-label uppercase tracking-wider text-dark-500">Подписка</p>
+              <p className={clsx('text-base font-semibold', isPro ? 'text-primary-400' : 'text-dark-200')}>
                 {isPro ? 'Pro' : 'Free'}
               </p>
             </div>
           </div>
 
-          <Badge
-            variant={isPro ? 'success' : 'info'}
-            className={clsx(isPro && 'border border-primary-500/30 shadow-sm shadow-primary-500/20')}
-          >
+          <Badge variant={isPro ? 'success' : 'info'}>
             {isPro ? 'Активна' : 'Базовый'}
           </Badge>
         </div>
@@ -183,7 +150,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
       <div className="space-y-3 px-4 pb-4 pt-3">
         {/* AI usage — Free only */}
         {!isPro && aiLimit !== null && (
-          <div className="rounded-xl border border-dark-700/80 bg-dark-800/50 p-3">
+          <div className="rounded-lg border border-dark-700 bg-dark-800/40 p-3">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-medium text-dark-400">AI-генерации в месяце</span>
               <span
@@ -200,9 +167,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
               <div
                 className={clsx(
                   'h-full rounded-full transition-all duration-500',
-                  usageNearLimit
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-400'
-                    : 'bg-gradient-to-r from-primary-600 to-primary-400'
+                  usageNearLimit ? 'bg-amber-500' : 'bg-primary-500'
                 )}
                 style={{ width: `${usagePercent}%` }}
               />
@@ -240,7 +205,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
 
         {/* Upgrade hint — Free only */}
         {!isPro && (
-          <div className="rounded-xl border border-primary-500/20 bg-gradient-to-r from-primary-900/30 to-dark-800/50 px-3 py-2.5 space-y-2.5">
+          <div className="rounded-lg border border-dark-700 px-3 py-2.5 space-y-2.5">
             <p className="text-xs leading-relaxed text-dark-300">
               <span className="font-semibold text-primary-400">Pro</span>
               {' — '}
@@ -248,7 +213,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
             </p>
             <Button
               size="sm"
-              className="w-full btn-hover"
+              className="w-full"
               icon={<Sparkles className="h-4 w-4" />}
               onClick={() => setIsUpgradeModalOpen(true)}
             >

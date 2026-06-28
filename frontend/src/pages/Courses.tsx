@@ -12,11 +12,12 @@ import type { Course, Model, Lesson, Step } from '../types';
 import { getStepDisplayType } from '../types';
 import { extractApiErrorMessage } from '../utils/apiError';
 import { validateTitle } from '../utils/validation';
+import { getCoursesSubtitle } from '../utils/pageCopy';
 
 export function Courses() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { courses, setCourses, addCourse, removeCourse, updateCourse } = useCourseStore();
+  const { courses, setCourses, addCourse, removeCourse, updateCourse, setSelectedCourse: selectCourseInStore } = useCourseStore();
   const [isLoading, setIsLoading] = useState(courses.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -143,6 +144,23 @@ export function Courses() {
     }
   };
 
+  const openCourseEditor = (courseId: number) => {
+    const course = courses.find((c) => c.id === courseId);
+    if (course) {
+      selectCourseInStore(course);
+    }
+    void sectionsApi.getCourseSections(courseId).then((sections) => {
+      const state = useCourseStore.getState();
+      if (state.selectedCourse?.id === courseId) {
+        state.setModels(sections);
+        state.saveSyncedModelPositions(sections);
+      }
+    }).catch(() => {
+      // loadCourse в редакторе повторит запрос
+    });
+    navigate(`/courses/${courseId}`);
+  };
+
   const openEditModal = (course: Course) => {
     setSelectedCourse(course);
     setFormData({ title: course.title, description: course.description });
@@ -193,8 +211,25 @@ export function Courses() {
         skeleton={<CoursesPageSkeleton />}
       >
       <PageHeader
-        title="Мои курсы"
-        description="Управляйте своими курсами"
+        eyebrow="Библиотека"
+        title={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            Мои курсы
+            {courses.length > 0 && (
+              <Badge variant="default" className="align-middle text-xs font-medium">
+                {courses.length}
+              </Badge>
+            )}
+          </span>
+        }
+        description={getCoursesSubtitle(
+          courses.length,
+          filteredCourses.length,
+          courses.filter((c) => c.fullySynced).length,
+          searchQuery.trim().length > 0
+        )}
+        icon={<BookOpen className="h-5 w-5" />}
+        iconAccent="blue"
         action={
           <Button
             icon={<Plus className="w-4 h-4" />}
@@ -242,7 +277,7 @@ export function Courses() {
             <CourseCard
               course={course}
               variant="detailed"
-              onOpen={(id) => navigate(`/courses/${id}`)}
+              onOpen={openCourseEditor}
               onViewDetails={loadCourseDetails}
               onEdit={openEditModal}
               onSync={handleSyncCourse}

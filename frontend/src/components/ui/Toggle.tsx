@@ -46,7 +46,7 @@ export function Toggle({
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-dark-900',
           sizes[size].toggle,
           checked 
-            ? 'bg-gradient-to-r from-primary-500 to-primary-600' 
+            ? 'bg-primary-600' 
             : 'bg-dark-600 group-hover:bg-dark-500'
         )}
       >

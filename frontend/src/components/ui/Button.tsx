@@ -25,35 +25,31 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles = clsx(
-    'inline-flex items-center justify-center font-medium rounded-xl',
-    'transition-all duration-200',
+    'inline-flex items-center justify-center font-medium rounded-lg',
+    'transition-colors duration-150',
     'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-dark-900',
-    'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
-    'active:scale-[0.98]'
+    'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
   );
   
   const variants = {
     primary: clsx(
-      'bg-gradient-to-r from-primary-600 to-primary-500',
-      'hover:from-primary-500 hover:to-primary-400',
-      'text-white shadow-lg shadow-primary-500/25',
+      'bg-primary-600 hover:bg-primary-500',
+      'text-white',
       'focus-visible:ring-primary-500'
     ),
     secondary: clsx(
-      'bg-dark-800 hover:bg-dark-700',
-      'text-dark-100 border border-dark-600 hover:border-dark-500',
+      'bg-dark-800 hover:bg-dark-700 border border-dark-600 hover:border-dark-500',
+      'text-dark-100',
       'focus-visible:ring-dark-500'
     ),
     danger: clsx(
-      'bg-gradient-to-r from-red-600 to-red-500',
-      'hover:from-red-500 hover:to-red-400',
-      'text-white shadow-lg shadow-red-500/25',
+      'bg-red-600 hover:bg-red-500',
+      'text-white',
       'focus-visible:ring-red-500'
     ),
     success: clsx(
-      'bg-gradient-to-r from-emerald-600 to-emerald-500',
-      'hover:from-emerald-500 hover:to-emerald-400',
-      'text-white shadow-lg shadow-emerald-500/25',
+      'bg-emerald-600 hover:bg-emerald-500',
+      'text-white',
       'focus-visible:ring-emerald-500'
     ),
     ghost: clsx(
