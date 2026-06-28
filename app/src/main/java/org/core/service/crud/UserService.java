@@ -10,6 +10,7 @@ import org.core.exception.exceptions.UserAlreadyExistsException;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.service.UserValidationService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,15 +22,19 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserValidationService validationService;
+    private final PasswordEncoder passwordEncoder;
 
     public UserResponseDTO createNewUser(CreateUserDTO createDto) {
         if (validationService.checkUserInDBByEmail(createDto.getEmail())) {
             throw new UserAlreadyExistsException("Пользователь с email " + createDto.getEmail() + " уже зарегистрирован");
         }
+
+        String hashPassword = passwordEncoder.encode(createDto.getPassword());
+
         User user = new User();
         user.setName(createDto.getName());
         user.setEmail(createDto.getEmail());
-        user.setPassword(createDto.getPassword());
+        user.setPassword(hashPassword);
         user.setRole(org.core.enums.UserRole.DEFAULT);
 
         log.info("Create user with name - {} and email - {}", user.getName(),user.getEmail());
@@ -41,7 +46,9 @@ public class UserService {
         User user = userRepository.findByEmail(loginDto.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("User was not found"));
 
-        if(!loginDto.getPassword().equals(user.getPassword())){
+        boolean isCorrectPassword = passwordEncoder.matches(loginDto.getPassword(), user.getPassword());
+
+        if(!isCorrectPassword){
             throw new InvalidPasswordException("Incorrect password");
         }
 
@@ -68,8 +75,9 @@ public class UserService {
         if(updateDTO.getEmail() != null){
             user.setEmail(updateDTO.getEmail());
         }
-        if(updateDTO.getPassword() != null && !user.getPassword().equals(updateDTO.getPassword())){
-            user.setPassword(updateDTO.getPassword());
+        if(updateDTO.getPassword() != null && !passwordEncoder.matches(updateDTO.getPassword(), user.getPassword())){
+            String hashPassword = passwordEncoder.encode(updateDTO.getPassword());
+            user.setPassword(hashPassword);
         }
         log.info("User updated with ID: {}", updateDTO.getUserId());
 
