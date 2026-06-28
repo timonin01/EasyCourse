@@ -34,10 +34,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={clsx(
-              'w-full py-2.5 bg-dark-800/80 border border-dark-600 rounded-xl text-dark-100 placeholder-dark-500',
-              'focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 focus:bg-dark-800',
-              'hover:border-dark-500 hover:bg-dark-800',
-              'transition-all duration-200',
+              'w-full py-2.5 bg-dark-800 border border-dark-600 rounded-lg text-dark-100 placeholder-dark-500',
+              'focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500/50',
+              'hover:border-dark-500',
+              'transition-colors duration-150',
               icon ? 'pl-10' : 'pl-4',
               suffix ? 'pr-12' : 'pr-4',
               error && 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50',

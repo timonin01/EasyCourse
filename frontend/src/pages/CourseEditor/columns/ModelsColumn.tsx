@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Plus, Trash2, Upload, Loader2, Layers, CheckCircle, AlertTriangle, Pencil } from 'lucide-react';
-import { Button, Card, SortableList, Tooltip, EmptyState } from '../../../components/ui';
+import { Button, Card, SortableList, Tooltip, EmptyState, Skeleton } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { EditTitleModal } from '../modals/EditTitleModal';
 import type { Model } from '../../../types';
 
 interface ModelsColumnProps {
   sections: Model[];
+  isLoading?: boolean;
   selectedModel: Model | null;
   onSelectModel: (m: Model) => void;
   onAddClick: () => void;
@@ -21,6 +22,7 @@ interface ModelsColumnProps {
 
 export function ModelsColumn({
   sections,
+  isLoading = false,
   selectedModel,
   onSelectModel,
   onAddClick,
@@ -52,7 +54,13 @@ export function ModelsColumn({
         <h2 className="font-semibold text-dark-200">Модули</h2>
         <Button size="sm" onClick={onAddClick}><Plus className="w-4 h-4" /></Button>
       </div>
-      {sections.length > 0 ? (
+      {isLoading && sections.length === 0 ? (
+        <div className="space-y-2" aria-busy="true" aria-label="Загрузка модулей">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 rounded-xl" />
+          ))}
+        </div>
+      ) : sections.length > 0 ? (
         <SortableList
           items={sections}
           onReorder={onReorder}

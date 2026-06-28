@@ -11,10 +11,11 @@ import {
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
 import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
-import { Card, Button, StatCard, EmptyState, DashboardSkeleton, StaggerList, StaggerItem, ContentReveal } from '../components/ui';
+import { Card, Button, StatCard, EmptyState, DashboardSkeleton, StaggerList, StaggerItem, ContentReveal, PageHeader, Badge } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { coursesApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
+import { formatCourseCount, getDashboardSubtitle, getTimeGreeting } from '../utils/pageCopy';
 
 export function Dashboard() {
   const { user } = useAuthStore();
@@ -47,6 +48,9 @@ export function Dashboard() {
     .slice(0, 6);
 
   const isNewUser = courses.length === 0;
+  const unsyncedCount = courses.filter((c) => !c.fullySynced).length;
+  const syncedCount = courses.length - unsyncedCount;
+  const firstName = user?.name?.split(/\s+/)[0];
 
   return (
     <MainLayout>
@@ -54,25 +58,39 @@ export function Dashboard() {
         isLoading={isLoading && courses.length === 0}
         skeleton={<DashboardSkeleton />}
       >
-        {/* Header */}
-        <div className="mb-8 min-w-0">
-          <h1 className="page-title">
-            Привет,{' '}
-            <span className="gradient-text break-words">{user?.name || 'Пользователь'}</span>
-            ! 👋
-          </h1>
-          <p className="page-subtitle mt-2">
-            {isNewUser
-              ? 'Начните создавать курсы для Stepik — мы подскажем, с чего начать'
-              : 'Вот что происходит с вашими курсами сегодня'}
-          </p>
-        </div>
+        <PageHeader
+          size="hero"
+          eyebrow={getTimeGreeting()}
+          title={
+            firstName ? (
+              <>
+                <span className="text-dark-100">{firstName}</span>
+                <span className="text-dark-500">, рад вас видеть</span>
+              </>
+            ) : (
+              'Дашборд'
+            )
+          }
+          description={getDashboardSubtitle(courses.length, unsyncedCount)}
+          meta={
+            !isNewUser ? (
+              <>
+                <Badge variant="default">{formatCourseCount(courses.length)}</Badge>
+                {syncedCount > 0 && (
+                  <Badge variant="success">{syncedCount} на Stepik</Badge>
+                )}
+                {unsyncedCount > 0 && (
+                  <Badge variant="warning">{unsyncedCount} не синхр.</Badge>
+                )}
+              </>
+            ) : undefined
+          }
+        />
 
         {isNewUser && <OnboardingBanner />}
 
         <DashboardSubscriptionWidget />
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {stats.map((stat) => (
             <StatCard
@@ -85,21 +103,20 @@ export function Dashboard() {
           ))}
         </div>
 
-        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Link to="/courses">
             <Card hover className="h-full">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-4 bg-primary-600/20 rounded-xl">
-                    <Plus className="w-8 h-8 text-primary-400" />
+                  <div className="rounded-xl bg-primary-600/20 p-4">
+                    <Plus className="h-8 w-8 text-primary-400" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-dark-100">Создать курс</h3>
-                    <p className="text-dark-400">Начните новый курс с нуля</p>
+                    <p className="text-dark-400">Новый курс с нуля</p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-dark-500" />
+                <ArrowRight className="h-5 w-5 text-dark-500" />
               </div>
             </Card>
           </Link>
@@ -108,21 +125,20 @@ export function Dashboard() {
             <Card hover className="h-full">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-4 bg-purple-600/20 rounded-xl">
-                    <Sparkles className="w-8 h-8 text-purple-400" />
+                  <div className="rounded-xl bg-purple-600/20 p-4">
+                    <Sparkles className="h-8 w-8 text-purple-400" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-dark-100">AI Генератор</h3>
-                    <p className="text-dark-400">Создавайте контент с помощью ИИ</p>
+                    <p className="text-dark-400">Генерация шагов и заданий</p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-dark-500" />
+                <ArrowRight className="h-5 w-5 text-dark-500" />
               </div>
             </Card>
           </Link>
         </div>
 
-        {/* Recent Courses */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-heading">Последние курсы</h2>

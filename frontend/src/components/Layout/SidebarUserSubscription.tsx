@@ -24,10 +24,10 @@ export function SidebarUserSubscription() {
       {isPro ? (
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-primary-500 to-primary-700">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary-600">
               <Crown className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-sm font-semibold gradient-text truncate">Pro</span>
+            <span className="text-sm font-semibold text-primary-400 truncate">Pro</span>
           </div>
           <Badge variant="success" className="text-[10px] px-2 py-0">
             Активна
@@ -52,9 +52,7 @@ export function SidebarUserSubscription() {
             <div
               className={clsx(
                 'h-full rounded-full transition-all duration-500',
-                usageNearLimit
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-400'
-                  : 'bg-gradient-to-r from-primary-600 to-primary-400'
+                usageNearLimit ? 'bg-amber-500' : 'bg-primary-500'
               )}
               style={{ width: `${usagePercent}%` }}
             />

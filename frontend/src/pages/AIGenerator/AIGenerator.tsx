@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { clsx } from 'clsx';
 import { MainLayout } from '../../components/Layout';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
 import { BatchPlanModal } from './components/BatchPlanModal';
@@ -9,15 +9,25 @@ import { BatchModePanel } from './components/BatchModePanel';
 import { GeneratePreviewPanel } from './components/GeneratePreviewPanel';
 import { BatchSettingsSidebar } from './components/BatchSettingsSidebar';
 import { useAIGeneratorPage } from './hooks/useAIGeneratorPage';
-import { easeOut, fadeInUp } from '../../components/ui/motion';
 
 export function AIGenerator() {
   const page = useAIGeneratorPage();
+  const isGenerateMode = page.mode === 'generate';
 
   return (
     <MainLayout>
-      <div className="flex flex-col xl:flex-row gap-6 min-h-0 h-[calc(100dvh-7rem)] max-h-[calc(100dvh-7rem)] overflow-x-hidden">
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div
+        className={clsx(
+          'flex min-h-0 h-[calc(100dvh-7rem)] max-h-[calc(100dvh-7rem)] gap-6 overflow-x-hidden',
+          isGenerateMode ? 'flex-col xl:flex-row' : 'flex-col xl:flex-row'
+        )}
+      >
+        <div
+          className={clsx(
+            'flex min-w-0 flex-col overflow-hidden',
+            isGenerateMode ? 'min-h-0 flex-1 xl:min-h-0 xl:flex-1' : 'flex-1'
+          )}
+        >
           <AIGeneratorHeader
             mode={page.mode}
             generatedStepHistoryRefreshKey={page.generatedStepHistoryRefreshKey}
@@ -27,16 +37,7 @@ export function AIGenerator() {
 
           <ModeToggle mode={page.mode} onModeChange={page.handleModeChange} />
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={page.mode}
-              className="flex-1 flex flex-col min-h-0 overflow-hidden"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={fadeInUp}
-              transition={{ duration: 0.22, ease: easeOut }}
-            >
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {page.mode === 'batch' ? (
             <BatchModePanel
               batchUserInput={page.batchUserInput}
@@ -77,20 +78,10 @@ export function AIGenerator() {
               onRestoreGeneratedStep={page.handleRestoreGeneratedStep}
             />
           )}
-            </motion.div>
-          </AnimatePresence>
+          </div>
         </div>
 
-        <AnimatePresence>
-        {page.mode === 'generate' && (
-          <motion.div
-            key="preview"
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 16 }}
-            transition={{ duration: 0.25, ease: easeOut }}
-            className="min-h-0"
-          >
+        {isGenerateMode && (
           <GeneratePreviewPanel
             previewStep={page.previewStep}
             isLoading={page.isLoading}
@@ -106,18 +97,9 @@ export function AIGenerator() {
             onLessonChange={page.setSelectedLessonId}
             onSave={() => void page.handleSaveStep()}
           />
-          </motion.div>
         )}
 
         {page.mode === 'batch' && (
-          <motion.div
-            key="batch-sidebar"
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 16 }}
-            transition={{ duration: 0.25, ease: easeOut }}
-            className="min-h-0"
-          >
           <BatchSettingsSidebar
             groupedLessons={page.groupedLessons}
             allLessonsCount={page.allLessons.length}
@@ -127,9 +109,7 @@ export function AIGenerator() {
             onViewBatchSteps={page.handleViewBatchSteps}
             onRerunBatchHistory={page.handleRerunBatchHistory}
           />
-          </motion.div>
         )}
-        </AnimatePresence>
       </div>
 
       <BatchPlanModal

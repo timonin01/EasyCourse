@@ -5,17 +5,17 @@ import { ONBOARDING_STEPS } from '../../constants/productInfo';
 
 export function OnboardingBanner() {
   return (
-    <Card className="mb-8 border-primary-600/20 bg-primary-600/5">
-      <h2 className="text-lg font-semibold text-dark-100 mb-1">Добро пожаловать в EasyCourse!</h2>
-      <p className="text-sm text-dark-400 mb-6">
-        Редактор курсов для Stepik с AI-генерацией. Вот с чего начать:
+    <Card className="mb-8">
+      <h2 className="text-heading text-dark-100 mb-1">С чего начать</h2>
+      <p className="text-caption text-dark-400 mb-5">
+        Три шага до первого курса на Stepik
       </p>
 
-      <ol className="space-y-4 mb-6">
+      <ol className="space-y-3 mb-5">
         {ONBOARDING_STEPS.map((item) => (
-          <li key={item.step} className="flex gap-4">
-            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary-600/20 text-primary-400 text-sm font-semibold flex items-center justify-center">
-              {item.step}
+          <li key={item.step} className="flex gap-3">
+            <span className="flex-shrink-0 w-5 text-label font-medium text-dark-500 tabular-nums pt-0.5">
+              {item.step}.
             </span>
             <div>
               <p className="text-sm font-medium text-dark-100">{item.title}</p>

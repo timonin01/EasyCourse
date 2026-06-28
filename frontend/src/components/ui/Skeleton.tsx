@@ -15,8 +15,7 @@ export function Skeleton({ className }: SkeletonProps) {
 
 export function StatCardSkeleton() {
   return (
-    <div className="glass overflow-hidden rounded-xl">
-      <Skeleton className="h-1 w-full rounded-none" />
+    <div className="surface overflow-hidden rounded-brand-lg">
       <div className="flex items-center gap-4 p-4">
         <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
         <div className="flex-1 space-y-2">
@@ -30,7 +29,7 @@ export function StatCardSkeleton() {
 
 export function CourseCardSkeleton() {
   return (
-    <div className="glass relative overflow-hidden rounded-xl p-4">
+    <div className="surface relative overflow-hidden rounded-brand-lg p-4">
       <Skeleton className="absolute left-0 top-0 h-full w-1 rounded-none" />
       <div className="space-y-3 pl-3">
         <div className="flex items-start justify-between">
@@ -51,7 +50,7 @@ export function CourseCardSkeleton() {
 
 export function DashboardSkeleton() {
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="space-y-8">
       <div className="space-y-2">
         <Skeleton className="h-9 w-72 max-w-full" />
         <Skeleton className="h-5 w-96 max-w-full" />
@@ -80,7 +79,7 @@ export function DashboardSkeleton() {
 
 export function CoursesPageSkeleton() {
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-2">
           <Skeleton className="h-9 w-48" />
@@ -100,7 +99,7 @@ export function CoursesPageSkeleton() {
 
 export function CourseEditorSkeleton() {
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Skeleton className="h-9 w-9 rounded-xl" />
         <Skeleton className="h-8 w-64 max-w-full" />
@@ -124,7 +123,7 @@ export function CourseEditorSkeleton() {
 
 export function StepikSyncSkeleton() {
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <div className="space-y-2">
         <Skeleton className="h-9 w-72 max-w-full" />
         <Skeleton className="h-5 w-96 max-w-full" />
@@ -140,7 +139,7 @@ export function StepikSyncSkeleton() {
 
 export function CourseAuditSkeleton() {
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       <div className="space-y-2">
         <Skeleton className="h-9 w-56 max-w-full" />
         <Skeleton className="h-5 w-full max-w-2xl" />

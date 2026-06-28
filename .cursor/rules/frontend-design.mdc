@@ -1,0 +1,17 @@
+---
+description: EasyCourse frontend visual design constraints
+globs: frontend/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Frontend design
+
+Follow `.cursor/skills/easycourse-design/SKILL.md`.
+
+Quick checks before shipping UI changes:
+
+- No `glass`, `gradient-text`, `pulse-glow`, or `btn-hover` classes
+- No purple accents outside AI-specific pages/components
+- Primary green used sparingly (CTA, active nav, success)
+- Prefer `.surface` over blur/translucent panels
+- Flat buttons; no gradient + glow shadows on cards

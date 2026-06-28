@@ -58,7 +58,12 @@ export function useCourseEditorPage() {
   const { setSelectedLessonId, setMode, getOrCreateGenerateSession } = useAIGeneratorStore();
   const { canChangeStepType, canSelectModel, refresh: refreshSubscription } = useSubscription();
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSectionsLoading, setIsSectionsLoading] = useState(() => {
+    if (!courseId) return false;
+    const id = parseInt(courseId, 10);
+    const { selectedCourse, sections } = useCourseStore.getState();
+    return !(selectedCourse?.id === id && sections.length > 0);
+  });
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [isStepModalOpen, setIsStepModalOpen] = useState(false);
@@ -133,27 +138,53 @@ export function useCourseEditorPage() {
   } = useStepBlockEdit({ applyStepUpdate, onSaved: closeStepViewOnBlockSave });
 
   useEffect(() => {
+    if (!courseId) return;
+    const id = parseInt(courseId, 10);
+    let cancelled = false;
+
+    const { selectedCourse: currentCourse, courses } = useCourseStore.getState();
+    if (currentCourse?.id !== id) {
+      const courseFromList = courses.find((c) => c.id === id);
+      if (courseFromList) {
+        setSelectedCourse(courseFromList);
+      }
+    }
+
+    const alreadyHasSections = useCourseStore.getState().selectedCourse?.id === id
+      && useCourseStore.getState().sections.length > 0;
+    if (!alreadyHasSections) {
+      setIsSectionsLoading(true);
+    }
+
     const loadCourse = async () => {
-      if (!courseId) return;
       try {
-        const course = await coursesApi.getCourse(parseInt(courseId));
+        const [course, courseSections] = await Promise.all([
+          coursesApi.getCourse(id),
+          sectionsApi.getCourseSections(id),
+        ]);
+        if (cancelled) return;
         setSelectedCourse(course);
-        const courseSections = await sectionsApi.getCourseSections(parseInt(courseId));
         setModels(courseSections);
-        // Сохраняем синхронизированные позиции модулей
         saveSyncedModelPositions(courseSections);
-        // Проверяем изменения позиций после загрузки
         setTimeout(() => checkAndMarkPositionChanges(), 0);
       } catch (error) {
+        if (cancelled) return;
         toast.error('Не удалось загрузить курс');
         console.error('Failed to load course:', error);
         navigate('/courses');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsSectionsLoading(false);
+        }
       }
     };
-    loadCourse();
-  }, [courseId, setSelectedCourse, setModels, navigate, saveSyncedModelPositions]);
+
+    void loadCourse();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId, setSelectedCourse, setModels, navigate, saveSyncedModelPositions, checkAndMarkPositionChanges]);
 
   useEffect(() => {
     const loadLessons = async () => {
@@ -1049,7 +1080,7 @@ export function useCourseEditorPage() {
   return {
     courseId,
     navigate,
-    isLoading,
+    isSectionsLoading,
     selectedCourse,
     setSelectedCourse,
     sections,

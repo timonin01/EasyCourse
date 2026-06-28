@@ -47,7 +47,7 @@ export function TabsTrigger({ value, children, className, disabled }: TabsTrigge
         'text-dark-400 hover:text-dark-200 hover:bg-dark-800/80',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60',
         'disabled:pointer-events-none disabled:opacity-50',
-        'data-[state=active]:bg-primary-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary-500/20',
+        'data-[state=active]:bg-dark-800 data-[state=active]:text-dark-100',
         className
       )}
     >
