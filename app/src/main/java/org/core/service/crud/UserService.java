@@ -10,6 +10,7 @@ import org.core.exception.exceptions.UserAlreadyExistsException;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.service.UserValidationService;
+import org.core.service.security.JwtTokenService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,10 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserValidationService validationService;
+
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenService jwtTokenService;
+
 
     public UserResponseDTO createNewUser(CreateUserDTO createDto) {
         if (validationService.checkUserInDBByEmail(createDto.getEmail())) {
@@ -52,7 +56,7 @@ public class UserService {
             throw new InvalidPasswordException("Incorrect password");
         }
 
-        String token = String.valueOf(user.getId());
+        String token = jwtTokenService.generateToken(user.getId());
         return new UserLoginResponseDTO(mapToResponseDto(user), token);
     }
 
