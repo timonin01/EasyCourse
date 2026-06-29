@@ -15,6 +15,7 @@ import java.util.List;
 
 import org.core.service.stepik.StepikCascadeSyncService;
 import org.core.service.stepik.course.getCourseFromStepik.StepikFullCourseService;
+import org.core.util.AuthUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,19 +36,18 @@ public class StepikCourseController {
 
     @GetMapping("/unsynced-courses/{userId}")
     public List<CourseResponseDTO> getUnsyncedCoursesByUserId(@PathVariable Long userId) {
+        AuthUtils.requireSameUser(userContextBean, userId);
         log.info("Getting unsynced courses for user: {}", userId);
-        userContextBean.setUserId(userId);
         return courseService.getUnsyncedCoursesByUserId(userId);
     }
 
     @PostMapping("/sync-course")
     public ResponseEntity<CourseCaptchaChallenge> syncCourse(
             @RequestParam Long courseId,
-            @RequestParam(required = false) String captchaToken,
-            @RequestHeader("User-Id") Long userId) {
+            @RequestParam(required = false) String captchaToken) {
         try {
             log.info("Starting sync for course: {} with captcha: {}", courseId, captchaToken != null);
-            userContextBean.setUserId(userId);
+            Long userId = userContextBean.getUserId();
             CourseCaptchaChallenge result = stepikCascadeSyncService.syncFullCourseForStepik(courseId, captchaToken, userId);
             return ResponseEntity.ok(result);
         } catch (IllegalStateException e) {
@@ -56,18 +56,13 @@ public class StepikCourseController {
         } catch (Exception e) {
             log.error("Failed to sync course {} with Stepik: {}", courseId, e.getMessage());
             return ResponseEntity.internalServerError().build();
-        } finally {
-            userContextBean.clear();
         }
     }
 
     @PutMapping("/update-course/{courseId}")
-    public ResponseEntity<StepikCourseResponseData> updateCourseInStepik(
-            @PathVariable Long courseId,
-            @RequestHeader("User-Id") Long userId) {
+    public ResponseEntity<StepikCourseResponseData> updateCourseInStepik(@PathVariable Long courseId) {
         try {
             log.info("Starting update for course: {}", courseId);
-            userContextBean.setUserId(userId);
             StepikCourseResponseData responseData = stepikCourseSyncService.updateCourseInStepik(courseId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
@@ -80,12 +75,10 @@ public class StepikCourseController {
     }
 
     @DeleteMapping("/delete-course/{courseId}")
-    public ResponseEntity<String> deleteCourseFromStepik(
-            @PathVariable Long courseId,
-            @RequestHeader("User-Id") Long userId) {
+    public ResponseEntity<String> deleteCourseFromStepik(@PathVariable Long courseId) {
         try {
             log.info("Starting deletion for course: {}", courseId);
-            userContextBean.setUserId(userId);
+            Long userId = userContextBean.getUserId();
             cascadeDeleteService.deleteFullCourseFromStepik(courseId, userId);
             return ResponseEntity.ok("Course successfully deleted from Stepik");
         } catch (IllegalStateException e) {
@@ -98,12 +91,10 @@ public class StepikCourseController {
     }
 
     @GetMapping("/full-course-from-stepik/{stepikCourseId}")
-    public ResponseEntity<FullCourseResponseDTO> getFullCourseFromStepik(
-            @PathVariable Long stepikCourseId,
-            @RequestHeader("User-Id") Long userId){
+    public ResponseEntity<FullCourseResponseDTO> getFullCourseFromStepik(@PathVariable Long stepikCourseId){
         try {
+            Long userId = userContextBean.getUserId();
             log.info("Get full course: {}, for: {}", stepikCourseId, userId);
-            userContextBean.setUserId(userId);
 
             return ResponseEntity.ok(fullCourseService.buildFullCourseResponseDTO(stepikCourseId, userId));
         }catch (RuntimeException e){

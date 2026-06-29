@@ -2,6 +2,7 @@ package org.core.rest.ai;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.domain.ai.ChatType;
 import org.core.dto.ai.AiMessageHistoryDTO;
 import org.core.exception.exceptions.UserNotFoundException;
@@ -26,15 +27,15 @@ import java.util.List;
 @Slf4j
 public class AiSessionController {
 
+    private final UserContextBean userContextBean;
     private final AiSessionMessageService aiSessionMessageService;
-
     private final AgentService agentService;
 
     @GetMapping("/latest")
     public ResponseEntity<?> getLatestSession(
-            @RequestHeader("User-Id") Long userId,
             @RequestParam String chatType,
             @RequestParam(required = false) String stepType) {
+        Long userId = userContextBean.getUserId();
         try {
             ChatType type = ChatType.valueOf(chatType.trim().toUpperCase());
             String sessionId = aiSessionMessageService
@@ -52,9 +53,8 @@ public class AiSessionController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<?> getHistory(
-            @RequestHeader("User-Id") Long userId,
-            @RequestParam String sessionId) {
+    public ResponseEntity<?> getHistory(@RequestParam String sessionId) {
+        Long userId = userContextBean.getUserId();
         try {
             log.info("Loading AI session history for userId={}, sessionId={}", userId, sessionId);
             if (sessionId == null || sessionId.isBlank()) {
@@ -78,9 +78,8 @@ public class AiSessionController {
     }
 
     @DeleteMapping("/{sessionId}")
-    public ResponseEntity<?> clearSession(
-            @RequestHeader("User-Id") Long userId,
-            @PathVariable String sessionId) {
+    public ResponseEntity<?> clearSession(@PathVariable String sessionId) {
+        Long userId = userContextBean.getUserId();
         try {
             log.info("Clearing AI session for userId={}, sessionId={}", userId, sessionId);
             if (sessionId == null || sessionId.isBlank()) {

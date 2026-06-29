@@ -46,11 +46,10 @@ public class AgentController {
 
     @PostMapping("/chat")
     public ResponseEntity<?> chat(
-            @RequestHeader("User-Id") Long userId,
             @RequestParam String sessionId,
             @RequestBody String userInput,
             @RequestParam(required = false) String llmModel) {
-        userContextBean.setUserId(userId);
+        Long userId = userContextBean.getUserId();
         try {
             aiPromptLimitService.validateChatPrompt(userInput);
             LlmModel model = parseLlmModel(llmModel);
@@ -74,19 +73,16 @@ public class AgentController {
         } catch (Exception e) {
             log.error("Error in chat endpoint: {}", e.getMessage());
             return ResponseEntity.internalServerError().body("Ошибка при обработке запроса");
-        } finally {
-            userContextBean.clear();
         }
     }
 
     @PostMapping("/generate-step")
     public ResponseEntity<?> generateStep(
-            @RequestHeader("User-Id") Long userId,
             @RequestParam String sessionId,
             @RequestParam(required = false) String stepType,
             @RequestBody String userInput,
             @RequestParam(required = false) String llmModel) {
-        userContextBean.setUserId(userId);
+        Long userId = userContextBean.getUserId();
         try {
             aiPromptLimitService.validateGeneratePrompt(userInput);
             if (stepType == null || stepType.isEmpty()) {
@@ -114,18 +110,15 @@ public class AgentController {
         } catch (Exception e) {
             log.error("Error in generateStep endpoint: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
-        } finally {
-            userContextBean.clear();
         }
     }
 
     @PostMapping("/generate-batch-steps")
     public ResponseEntity<?> generateBatchSteps(
-            @RequestHeader("User-Id") Long userId,
             @RequestParam String sessionId,
             @RequestBody BatchStepDTO batchStepDTO) {
-        userContextBean.setUserId(userId);
         Long batchGenerationId = null;
+        Long userId = userContextBean.getUserId();
         try {
             aiPromptLimitService.validateBatchPlan(batchStepDTO);
             subscriptionService.validateBatchPlan(userId, batchStepDTO);
@@ -156,8 +149,6 @@ public class AgentController {
             batchSessionMessageService.markFailed(batchGenerationId, e.getMessage());
             log.error("Error in generateBatchSteps endpoint: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body("Ошибка при генерации batch шагов");
-        } finally {
-            userContextBean.clear();
         }
     }
 
@@ -178,13 +169,12 @@ public class AgentController {
 
     @PostMapping("/modify-stepContent")
     public ResponseEntity<?> modifyStepContent(
-            @RequestHeader("User-Id") Long userId,
             @RequestParam String sessionId,
             @RequestParam String stepType,
             @RequestParam String userInput,
             @RequestBody String previousStepikBlockRequestJson,
             @RequestParam(required = false) String llmModel) {
-        userContextBean.setUserId(userId);
+        Long userId = userContextBean.getUserId();
         try {
             aiPromptLimitService.validateGeneratePrompt(userInput);
             StepikBlockRequest previousStepikBlockRequest = stepikRequestParser.parseRequest(previousStepikBlockRequestJson, stepType);
@@ -207,8 +197,6 @@ public class AgentController {
         } catch (Exception e) {
             log.error("Error in modifyStepContent endpoint: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
-        } finally {
-            userContextBean.clear();
         }
     }
 

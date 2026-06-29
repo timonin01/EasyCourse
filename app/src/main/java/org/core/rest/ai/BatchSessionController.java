@@ -2,12 +2,12 @@ package org.core.rest.ai;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.dto.ai.BatchGenerationHistoryDTO;
 import org.core.service.ai.BatchSessionMessageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,9 +20,11 @@ import java.util.List;
 public class BatchSessionController {
 
     private final BatchSessionMessageService batchSessionMessageService;
+    private final UserContextBean userContextBean;
 
     @GetMapping("/history")
-    public ResponseEntity<?> getHistory(@RequestHeader("User-Id") Long userId) {
+    public ResponseEntity<?> getHistory() {
+        Long userId = userContextBean.getUserId();
         try {
             log.info("Loading batch generation history for userId={}", userId);
             List<BatchGenerationHistoryDTO> history = batchSessionMessageService.getHistory(userId);
@@ -35,7 +37,8 @@ public class BatchSessionController {
     }
 
     @DeleteMapping("/history")
-    public ResponseEntity<?> clearAllBatchGenerations(@RequestHeader("User-Id") Long userId) {
+    public ResponseEntity<?> clearAllBatchGenerations() {
+        Long userId = userContextBean.getUserId();
         try {
             log.info("Clearing all batch generations for userId={}", userId);
             batchSessionMessageService.clearAllBatchGenerations(userId);

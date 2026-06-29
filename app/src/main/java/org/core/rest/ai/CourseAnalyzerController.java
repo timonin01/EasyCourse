@@ -17,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,12 +37,10 @@ public class CourseAnalyzerController {
 
     @PostMapping("/course")
     public ResponseEntity<?> courseAnalyze(
-            @RequestHeader("User-Id") Long userId,
             @RequestParam Long courseId,
             @RequestParam(required = false) String llmModel
     ) {
-        userContextBean.setUserId(userId);
-
+        Long userId = userContextBean.getUserId();
         try {
             if (!subscriptionService.isPro(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("AI-аудит курса доступен в подписке Pro");
@@ -67,18 +64,13 @@ public class CourseAnalyzerController {
         } catch (Exception ex) {
             log.error("Error in courseAnalyzer endpoint: {}", ex.getMessage(), ex);
             return ResponseEntity.internalServerError().body("Ошибка при анализе курса");
-        } finally {
-            userContextBean.clear();
         }
     }
 
     @PostMapping(value = "/export-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<?> exportCourseAuditPdf(
-            @RequestHeader("User-Id") Long userId,
-            @RequestBody CourseAuditPdfExportRequest request
+    public ResponseEntity<?> exportCourseAuditPdf(@RequestBody CourseAuditPdfExportRequest request
     ) {
-        userContextBean.setUserId(userId);
-
+        Long userId = userContextBean.getUserId();
         try {
             if (!subscriptionService.isPro(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Экспорт PDF доступен в подписке Pro");
@@ -106,8 +98,6 @@ public class CourseAnalyzerController {
         } catch (Exception ex) {
             log.error("Error exporting course audit PDF: {}", ex.getMessage(), ex);
             return ResponseEntity.internalServerError().body("Ошибка при формировании PDF");
-        } finally {
-            userContextBean.clear();
         }
     }
 

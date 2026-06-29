@@ -18,47 +18,35 @@ public class StepikStepController {
     private final UserContextBean userContextBean;
 
     @PostMapping("/sync-step")
-    public ResponseEntity<StepikStepSourceResponseData> syncStepWithStepik(
-            @RequestParam Long stepId,
-            @RequestHeader("User-Id") Long userId) {
-
+    public ResponseEntity<StepikStepSourceResponseData> syncStepWithStepik(@RequestParam Long stepId) {
+        Long userId = userContextBean.getUserId();
         log.info("Syncing step {} with Stepik for user {}", stepId, userId);
-        userContextBean.setUserId(userId);
 
         StepikStepSourceResponseData result = stepikStepSyncService.syncStepWithStepik(stepId);
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/get-sync-step")
-    public ResponseEntity<StepikStepSourceResponseData> getVoid(
-            @RequestParam Long stepId,
-            @RequestHeader("User-Id") Long userId) {
+    public ResponseEntity<StepikStepSourceResponseData> getVoid(@RequestParam Long stepId) {
         log.info("Start getting information about step from stepik for stepId: {}", stepId);
-        userContextBean.setUserId(userId);
 
         StepikStepSourceResponseData result = stepikStepSyncService.getStepFromStepikByLocalStepId(stepId);
         return ResponseEntity.ok(result);
     }
 
     @PutMapping("/update-step/{stepId}")
-    public ResponseEntity<StepikStepSourceResponseData> updateStepInStepik(
-            @PathVariable Long stepId,
-            @RequestHeader("User-Id") Long userId) {
-
+    public ResponseEntity<StepikStepSourceResponseData> updateStepInStepik(@PathVariable Long stepId) {
+        Long userId = userContextBean.getUserId();
         log.info("Updating step {} in Stepik for user {}", stepId, userId);
-        userContextBean.setUserId(userId);
 
         StepikStepSourceResponseData result = stepikStepSyncService.updateStepInStepik(stepId);
         return ResponseEntity.ok(result);
     }
 
     @DeleteMapping("/delete-step/{stepId}")
-    public ResponseEntity<Void> deleteStepFromStepik(
-            @PathVariable Long stepId,
-            @RequestHeader("User-Id") Long userId) {
-
+    public ResponseEntity<Void> deleteStepFromStepik(@PathVariable Long stepId) {
+        Long userId = userContextBean.getUserId();
         log.info("Deleting step {} from Stepik for user {}", stepId, userId);
-        userContextBean.setUserId(userId);
 
         stepikStepSyncService.deleteStepFromStepik(stepId);
         return ResponseEntity.ok().build();

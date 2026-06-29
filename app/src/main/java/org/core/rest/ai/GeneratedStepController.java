@@ -2,6 +2,7 @@ package org.core.rest.ai;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.dto.ai.GeneratedStepHistoryDTO;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.service.ai.AiSessionMessageService;
@@ -21,9 +22,11 @@ import java.util.List;
 public class GeneratedStepController {
 
     private final AiSessionMessageService aiSessionMessageService;
+    private final UserContextBean userContextBean;
 
     @GetMapping("/history")
-    public ResponseEntity<?> getHistory(@RequestHeader("User-Id") Long userId) {
+    public ResponseEntity<?> getHistory() {
+        Long userId = userContextBean.getUserId();
         try {
             log.info("Loading generated steps history for userId={}", userId);
             List<GeneratedStepHistoryDTO> history = aiSessionMessageService.getGeneratedStepsHistory(userId)
