@@ -3,7 +3,7 @@ package org.core.util;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CleanerHtmlTags {
+public final class CleanerHtmlTags {
 
     public String cleanHtmlTags(String htmlText) {
         if (htmlText == null || htmlText.trim().isEmpty()) {

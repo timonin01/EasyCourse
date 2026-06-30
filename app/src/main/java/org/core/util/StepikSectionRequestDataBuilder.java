@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class StepikSectionRequestDataBuilder {
+public final class StepikSectionRequestDataBuilder {
 
     public StepikSectionRequestData createRequestDataForCreation(Section section){
         StepikSectionRequestData requestData = new StepikSectionRequestData();

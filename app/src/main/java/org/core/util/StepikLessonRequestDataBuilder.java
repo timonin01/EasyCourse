@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class StepikLessonRequestDataBuilder {
+public final class StepikLessonRequestDataBuilder {
 
     @Value("${stepik.api.owner-id}")
     private String ownerId;
