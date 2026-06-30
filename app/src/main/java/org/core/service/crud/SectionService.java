@@ -4,15 +4,14 @@ import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.domain.Course;
 import org.core.domain.Section;
 import org.core.dto.section.CreateSectionDTO;
 import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.section.UpdateSectionDTO;
-import org.core.exception.exceptions.CourseNotFoundException;
-import org.core.exception.exceptions.SectionNotFoundException;
-import org.core.repository.CourseRepository;
 import org.core.repository.SectionRepository;
+import org.core.util.UserAccessService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,13 +23,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class SectionService {
 
-    private final CourseRepository courseRepository;
     private final SectionRepository sectionRepository;
 
+    private final UserContextBean userContextBean;
+    private final UserAccessService userAccessService;
+
     public SectionResponseDTO createSection(CreateSectionDTO createDTO){
-        Course course = courseRepository.findById(createDTO.getCourseId())
-                .orElseThrow(() -> new CourseNotFoundException("Course not found"));
-        
+        Long contextUserId = userContextBean.getUserId();
+        Course course = userAccessService.findByCourseIdAndVerifyOwner(contextUserId, createDTO.getCourseId());
+
         Integer position = getNextPosition(course.getId());
 
         Section section = new Section();
@@ -44,8 +45,8 @@ public class SectionService {
     }
 
     public Section createSectionFromDTO(SectionResponseDTO sectionResponseDTO){
-        Course course = courseRepository.findById(sectionResponseDTO.getCourseId())
-                .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+        Long contextUserId = userContextBean.getUserId();
+        Course course = userAccessService.findByCourseIdAndVerifyOwner(contextUserId, sectionResponseDTO.getCourseId());
 
         Section section = Section.builder()
                 .course(course)
@@ -61,11 +62,15 @@ public class SectionService {
     }
 
     public SectionResponseDTO getSectionBySectionId(Long sectionId){
-        Section section = findSectionBySectionId(sectionId);
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
         return mapToResponseDTO(section);
     }
 
     public List<SectionResponseDTO> getCourseSectionsByCourseId(Long courseId){
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findByCourseIdAndVerifyOwner(contextUserId, courseId);
+
         List<Section> sections = sectionRepository.findByCourseIdOrderByPositionAsc(courseId);
         return sections.stream()
                 .map(this::mapToResponseDTO)
@@ -73,6 +78,9 @@ public class SectionService {
     }
 
     public List<SectionResponseDTO> getUnsyncedSectionsByCourseId(Long courseId){
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findByCourseIdAndVerifyOwner(contextUserId, courseId);
+
         List<Section> unsyncedSections = sectionRepository.findByCourseIdAndStepikSectionIdIsNullOrderByPositionAsc(courseId);
         log.info("Found {} unsynced sections for course: {}", unsyncedSections.size(), courseId);
         return unsyncedSections.stream()
@@ -81,7 +89,9 @@ public class SectionService {
     }
 
     public SectionResponseDTO updateSection(UpdateSectionDTO updateDTO){
-        Section section = findSectionBySectionId(updateDTO.getSectionId());
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, updateDTO.getSectionId());
+
         boolean contentChanged = false;
         if(updateDTO.getTitle() != null && !updateDTO.getTitle().equals(section.getTitle())){
             section.setTitle(updateDTO.getTitle());
@@ -104,7 +114,9 @@ public class SectionService {
     }
 
     public void deleteSection(Long sectionId){
-        Section section = findSectionBySectionId(sectionId);
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
+
         Long courseId = section.getCourse().getId();
         Integer position = section.getPosition();
 
@@ -115,7 +127,8 @@ public class SectionService {
     }
 
     public void updateSectionStepikSectionId(Long sectionId, Long stepikSectionId) {
-        Section section = findSectionBySectionId(sectionId);
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
         section.setStepikSectionId(stepikSectionId);
         section.setNeedsStepikSync(false);
         Section savedSection = sectionRepository.save(section);
@@ -124,17 +137,13 @@ public class SectionService {
     }
 
     public void clearNeedsStepikSync(Long sectionId) {
-        Section section = findSectionBySectionId(sectionId);
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
         if (section.isNeedsStepikSync()) {
             section.setNeedsStepikSync(false);
             sectionRepository.save(section);
             log.info("Cleared needsStepikSync for section ID: {}", sectionId);
         }
-    }
-
-    private Section findSectionBySectionId(Long sectionId){
-        return sectionRepository.findById(sectionId)
-                .orElseThrow(() -> new SectionNotFoundException("Section not found"));
     }
 
     private Integer getNextPosition(Long courseId) {

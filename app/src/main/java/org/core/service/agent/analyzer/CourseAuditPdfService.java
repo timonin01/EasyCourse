@@ -12,8 +12,10 @@ import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.CourseAuditPdfExportRequest;
+import org.core.util.UserAccessService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -31,7 +33,10 @@ import java.util.regex.Pattern;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CourseAuditPdfService {
+
+    private final UserAccessService userAccessService;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final Pattern BOLD_PATTERN = Pattern.compile("\\*\\*(.+?)\\*\\*");
@@ -41,6 +46,11 @@ public class CourseAuditPdfService {
 
     @Value("${app.brand.site}")
     private String brandSite;
+
+    public byte[] generateForUser(Long userId, CourseAuditPdfExportRequest request) throws IOException {
+        userAccessService.findByCourseIdAndVerifyOwner(userId, request.getCourseId());
+        return generate(request);
+    }
 
     public byte[] generate(CourseAuditPdfExportRequest request) throws IOException {
         if (!request.isIncludeReport() && !request.isIncludeImprovements() && !request.isIncludeNewContent()) {

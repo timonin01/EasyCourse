@@ -3,15 +3,14 @@ package org.core.service.crud;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.domain.Lesson;
 import org.core.domain.Section;
 import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.lesson.UpdateLessonDTO;
-import org.core.exception.exceptions.LessonNotFoundException;
-import org.core.exception.exceptions.SectionNotFoundException;
 import org.core.repository.LessonRepository;
-import org.core.repository.SectionRepository;
+import org.core.util.UserAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +24,14 @@ import java.util.stream.Collectors;
 public class LessonService {
 
     private final LessonRepository lessonRepository;
-    private final SectionRepository sectionRepository;
+
+    private final UserContextBean userContextBean;
+    private final UserAccessService userAccessService;
 
     public LessonResponseDTO createLesson(CreateLessonDTO createDTO) {
-        Section section = sectionRepository.findById(createDTO.getSectionId())
-            .orElseThrow(() -> new SectionNotFoundException("Section not found"));
-        
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, createDTO.getSectionId());
+
         Integer position = getNextPosition(section.getId());
 
         Lesson lesson = new Lesson();
@@ -43,8 +44,8 @@ public class LessonService {
     }
 
     public Lesson createLessonFromDTO(LessonResponseDTO lessonResponseDTO){
-        Section section = sectionRepository.findById(lessonResponseDTO.getSectionId())
-                .orElseThrow(() -> new SectionNotFoundException("Section not found"));
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, lessonResponseDTO.getSectionId());
 
         Lesson lesson = Lesson.builder()
                 .section(section)
@@ -59,11 +60,15 @@ public class LessonService {
     }
 
     public LessonResponseDTO getLessonByLessonID(Long lessonId) {
-        Lesson lesson = findLessonById(lessonId);
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
         return mapToResponseDTO(lesson);
     }
 
     public List<LessonResponseDTO> getSectionLessonsBySectionId(Long sectionId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
+
         List<Lesson> lessons = lessonRepository.findByModelIdOrderByPositionAsc(sectionId);
         return lessons.stream()
                 .map(this::mapToResponseDTO)
@@ -71,7 +76,9 @@ public class LessonService {
     }
 
     public LessonResponseDTO updateLesson(UpdateLessonDTO updateDTO) {
-        Lesson lesson = findLessonById(updateDTO.getLessonId());
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, updateDTO.getLessonId());
+
         boolean contentChanged = false;
         if (updateDTO.getTitle() != null && !updateDTO.getTitle().equals(lesson.getTitle())) {
             lesson.setTitle(updateDTO.getTitle());
@@ -90,7 +97,8 @@ public class LessonService {
     }
 
     public void deleteLesson(Long lessonId) {
-        Lesson lesson = findLessonById(lessonId);
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
         Long sectionId = lesson.getSection().getId();
         Integer position = lesson.getPosition();
 
@@ -98,11 +106,6 @@ public class LessonService {
         reorderLessonsAfterDeletion(sectionId, position);
         
         log.info("Deleted lesson with ID: {} from section: {}", lessonId, sectionId);
-    }
-
-    private Lesson findLessonById(Long lessonId) {
-        return lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new LessonNotFoundException("Lesson not found"));
     }
 
     private Integer getNextPosition(Long sectionId) {
@@ -131,6 +134,9 @@ public class LessonService {
     }
 
     public List<LessonResponseDTO> getUnsyncedLessonsBySectionId(Long sectionId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
+
         List<Lesson> lessons = lessonRepository.findByModelIdAndStepikLessonIdIsNullOrderByPositionAsc(sectionId);
         return lessons.stream()
                 .map(this::mapToResponseDTO)
@@ -138,7 +144,8 @@ public class LessonService {
     }
 
     public void updateLessonStepikLessonId(Long lessonId, Long stepikLessonId) {
-        Lesson lesson = findLessonById(lessonId);
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
         lesson.setStepikLessonId(stepikLessonId);
         lesson.setNeedsStepikSync(false);
         lessonRepository.save(lesson);
@@ -146,18 +153,23 @@ public class LessonService {
     }
 
     public void updateLessonStepikLessonIdSetNull(Long lessonId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
         lessonRepository.updateStepikLessonId(lessonId);
         log.info("Updated lesson {} set NULL value", lessonId);
     }
 
     public void clearStepikLessonIdsBySectionId(Long sectionId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
         log.info("Clearing stepikLessonId for all lessons in section {}", sectionId);
         int updatedCount = lessonRepository.clearStepikLessonIdsByModelId(sectionId);
         log.info("Cleared stepikLessonId for {} lessons in section {}", updatedCount, sectionId);
     }
 
     public void clearNeedsStepikSync(Long lessonId) {
-        Lesson lesson = findLessonById(lessonId);
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
         if (lesson.isNeedsStepikSync()) {
             lesson.setNeedsStepikSync(false);
             lessonRepository.save(lesson);

@@ -13,7 +13,7 @@ import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public class HeaderBuilder {
+public final class HeaderBuilder {
 
     @Value("${stepik.api.token}")
     private String staticToken;

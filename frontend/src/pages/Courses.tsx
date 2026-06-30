@@ -73,7 +73,6 @@ export function Courses() {
 
     try {
       const newCourse = await coursesApi.createCourse({
-        userId: user.id,
         title: formData.title.trim(),
         description: formData.description,
       });

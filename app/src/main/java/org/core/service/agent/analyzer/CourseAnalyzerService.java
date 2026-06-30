@@ -7,11 +7,10 @@ import org.core.domain.Section;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.CourseAnalyzerDTO;
 import org.core.enums.LlmModel;
-import org.core.exception.exceptions.CourseNotFoundException;
-import org.core.repository.CourseRepository;
 import org.core.repository.SectionRepository;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.llmProvider.LlmProvider;
+import org.core.util.UserAccessService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,50 +23,37 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class CourseAnalyzerService {
 
-    private final CourseRepository courseRepository;
     private final SectionRepository sectionRepository;
     private final SectionAnalyzerService sectionAnalyzerService;
     private final SystemPromptService systemPromptService;
+    private final UserAccessService userAccessService;
     private final LlmProvider llmProvider;
     private final LlmModelConfig llmModelConfig;
 
-    @Value("${course.analyzer.max-output-tokens:16000}")
+    @Value("${course.analyzer.max-output-tokens}")
     private int analyzerMaxOutputTokens;
 
     public CourseAnalyzerService(@Qualifier("yandexProvider") LlmProvider llmProvider,
                                  SystemPromptService systemPromptService,
-                                 CourseRepository courseRepository,
                                  SectionRepository sectionRepository,
                                  SectionAnalyzerService sectionAnalyzerService,
+                                 UserAccessService userAccessService,
                                  LlmModelConfig llmModelConfig) {
         this.llmProvider = llmProvider;
         this.systemPromptService = systemPromptService;
-        this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
         this.sectionAnalyzerService = sectionAnalyzerService;
+        this.userAccessService = userAccessService;
         this.llmModelConfig = llmModelConfig;
     }
 
     public CourseAnalyzerDTO courseAnalyze(Long userId, Long courseId, LlmModel llmModel) {
-        validateCourseAccess(userId, courseId);
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+        Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
 
         String courseSnapshot = buildCourseSnapshot(course);
         log.info("Built course snapshot for courseId={}, length={}", courseId, courseSnapshot.length());
 
         return analyzeSectionsSummeryByLLMChat(courseSnapshot, llmModel);
-    }
-
-    public void validateCourseAccess(Long userId, Long courseId) {
-        if (courseId == null) {
-            throw new IllegalArgumentException("Course id is required");
-        }
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new CourseNotFoundException("Course not found"));
-        if (!course.getAuthor().getId().equals(userId)) {
-            throw new IllegalArgumentException("Course does not belong to user");
-        }
     }
 
     private String buildCourseSnapshot(Course course) {

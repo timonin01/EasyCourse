@@ -48,7 +48,6 @@ export interface Course {
 }
 
 export interface CreateCourseDTO {
-  userId: number;
   title: string;
   description: string;
 }

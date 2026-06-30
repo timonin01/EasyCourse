@@ -6,7 +6,6 @@ import org.core.context.UserContextBean;
 import org.core.dto.agent.CourseAnalyzerDTO;
 import org.core.dto.agent.CourseAuditPdfExportRequest;
 import org.core.enums.LlmModel;
-import org.core.exception.exceptions.CourseNotFoundException;
 import org.core.exception.exceptions.SubscriptionLimitExceededException;
 import org.core.service.agent.analyzer.CourseAnalyzerService;
 import org.core.service.agent.analyzer.CourseAuditPdfService;
@@ -21,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -41,10 +41,10 @@ public class CourseAnalyzerController {
             @RequestParam(required = false) String llmModel
     ) {
         Long userId = userContextBean.getUserId();
+        if (!subscriptionService.isPro(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("AI-аудит курса доступен в подписке Pro");
+        }
         try {
-            if (!subscriptionService.isPro(userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("AI-аудит курса доступен в подписке Pro");
-            }
             LlmModel model = parseLlmModel(llmModel);
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
@@ -53,52 +53,31 @@ public class CourseAnalyzerController {
             subscriptionService.recordAiUsage(userId, 1);
             return ResponseEntity.ok(courseAnalyzerDTO);
         } catch (IllegalArgumentException e) {
-            ResponseEntity<?> accessDenied = courseAccessDeniedResponse(e);
-            if (accessDenied != null) {
-                return accessDenied;
-            }
             log.error("Invalid LLM model: {}", llmModel);
             return ResponseEntity.badRequest().body("Неверная модель LLM: " + llmModel);
         } catch (SubscriptionLimitExceededException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-        } catch (Exception ex) {
-            log.error("Error in courseAnalyzer endpoint: {}", ex.getMessage(), ex);
-            return ResponseEntity.internalServerError().body("Ошибка при анализе курса");
         }
     }
 
     @PostMapping(value = "/export-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<?> exportCourseAuditPdf(@RequestBody CourseAuditPdfExportRequest request
-    ) {
+    public ResponseEntity<?> exportCourseAuditPdf(@RequestBody CourseAuditPdfExportRequest request) throws IOException {
         Long userId = userContextBean.getUserId();
-        try {
-            if (!subscriptionService.isPro(userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Экспорт PDF доступен в подписке Pro");
-            }
-            if (request == null || request.getCourseId() == null) {
-                return ResponseEntity.badRequest().body("Не указан курс");
-            }
-            courseAnalyzerService.validateCourseAccess(userId, request.getCourseId());
-            byte[] pdfBytes = courseAuditPdfService.generate(request);
-            String filename = courseAuditPdfService.buildFilename(request.getCourseTitle());
-            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdfBytes);
-        } catch (IllegalArgumentException e) {
-            ResponseEntity<?> accessDenied = courseAccessDeniedResponse(e);
-            if (accessDenied != null) {
-                return accessDenied;
-            }
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (CourseNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception ex) {
-            log.error("Error exporting course audit PDF: {}", ex.getMessage(), ex);
-            return ResponseEntity.internalServerError().body("Ошибка при формировании PDF");
+        if (!subscriptionService.isPro(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Экспорт PDF доступен в подписке Pro");
         }
+        if (request == null || request.getCourseId() == null) {
+            return ResponseEntity.badRequest().body("Не указан курс");
+        }
+
+        byte[] pdfBytes = courseAuditPdfService.generateForUser(userId, request);
+        String filename = courseAuditPdfService.buildFilename(request.getCourseTitle());
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 
     private LlmModel parseLlmModel(String llmModel) {
@@ -106,12 +85,5 @@ public class CourseAnalyzerController {
             return null;
         }
         return LlmModel.valueOf(llmModel.toUpperCase());
-    }
-
-    private ResponseEntity<?> courseAccessDeniedResponse(IllegalArgumentException e) {
-        if ("Course does not belong to user".equals(e.getMessage())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-        }
-        return null;
     }
 }
