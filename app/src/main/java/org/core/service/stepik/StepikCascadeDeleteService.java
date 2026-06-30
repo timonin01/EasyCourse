@@ -9,9 +9,9 @@ import org.core.domain.Course;
 import org.core.domain.Lesson;
 import org.core.domain.Section;
 import org.core.domain.Step;
-import org.core.repository.CourseRepository;
 import org.core.repository.LessonRepository;
 import org.core.repository.SectionRepository;
+import org.core.util.UserAccessService;
 import org.core.service.stepik.course.StepikCourseSyncService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.core.service.stepik.section.StepikSectionSyncService;
@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
@@ -39,26 +38,22 @@ public class StepikCascadeDeleteService {
     private final StepikStepSyncService stepSyncService;
 
     private final UserContextBean userContextBean;
-    
-    private final CourseRepository courseRepository;
+    private final UserAccessService userAccessService;
+
     private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
 
     public void deleteFullCourseFromStepik(Long courseId, Long userId){
         userContextBean.setUserId(userId);
         try {
-            Optional<Course> course = courseRepository.findById(courseId);
-            if (course.isEmpty()) {
-                log.error("Course with id: {} not found", courseId);
-                throw new IllegalArgumentException("Course with id " + courseId + " not found");
-            }
-            if (course.get().getStepikCourseId() == null) {
+            Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
+            if (course.getStepikCourseId() == null) {
                 log.error("Course with id: {} not synchronized with stepik", courseId);
                 throw new IllegalArgumentException("Course with id " + courseId + " not synchronized with stepik");
             }
 
             List<CompletableFuture<Void>> sectionFutures = new ArrayList<>();
-            List<Section> courseSections = course.get().getSections();
+            List<Section> courseSections = course.getSections();
             for (Section section : courseSections) {
                 if (section.getStepikSectionId() != null) {
                     log.info("Start async deleting section from stepik with sectionId: {}", section.getId());

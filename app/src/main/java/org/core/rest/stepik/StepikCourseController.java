@@ -15,7 +15,6 @@ import java.util.List;
 
 import org.core.service.stepik.StepikCascadeSyncService;
 import org.core.service.stepik.course.getCourseFromStepik.StepikFullCourseService;
-import org.core.util.AuthUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +35,6 @@ public class StepikCourseController {
 
     @GetMapping("/unsynced-courses/{userId}")
     public List<CourseResponseDTO> getUnsyncedCoursesByUserId(@PathVariable Long userId) {
-        AuthUtils.requireSameUser(userContextBean, userId);
         log.info("Getting unsynced courses for user: {}", userId);
         return courseService.getUnsyncedCoursesByUserId(userId);
     }
