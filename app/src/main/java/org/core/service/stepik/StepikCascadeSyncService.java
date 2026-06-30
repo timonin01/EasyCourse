@@ -73,17 +73,15 @@ public class StepikCascadeSyncService {
         List<CompletableFuture<Void>> sectionFutures = new ArrayList<>();
         for (SectionResponseDTO section : sections) {
             sectionFutures.add(CompletableFuture.runAsync(
-                    () -> syncMissingInSection(section.getId(), captchaToken, userId),
+                    () -> syncMissingInSection(section.getId(), captchaToken),
                     virtualExecutor));
         }
         CompletableFuture.allOf(sectionFutures.toArray(new CompletableFuture[0])).join();
         return result;
     }
 
-    private void syncMissingInSection(Long sectionId, String captchaToken, Long userId) {
+    private void syncMissingInSection(Long sectionId, String captchaToken) {
         try {
-            userContextBean.setUserId(userId);
-
             SectionResponseDTO section = sectionService.getSectionBySectionId(sectionId);
             if (section.getStepikSectionId() == null) {
                 log.info("Start sync section with sectionId: {}", sectionId);
@@ -136,7 +134,7 @@ public class StepikCascadeSyncService {
                 sectionResponseData = stepikSectionService.getSectionByStepikId(section.getStepikSectionId());
             }
 
-            syncMissingInSection(sectionId, captchaToken, userId);
+            syncMissingInSection(sectionId, captchaToken);
             return sectionResponseData;
         } finally {
             userContextBean.clear();

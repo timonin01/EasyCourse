@@ -3,10 +3,12 @@ package org.core.rest.crud;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import org.core.context.UserContextBean;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.course.CreateCourseDTO;
 import org.core.dto.course.UpdateCourseDTO;
 import org.core.service.crud.CourseService;
+import org.core.util.AuthUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.List;
 public class CourseController {
 
     private final CourseService courseService;
+    private final UserContextBean userContextBean;
 
     @GetMapping("/{courseId}")
     public CourseResponseDTO getCourseByCourseId(@PathVariable Long courseId) {
@@ -25,6 +28,7 @@ public class CourseController {
 
     @GetMapping("/all_courses/{userId}")
     public List<CourseResponseDTO> getUserCoursesByUserId(@PathVariable Long userId) {
+        AuthUtils.requireSameUser(userContextBean, userId);
         return courseService.getUserCoursesByUserId(userId);
     }
 

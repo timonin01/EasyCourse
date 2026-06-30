@@ -31,19 +31,17 @@ public class StepikSectionController {
 
     @GetMapping("/unsynced-sections/{courseId}")
     public List<SectionResponseDTO> getUnsyncedSectionsByCourseId(
-            @PathVariable Long courseId,
-            @RequestHeader("User-Id") Long userId) {
+            @PathVariable Long courseId) {
         log.info("Getting unsynced sections for course: {}", courseId);
-        userContextBean.setUserId(userId);
         return sectionService.getUnsyncedSectionsByCourseId(courseId);
     }
 
     @PostMapping("/sync-section")
     public ResponseEntity<StepikSectionResponseData> syncSection(
-            @RequestParam("sectionId") Long sectionId,
-            @RequestHeader("User-Id") Long userId) {
+            @RequestParam("sectionId") Long sectionId) {
         try {
             log.info("Starting sync section: {}", sectionId);
+            Long userId = userContextBean.getUserId();
             StepikSectionResponseData responseData = cascadeSyncService.syncFullSectionById(sectionId, null, userId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
@@ -57,11 +55,9 @@ public class StepikSectionController {
 
     @PutMapping("/update-section/{sectionId}")
     public ResponseEntity<StepikSectionResponseData> updateSectionInStepik(
-            @PathVariable Long sectionId,
-            @RequestHeader("User-Id") Long userId) {
+            @PathVariable Long sectionId) {
         try {
             log.info("Starting update section: {}", sectionId);
-            userContextBean.setUserId(userId);
             StepikSectionResponseData responseData = stepikSectionSyncService.updateSectionInStepik(sectionId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
@@ -75,10 +71,10 @@ public class StepikSectionController {
 
     @DeleteMapping("/delete-section/{sectionId}")
     public ResponseEntity<String> deleteSectionFromStepik(
-            @PathVariable Long sectionId,
-            @RequestHeader("User-Id") Long userId) {
+            @PathVariable Long sectionId) {
         try {
             log.info("Starting deletion section: {}", sectionId);
+            Long userId = userContextBean.getUserId();
             cascadeDeleteService.deleteFullSectionFromStepikById(sectionId, userId);
             return ResponseEntity.ok("Section successfully deleted from Stepik");
         } catch (IllegalStateException e) {

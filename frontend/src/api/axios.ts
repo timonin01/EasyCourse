@@ -14,16 +14,11 @@ export const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  const userId = localStorage.getItem('userId');
-  
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
-  if (userId) {
-    config.headers['User-Id'] = userId;
-  }
-  
+
   return config;
 });
 

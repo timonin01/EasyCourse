@@ -47,15 +47,10 @@ public class StepController {
     public StepResponseDTO changeStepType(
             @RequestParam Long stepId,
             @RequestParam StepType newStepType,
-            @RequestHeader("User-Id") Long userId,
             @RequestParam String sessionId
     ){
-        userContextBean.setUserId(userId);
-        try {
-            return stepTypeChangeService.changeStepType(stepId, newStepType, sessionId, userId);
-        } finally {
-            userContextBean.clear();
-        }
+        Long userId = userContextBean.getUserId();
+        return stepTypeChangeService.changeStepType(stepId, newStepType, sessionId, userId);
     }
 
     @DeleteMapping("/delete/{stepId}")

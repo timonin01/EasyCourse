@@ -32,20 +32,18 @@ public class StepikLessonController {
 
     @GetMapping("/unsynced-lessons/{sectionId}")
     public List<LessonResponseDTO> getUnsyncedLessonsBySectionId(
-            @PathVariable Long sectionId,
-            @RequestHeader("User-Id") Long userId) {
+            @PathVariable Long sectionId) {
         log.info("Getting unsynced lessons for section: {}", sectionId);
-        userContextBean.setUserId(userId);
         return lessonService.getUnsyncedLessonsBySectionId(sectionId);
     }
 
     @PostMapping("/sync-lesson")
     public ResponseEntity<LessonCaptchaChallenge> syncLesson(
             @RequestParam Long lessonId,
-            @RequestParam(required = false) String captchaToken,
-            @RequestHeader("User-Id") Long userId) {
+            @RequestParam(required = false) String captchaToken) {
         try {
             log.info("Starting sync for lesson: {} with captcha: {}", lessonId, captchaToken != null);
+            Long userId = userContextBean.getUserId();
             LessonCaptchaChallenge result = cascadeSyncService.syncFullLessonById(lessonId, captchaToken, userId);
             return ResponseEntity.ok(result);
         } catch (IllegalStateException e) {
@@ -59,11 +57,9 @@ public class StepikLessonController {
 
     @PutMapping("/update-lesson/{lessonId}")
     public ResponseEntity<StepikLessonResponseData> updateLesson(
-            @PathVariable Long lessonId,
-            @RequestHeader("User-Id") Long userId) {
+            @PathVariable Long lessonId) {
         try {
             log.info("Starting manual update of lesson: {}", lessonId);
-            userContextBean.setUserId(userId);
             StepikLessonResponseData responseData = stepikLessonSyncService.updateLessonInStepik(lessonId);
             return ResponseEntity.ok(responseData);
         } catch (IllegalStateException e) {
@@ -77,10 +73,10 @@ public class StepikLessonController {
 
     @DeleteMapping("/delete-lesson/{lessonId}")
     public ResponseEntity<Void> deleteLesson(
-            @PathVariable Long lessonId,
-            @RequestHeader("User-Id") Long userId) {
+            @PathVariable Long lessonId) {
         try {
             log.info("Starting deletion of lesson: {}", lessonId);
+            Long userId = userContextBean.getUserId();
             cascadeDeleteService.deleteFullLessonFromStepikById(lessonId, userId);
             return ResponseEntity.ok().build();
         } catch (IllegalStateException e) {
