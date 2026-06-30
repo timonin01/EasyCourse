@@ -6,21 +6,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
 import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
 import org.core.dto.stepik.step.StepikBlockResponse;
-import org.core.exception.exceptions.LessonNotFoundException;
-import org.core.exception.exceptions.StepNotFoundException;
-import org.core.repository.LessonRepository;
 import org.core.repository.StepRepository;
+import org.core.util.UserAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,12 +28,14 @@ import java.util.stream.Collectors;
 public class StepService {
 
     private final StepRepository stepRepository;
-    private final LessonRepository lessonRepository;
     private final ObjectMapper objectMapper;
 
+    private final UserContextBean userContextBean;
+    private final UserAccessService userAccessService;
+
     public StepResponseDTO createStep(CreateStepDTO createStepDTO){
-        Lesson lesson = lessonRepository.findById(createStepDTO.getLessonId())
-                .orElseThrow(() -> new LessonNotFoundException("Lesson not found"));
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, createStepDTO.getLessonId());
 
         Integer position = getNextPosition(lesson.getId());
 
@@ -61,8 +61,8 @@ public class StepService {
     }
 
     public Step createStepFromDTO(StepResponseDTO stepResponseDTO){
-        Lesson lesson = lessonRepository.findById(stepResponseDTO.getLessonId())
-                .orElseThrow(() -> new LessonNotFoundException("Lesson not found"));
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, stepResponseDTO.getLessonId());
 
         Step step = Step.builder()
                 .lesson(lesson)
@@ -80,11 +80,15 @@ public class StepService {
     }
 
     public StepResponseDTO getStepById(Long stepId) {
-        Step step = getStepByStepId(stepId);
+        Long contextUserId = userContextBean.getUserId();
+        Step step = userAccessService.findStepAndVerifyOwner(contextUserId, stepId);
         return mapToResponseDto(step);
     }
 
     public List<StepResponseDTO> getLessonStepsByLessonId(Long lessonId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
+
         List<Step> steps = stepRepository.findByLessonIdOrderByPositionAsc(lessonId);
         return steps.stream()
                 .map(this::mapToResponseDto)
@@ -92,7 +96,9 @@ public class StepService {
     }
 
     public StepResponseDTO updateStep(UpdateStepDTO updateDto) {
-        Step step = getStepByStepId(updateDto.getStepId());
+        Long contextUserId = userContextBean.getUserId();
+        Step step = userAccessService.findStepAndVerifyOwner(contextUserId, updateDto.getStepId());
+
         if (updateDto.getType() != null) {
             step.setType(updateDto.getType());
         }
@@ -134,7 +140,8 @@ public class StepService {
     }
 
     public void deleteStep(Long stepId) {
-        Step step = getStepByStepId(stepId);
+        Long contextUserId = userContextBean.getUserId();
+        Step step = userAccessService.findStepAndVerifyOwner(contextUserId, stepId);
         Long lessonId = step.getLesson().getId();
         Integer position = step.getPosition();
 
@@ -145,12 +152,8 @@ public class StepService {
     }
 
     public void updateStepStepikStepId(Long stepId, Long stepikStepId){
-        Optional<Step> optionalStep = stepRepository.findById(stepId);
-        if(optionalStep.isEmpty()){
-            log.error("Step with stepId: {} not found", stepId);
-            throw new IllegalArgumentException("Step with stepId: " + stepId +" not found");
-        }
-        Step step = optionalStep.get();
+        Long contextUserId = userContextBean.getUserId();
+        Step step = userAccessService.findStepAndVerifyOwner(contextUserId, stepId);
         step.setStepikStepId(stepikStepId);
         step.setNeedsStepikSync(false);
         Step savedStep = stepRepository.save(step);
@@ -158,17 +161,13 @@ public class StepService {
     }
 
     public void clearNeedsStepikSync(Long stepId) {
-        Step step = getStepByStepId(stepId);
+        Long contextUserId = userContextBean.getUserId();
+        Step step = userAccessService.findStepAndVerifyOwner(contextUserId, stepId);
         if (step.isNeedsStepikSync()) {
             step.setNeedsStepikSync(false);
             stepRepository.save(step);
             log.info("Cleared needsStepikSync for step ID: {}", stepId);
         }
-    }
-
-    private Step getStepByStepId(Long stepId){
-        return stepRepository.findById(stepId)
-                .orElseThrow(() -> new StepNotFoundException("Step not found"));
     }
 
     private Integer getNextPosition(Long lessonId) {
