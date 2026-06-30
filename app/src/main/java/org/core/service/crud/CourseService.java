@@ -32,11 +32,9 @@ public class CourseService {
     private final UserAccessService userAccessService;
 
     public CourseResponseDTO createCourse(CreateCourseDTO createDTO){
-        User user = userRepository.findById(createDTO.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-
         Long contextUserId = userContextBean.getUserId();
-        userAccessService.validateUserAccess(contextUserId, createDTO.getUserId());
+        User user = userRepository.findById(contextUserId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         Course course = new Course();
         course.setAuthor(user);
