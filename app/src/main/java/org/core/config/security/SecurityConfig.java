@@ -25,6 +25,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/users/login", "/api/v1/users").permitAll()
                         .requestMatchers("/api/v1/users/verify-email", "/api/v1/users/resend-verification").permitAll()
+                        .requestMatchers("/api/v1/users/registration-config").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()
                 )

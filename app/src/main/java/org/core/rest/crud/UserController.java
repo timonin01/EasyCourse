@@ -19,6 +19,11 @@ public class UserController {
     private final RegistrationService registrationService;
     private final UserContextBean userContextBean;
 
+    @GetMapping("/registration-config")
+    public RegistrationConfigDTO getRegistrationConfig() {
+        return registrationService.getRegistrationConfig();
+    }
+
     @GetMapping("/{userId}")
     public UserResponseDTO getUserByUserId(@PathVariable Long userId) {
         AuthUtils.requireSameUser(userContextBean, userId);

@@ -13,6 +13,11 @@ export interface RegistrationMessage {
   message: string;
 }
 
+export interface RegistrationConfig {
+  enabled: boolean;
+  inviteRequired: boolean;
+}
+
 export interface VerifyEmailDTO {
   email: string;
   code: string;
@@ -26,6 +31,7 @@ export interface CreateUserDTO {
   name: string;
   email: string;
   password: string;
+  inviteCode?: string;
 }
 
 export interface UserLoginDTO {

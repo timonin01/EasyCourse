@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Mail, Lock, User, ArrowRight, KeyRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { GraduationCap, Mail, Lock, User, ArrowRight, KeyRound, Ticket } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Input, PasswordInput, FadeIn } from '../components/ui';
 import { authApi } from '../api';
@@ -12,6 +12,7 @@ type RegisterStep = 'form' | 'verify';
 
 export function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const login = useAuthStore((state) => state.login);
   const [step, setStep] = useState<RegisterStep>('form');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,8 +22,26 @@ export function Register() {
     email: '',
     password: '',
     confirmPassword: '',
+    inviteCode: '',
   });
   const [verificationCode, setVerificationCode] = useState('');
+  const [inviteRequired, setInviteRequired] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    authApi.getRegistrationConfig()
+      .then((config) => setInviteRequired(config.inviteRequired))
+      .catch((error) => {
+        console.error('Failed to load registration config:', error);
+        setInviteRequired(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    const invite = searchParams.get('invite');
+    if (invite && inviteRequired) {
+      setFormData((prev) => ({ ...prev, inviteCode: invite }));
+    }
+  }, [searchParams, inviteRequired]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +63,11 @@ export function Register() {
       return;
     }
 
+    if (inviteRequired && !formData.inviteCode.trim()) {
+      toast.error('Введите код приглашения');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -51,6 +75,7 @@ export function Register() {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
+        inviteCode: inviteRequired ? formData.inviteCode.trim() : undefined,
       });
       toast.success(response.message);
       setStep('verify');
@@ -110,6 +135,10 @@ export function Register() {
     const status = getApiErrorStatus(error);
     if (status === 409) {
       toast.error('Email уже зарегистрирован. Попробуйте войти.');
+      return;
+    }
+    if (status === 403) {
+      toast.error(extractApiErrorMessage(error, 'Регистрация по приглашению. Проверьте код.'));
       return;
     }
     if (status === 503) {
@@ -172,6 +201,17 @@ export function Register() {
                 required
                 minLength={6}
               />
+
+              {inviteRequired && (
+                <Input
+                  type="text"
+                  placeholder="Код приглашения"
+                  icon={<Ticket className="w-5 h-5" />}
+                  value={formData.inviteCode}
+                  onChange={(e) => setFormData({ ...formData, inviteCode: e.target.value })}
+                  required
+                />
+              )}
 
               <Button
                 type="submit"
