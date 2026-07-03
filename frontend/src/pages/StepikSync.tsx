@@ -16,7 +16,7 @@ import {
 import { StepikIcon } from '../components/StepikIcon';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton, ContentReveal } from '../components/ui';
+import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton, ContentReveal, StaggerList, StaggerItem } from '../components/ui';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
 import { stepikApi, SyncProgress } from '../api/stepik.api';
 import { useAuthStore, useCourseStore } from '../store';
@@ -521,13 +521,13 @@ export function StepikSync() {
                 }
               />
             ) : (
-              <div className="space-y-3">
+              <StaggerList className="space-y-3">
                 {courses.map((course) => {
                   const syncStatus = getSyncStatus(course);
                   const SyncIcon = syncStatus.icon;
                   
                   return (
-                    <div
+                    <StaggerItem
                       key={course.id}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer
                         ${selectedCourse?.id === course.id 
@@ -569,10 +569,10 @@ export function StepikSync() {
                         )}
                         <ChevronRight className="w-4 h-4 text-dark-500" />
                       </div>
-                    </div>
+                    </StaggerItem>
                   );
                 })}
-              </div>
+              </StaggerList>
             )}
           </Card>
 
@@ -925,9 +925,9 @@ export function StepikSync() {
                 description="Выгрузите курс на Stepik во вкладке «Выгрузить на Stepik»"
               />
             ) : (
-              <div className="space-y-3">
+              <StaggerList className="space-y-3">
                 {courses.filter(c => c.stepikCourseId).map((course) => (
-                  <div
+                  <StaggerItem
                     key={course.id}
                     className="flex items-center justify-between p-4 rounded-xl border border-dark-700 hover:border-dark-600 transition-all"
                   >
@@ -961,9 +961,9 @@ export function StepikSync() {
                         </Button>
                       </a>
                     </div>
-                  </div>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerList>
             )}
           </Card>
         </div>

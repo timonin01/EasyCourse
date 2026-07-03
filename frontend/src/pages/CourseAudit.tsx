@@ -16,7 +16,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton, Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui';
+import { Button, Card, Spinner, PageHeader, EmptyState, CourseAuditSkeleton, Tabs, TabsList, TabsTrigger, TabsContent, StaggerList, StaggerItem } from '../components/ui';
 import { CoursePickerList } from '../components/courses/CoursePickerList';
 import { LessonPickerSelect } from '../components/courses/LessonPickerSelect';
 import { ChatMarkdown } from '../components/ui/ChatMarkdown';
@@ -465,6 +465,8 @@ export function CourseAudit() {
       />
 
       {showCoursePicker && (
+        <StaggerList>
+        <StaggerItem>
         <Card className="mb-6 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0 flex-1">
@@ -486,6 +488,8 @@ export function CourseAudit() {
             </Button>
           </div>
         </Card>
+        </StaggerItem>
+        </StaggerList>
       )}
 
       {isAnalyzing && (
@@ -534,7 +538,8 @@ export function CourseAudit() {
       />
 
       {analyzeResult && (
-        <div className={`grid gap-6 ${showHintsSidebar ? 'xl:grid-cols-[2fr_1fr]' : ''}`}>
+        <StaggerList className={`grid gap-6 ${showHintsSidebar ? 'xl:grid-cols-[2fr_1fr]' : ''}`}>
+          <StaggerItem>
           <Card className="p-6">
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AuditTab)}>
               <TabsList className="mb-5 w-full pb-4">
@@ -589,9 +594,10 @@ export function CourseAudit() {
               </TabsContent>
             </Tabs>
           </Card>
+          </StaggerItem>
 
           {showHintsSidebar && (
-            <div className="space-y-4">
+            <StaggerItem className="space-y-4">
               <Card className="p-5">
                 <div className="mb-4 flex items-center gap-2">
                   <Layers className="h-5 w-5 text-primary-400" />
@@ -614,9 +620,9 @@ export function CourseAudit() {
                   )
                 )}
               </Card>
-            </div>
+            </StaggerItem>
           )}
-        </div>
+        </StaggerList>
       )}
     </MainLayout>
   );
