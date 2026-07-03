@@ -22,12 +22,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-function isAuthRequest(url?: string): boolean {
+function isPublicAuthRequest(url?: string): boolean {
   if (!url) {
     return false;
   }
 
-  return url.includes('/v1/users/login') || /\/v1\/users\/?$/.test(url);
+  return (
+    url.includes('/v1/users/login') ||
+    url.includes('/v1/users/registration-config') ||
+    url.includes('/v1/users/verify-email') ||
+    url.includes('/v1/users/resend-verification') ||
+    /\/v1\/users\/?$/.test(url)
+  );
 }
 
 // Response interceptor for error handling
@@ -37,8 +43,8 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = error.config?.url as string | undefined;
 
-    // Не редиректим при неудачном логине/регистрации — иначе страница перезагружается
-    if (status === 401 && !isAuthRequest(requestUrl)) {
+    // Не редиректим на публичных auth-эндпоинтах (логин, регистрация, конфиг)
+    if (status === 401 && !isPublicAuthRequest(requestUrl)) {
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       localStorage.removeItem('auth-storage');

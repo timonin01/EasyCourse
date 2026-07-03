@@ -7,11 +7,25 @@ import type {
   UpdateUserDTO,
   StepikOAuthConfig,
   RegistrationMessage,
+  RegistrationConfig,
   VerifyEmailDTO,
   ResendVerificationDTO,
 } from '../types';
 
 export const authApi = {
+  getRegistrationConfig: async (): Promise<RegistrationConfig> => {
+    const { data } = await api.get<{
+      enabled?: boolean;
+      registrationEnabled?: boolean;
+      inviteRequired?: boolean;
+    }>('/v1/users/registration-config');
+
+    return {
+      enabled: data.enabled ?? data.registrationEnabled ?? false,
+      inviteRequired: Boolean(data.inviteRequired),
+    };
+  },
+
   requestRegistration: async (data: CreateUserDTO): Promise<RegistrationMessage> => {
     const response = await api.post<RegistrationMessage>('/v1/users', data);
     return response.data;
