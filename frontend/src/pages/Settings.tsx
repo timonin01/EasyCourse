@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, Key, User, Lock, ExternalLink, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Badge, PageHeader } from '../components/ui';
+import { Card, Button, Input, Badge, PageHeader, StaggerList, StaggerItem } from '../components/ui';
 import { SubscriptionPanel } from '../components/subscription/SubscriptionPanel';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
@@ -167,9 +167,13 @@ export function Settings() {
           description="Управляйте своим аккаунтом и интеграциями"
         />
 
-        <SubscriptionPanel />
+        <StaggerList>
+        <StaggerItem>
+          <SubscriptionPanel />
+        </StaggerItem>
 
         {/* Profile Settings */}
+        <StaggerItem>
         <Card className="mb-6">
           <h2 className="text-lg font-semibold text-dark-100 mb-4 flex items-center gap-2">
             <User className="w-5 h-5 text-primary-400" />
@@ -192,8 +196,10 @@ export function Settings() {
             </Button>
           </div>
         </Card>
+        </StaggerItem>
 
         {/* Password Settings */}
+        <StaggerItem>
         <Card className="mb-6">
           <h2 className="text-lg font-semibold text-dark-100 mb-4 flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary-400" />
@@ -222,8 +228,10 @@ export function Settings() {
             </Button>
           </div>
         </Card>
+        </StaggerItem>
 
         {/* Stepik Integration */}
+        <StaggerItem>
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-dark-100 flex items-center gap-2">
@@ -297,6 +305,8 @@ export function Settings() {
             </ol>
           </div>
         </Card>
+        </StaggerItem>
+        </StaggerList>
       </div>
     </MainLayout>
   );
