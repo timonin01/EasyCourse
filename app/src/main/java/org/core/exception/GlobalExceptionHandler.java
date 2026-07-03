@@ -262,6 +262,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
+    @ExceptionHandler(RegistrationNotAllowedException.class)
+    public ResponseEntity<ErrorResponse> handleRegistrationNotAllowedException(RegistrationNotAllowedException ex) {
+        log.warn("Registration not allowed: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Registration not allowed",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     @ExceptionHandler({ResourceAccessDeniedException.class, CourseDoesntBelongToUserException.class})
     public ResponseEntity<ErrorResponse> handleAccessDeniedExceptions(Exception ex) {
         log.error("Access denied: {}", ex.getMessage());

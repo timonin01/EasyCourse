@@ -26,4 +26,7 @@ public class CreateUserDTO {
     @NotBlank(message = "Пароль не может быть пустым")
     @Size(min = 6, max = 100, message = "Пароль должен быть не менее 6 символов")
     private String password;
+
+    @Size(max = 100, message = "Код приглашения не должен превышать 100 символов")
+    private String inviteCode;
 }
