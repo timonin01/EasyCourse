@@ -1,37 +1,51 @@
 import api from './axios';
-import type { User, CreateUserDTO, UserLoginDTO, UserLoginResponse, UpdateUserDTO, StepikOAuthConfig } from '../types';
+import type {
+  User,
+  CreateUserDTO,
+  UserLoginDTO,
+  UserLoginResponse,
+  UpdateUserDTO,
+  StepikOAuthConfig,
+  RegistrationMessage,
+  VerifyEmailDTO,
+  ResendVerificationDTO,
+} from '../types';
 
 export const authApi = {
-  // User registration
-  register: async (data: CreateUserDTO): Promise<User> => {
-    const response = await api.post<User>('/v1/users', data);
+  requestRegistration: async (data: CreateUserDTO): Promise<RegistrationMessage> => {
+    const response = await api.post<RegistrationMessage>('/v1/users', data);
     return response.data;
   },
 
-  // User login
+  verifyEmail: async (data: VerifyEmailDTO): Promise<UserLoginResponse> => {
+    const response = await api.post<UserLoginResponse>('/v1/users/verify-email', data);
+    return response.data;
+  },
+
+  resendVerification: async (data: ResendVerificationDTO): Promise<RegistrationMessage> => {
+    const response = await api.post<RegistrationMessage>('/v1/users/resend-verification', data);
+    return response.data;
+  },
+
   login: async (data: UserLoginDTO): Promise<UserLoginResponse> => {
     const response = await api.post<UserLoginResponse>('/v1/users/login', data);
     return response.data;
   },
 
-  // Get user by ID
   getUser: async (userId: number): Promise<User> => {
     const response = await api.get<User>(`/v1/users/${userId}`);
     return response.data;
   },
 
-  // Update user
   updateUser: async (data: UpdateUserDTO): Promise<User> => {
     const response = await api.put<User>('/v1/users/update', data);
     return response.data;
   },
 
-  // Delete user
   deleteUser: async (userId: number): Promise<void> => {
     await api.delete(`/v1/users/delete/${userId}`);
   },
 
-  // Stepik OAuth (путь без ведущего / — иначе baseURL /api может не подставляться в axios)
   getStepikOAuthConfig: async (userId: number): Promise<StepikOAuthConfig> => {
     const response = await api.get<StepikOAuthConfig>(`stepik-oauth/config/${userId}`);
     return response.data;
@@ -52,4 +66,3 @@ export const authApi = {
     return response.data;
   },
 };
-

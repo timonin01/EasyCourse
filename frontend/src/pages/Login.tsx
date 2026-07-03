@@ -38,6 +38,8 @@ export function Login() {
           toast.error('Пользователь с таким email не найден');
         } else if (status === 401) {
           toast.error('Неверный пароль');
+        } else if (status === 403) {
+          toast.error(extractApiErrorMessage(error, 'Email не подтверждён'));
         } else {
           toast.error(extractApiErrorMessage(error, 'Не удалось войти'));
         }

@@ -9,6 +9,19 @@ export interface User {
   createdAt: string;
 }
 
+export interface RegistrationMessage {
+  message: string;
+}
+
+export interface VerifyEmailDTO {
+  email: string;
+  code: string;
+}
+
+export interface ResendVerificationDTO {
+  email: string;
+}
+
 export interface CreateUserDTO {
   name: string;
   email: string;
