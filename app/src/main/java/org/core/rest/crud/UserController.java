@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.core.context.UserContextBean;
 import org.core.dto.user.*;
 import org.core.service.crud.UserService;
+import org.core.service.registration.RegistrationService;
 import org.core.util.AuthUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final RegistrationService registrationService;
     private final UserContextBean userContextBean;
 
     @GetMapping("/{userId}")
@@ -24,8 +26,18 @@ public class UserController {
     }
 
     @PostMapping
-    public UserResponseDTO createUser(@Valid @RequestBody CreateUserDTO createUserDTO) {
-        return userService.createNewUser(createUserDTO);
+    public RegistrationMessageDTO requestRegistration(@Valid @RequestBody CreateUserDTO createUserDTO) {
+        return registrationService.requestRegistration(createUserDTO);
+    }
+
+    @PostMapping("/verify-email")
+    public UserLoginResponseDTO verifyEmail(@Valid @RequestBody VerifyEmailDTO verifyEmailDTO) {
+        return registrationService.verifyEmailAndRegister(verifyEmailDTO);
+    }
+
+    @PostMapping("/resend-verification")
+    public RegistrationMessageDTO resendVerification(@Valid @RequestBody ResendVerificationDTO resendVerificationDTO) {
+        return registrationService.resendVerificationCode(resendVerificationDTO.getEmail());
     }
 
     @PostMapping("/login")
