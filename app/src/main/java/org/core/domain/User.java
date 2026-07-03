@@ -27,6 +27,10 @@ public class User {
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = true;
+
     @Column(name = "password", nullable = false, length = 100)
     private String password;
 

@@ -5,12 +5,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.domain.User;
 import org.core.dto.user.*;
+import org.core.enums.UserRole;
+import org.core.exception.exceptions.EmailNotVerifiedException;
 import org.core.exception.exceptions.InvalidPasswordException;
 import org.core.exception.exceptions.UserAlreadyExistsException;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.service.UserValidationService;
+import org.core.service.registration.RegistrationService;
 import org.core.service.security.JwtTokenService;
+import org.core.util.EmailNormalizer;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,36 +27,25 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserValidationService validationService;
-
+    private final EmailNormalizer emailNormalizer;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
 
-
-    public UserResponseDTO createNewUser(CreateUserDTO createDto) {
-        if (validationService.checkUserInDBByEmail(createDto.getEmail())) {
-            throw new UserAlreadyExistsException("Пользователь с email " + createDto.getEmail() + " уже зарегистрирован");
-        }
-
-        String hashPassword = passwordEncoder.encode(createDto.getPassword());
-
-        User user = new User();
-        user.setName(createDto.getName());
-        user.setEmail(createDto.getEmail());
-        user.setPassword(hashPassword);
-        user.setRole(org.core.enums.UserRole.DEFAULT);
-
-        log.info("Create user with name - {} and email - {}", user.getName(),user.getEmail());
-        return mapToResponseDto(userRepository.save(user));
-    }
-
     @Transactional(readOnly = true)
-    public UserLoginResponseDTO authenticateUser(UserLoginDTO loginDto){
-        User user = userRepository.findByEmail(loginDto.getEmail())
+    public UserLoginResponseDTO authenticateUser(UserLoginDTO loginDto) {
+        String email = emailNormalizer.normalizeEmail(loginDto.getEmail());
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User was not found"));
+
+        if (!user.isEmailVerified()) {
+            throw new EmailNotVerifiedException(
+                    "Email не подтверждён. Завершите регистрацию или обратитесь в поддержку."
+            );
+        }
 
         boolean isCorrectPassword = passwordEncoder.matches(loginDto.getPassword(), user.getPassword());
 
-        if(!isCorrectPassword){
+        if (!isCorrectPassword) {
             throw new InvalidPasswordException("Incorrect password");
         }
 
@@ -60,26 +53,25 @@ public class UserService {
         return new UserLoginResponseDTO(mapToResponseDto(user), token);
     }
 
-    public UserResponseDTO getUserByUserId(Long userId){
+    public UserResponseDTO getUserByUserId(Long userId) {
         User user = findUserBiUserId(userId);
         return mapToResponseDto(user);
     }
 
-    public UserResponseDTO updateUser(UpdateUserDTO updateDTO){
+    public UserResponseDTO updateUser(UpdateUserDTO updateDTO) {
         User user = findUserBiUserId(updateDTO.getUserId());
-        if(updateDTO.getName() != null && !updateDTO.getName().equals(user.getName())){
+        if (updateDTO.getName() != null && !updateDTO.getName().equals(user.getName())) {
             user.setName(updateDTO.getName());
         }
-        if(updateDTO.getEmail() != null && !updateDTO.getEmail().equals(user.getEmail())){
-            if(validationService.checkUserInDBByEmail(updateDTO.getEmail())){
-                throw new UserAlreadyExistsException("Пользователь с email " + updateDTO.getEmail() + " уже зарегистрирован");
+        if (updateDTO.getEmail() != null && !updateDTO.getEmail().equals(user.getEmail())) {
+            String normalizedEmail = emailNormalizer.normalizeEmail(updateDTO.getEmail());
+            if (validationService.checkUserInDBByEmail(normalizedEmail)) {
+                throw new UserAlreadyExistsException("Пользователь с email " + normalizedEmail + " уже зарегистрирован");
             }
-            user.setEmail(updateDTO.getEmail());
+            user.setEmail(normalizedEmail);
+            user.setEmailVerified(false);
         }
-        if(updateDTO.getEmail() != null){
-            user.setEmail(updateDTO.getEmail());
-        }
-        if(updateDTO.getPassword() != null && !passwordEncoder.matches(updateDTO.getPassword(), user.getPassword())){
+        if (updateDTO.getPassword() != null) {
             String hashPassword = passwordEncoder.encode(updateDTO.getPassword());
             user.setPassword(hashPassword);
         }
@@ -88,14 +80,29 @@ public class UserService {
         return mapToResponseDto(userRepository.save(user));
     }
 
-    public void deleteUser(Long userId){
+    public void deleteUser(Long userId) {
         User user = findUserBiUserId(userId);
 
         userRepository.delete(user);
-        log.info("Delete user with ID: {}",userId);
+        log.info("Delete user with ID: {}", userId);
     }
 
-    private User findUserBiUserId(Long userId){
+    public UserLoginResponseDTO createVerifiedUserAndLogin(String name, String email, String passwordHash) {
+        User user = User.builder()
+                .name(name)
+                .email(email)
+                .password(passwordHash)
+                .role(UserRole.DEFAULT)
+                .emailVerified(true)
+                .build();
+
+        log.info("Create verified user with name - {} and email - {}", user.getName(), user.getEmail());
+        User saved = userRepository.save(user);
+        String token = jwtTokenService.generateToken(saved.getId());
+        return new UserLoginResponseDTO(mapToResponseDto(saved), token);
+    }
+
+    private User findUserBiUserId(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User was not found"));
     }
@@ -109,5 +116,4 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
-
 }

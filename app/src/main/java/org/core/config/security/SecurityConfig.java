@@ -24,6 +24,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/users/login", "/api/v1/users").permitAll()
+                        .requestMatchers("/api/v1/users/verify-email", "/api/v1/users/resend-verification").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()
                 )
