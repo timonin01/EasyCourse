@@ -14,8 +14,6 @@ public class UserContextBean {
     public void setUserId(Long userId) {
         if (userId != null) {
             userIdHolder.set(userId);
-        } else {
-            userIdHolder.remove();
         }
     }
     

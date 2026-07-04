@@ -55,6 +55,12 @@ public class StepikCascadeSyncService {
     private final SectionRepository sectionRepository;
 
     public CourseCaptchaChallenge syncFullCourseForStepik(Long courseId, String captchaToken, Long userId) {
+        Long effectiveUserId = requireUserId(userId);
+        userContextBean.setUserId(effectiveUserId);
+        return syncFullCourseForStepikInternal(courseId, captchaToken, effectiveUserId);
+    }
+
+    private CourseCaptchaChallenge syncFullCourseForStepikInternal(Long courseId, String captchaToken, Long userId) {
         CourseResponseDTO course = courseService.getCourseByCourseId(courseId);
         CourseCaptchaChallenge result;
         if (course.getStepikCourseId() == null) {
@@ -73,14 +79,26 @@ public class StepikCascadeSyncService {
         List<CompletableFuture<Void>> sectionFutures = new ArrayList<>();
         for (SectionResponseDTO section : sections) {
             sectionFutures.add(CompletableFuture.runAsync(
-                    () -> syncMissingInSection(section.getId(), captchaToken),
+                    () -> syncMissingInSection(section.getId(), captchaToken, userId),
                     virtualExecutor));
         }
         CompletableFuture.allOf(sectionFutures.toArray(new CompletableFuture[0])).join();
         return result;
     }
 
-    private void syncMissingInSection(Long sectionId, String captchaToken) {
+    private Long requireUserId(Long userId) {
+        if (userId != null) {
+            return userId;
+        }
+        Long fromContext = userContextBean.getUserId();
+        if (fromContext != null) {
+            return fromContext;
+        }
+        throw new IllegalStateException("User is not authenticated");
+    }
+
+    private void syncMissingInSection(Long sectionId, String captchaToken, Long userId) {
+        userContextBean.setUserId(userId);
         try {
             SectionResponseDTO section = sectionService.getSectionBySectionId(sectionId);
             if (section.getStepikSectionId() == null) {
@@ -134,7 +152,7 @@ public class StepikCascadeSyncService {
                 sectionResponseData = stepikSectionService.getSectionByStepikId(section.getStepikSectionId());
             }
 
-            syncMissingInSection(sectionId, captchaToken);
+            syncMissingInSection(sectionId, captchaToken, userId);
             return sectionResponseData;
         } finally {
             userContextBean.clear();

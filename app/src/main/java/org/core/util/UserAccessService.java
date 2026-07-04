@@ -1,6 +1,7 @@
 package org.core.util;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Course;
 import org.core.domain.Lesson;
 import org.core.domain.Section;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public final class UserAccessService {
 
     private final CourseRepository courseRepository;
@@ -31,8 +33,14 @@ public final class UserAccessService {
         if (courseId == null) {
             throw new IllegalArgumentException("Course id is required");
         }
+        if (userId == null) {
+            throw new ResourceAccessDeniedException("User is not authenticated");
+        }
         Course course = findCourseByCourseId(courseId);
-        if (!course.getAuthor().getId().equals(userId)) {
+        Long authorId = course.getAuthor().getId();
+        if (!authorId.equals(userId)) {
+            log.warn("Course ownership check failed: courseId={}, authorId={}, requestUserId={}",
+                    courseId, authorId, userId);
             throw new CourseDoesntBelongToUserException("Course does not belong to user");
         }
         return course;
