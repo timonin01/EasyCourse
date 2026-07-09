@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Search, CheckCircle, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
+import { VideoStepsWarningBanner } from '../components/VideoStepsWarningBanner';
 import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, Spinner, StaggerList, StaggerItem, ContentReveal } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { StepView } from '../components/StepView';
@@ -25,7 +26,7 @@ export function Courses() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [formData, setFormData] = useState({ title: '', description: '' });
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [isCourseDetailsModalOpen, setIsCourseDetailsModalOpen] = useState(false);
   const [courseDetails, setCourseDetails] = useState<{
     course: Course;
@@ -34,7 +35,7 @@ export function Courses() {
     steps: Step[];
   } | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  
+
   const [isStepViewModalOpen, setIsStepViewModalOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<Step | null>(null);
 
@@ -176,7 +177,7 @@ export function Courses() {
       for (const section of sections) {
         const lessons = await lessonsApi.getSectionLessons(section.id);
         allLessons.push(...lessons);
-        
+
         for (const lesson of lessons) {
           const steps = await stepsApi.getLessonSteps(lesson.id);
           allSteps.push(...steps);
@@ -238,6 +239,8 @@ export function Courses() {
           </Button>
         }
       />
+
+      <VideoStepsWarningBanner className="mb-6" />
 
       {/* Search */}
       <div className="mb-6 max-w-md">

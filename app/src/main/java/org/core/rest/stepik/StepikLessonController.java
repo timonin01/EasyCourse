@@ -20,7 +20,6 @@ import java.util.List;
 @RequestMapping("/api/v1/stepik/lessons")
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-@CrossOrigin(origins = "*")
 public class StepikLessonController {
 
     private final StepikLessonSyncService stepikLessonSyncService;

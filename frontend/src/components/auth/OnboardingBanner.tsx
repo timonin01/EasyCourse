@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Plus, Settings } from 'lucide-react';
+import { ArrowRight, Plus, Settings, Sparkles } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { ONBOARDING_STEPS } from '../../constants/productInfo';
 
@@ -37,8 +37,13 @@ export function OnboardingBanner() {
           </Button>
         </Link>
         <Link to="/ai-generator">
-          <Button variant="ghost" icon={<ArrowRight className="w-4 h-4" />} iconPosition="right">
+          <Button
+            variant="secondary"
+            icon={<Sparkles className="w-4 h-4" />}
+            className="border-purple-500/40 bg-purple-600/20 text-purple-100 shadow-lg shadow-purple-950/20 hover:border-purple-400/60 hover:bg-purple-600/30 hover:text-white"
+          >
             Попробовать AI-генератор
+            <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </Link>
       </div>

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
+import { VideoStepsWarningBanner } from '../components/VideoStepsWarningBanner';
 import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
 import { Card, Button, StatCard, EmptyState, DashboardSkeleton, StaggerList, StaggerItem, ContentReveal, PageHeader, Badge } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
@@ -86,6 +87,8 @@ export function Dashboard() {
             ) : undefined
           }
         />
+
+        <VideoStepsWarningBanner className="mb-8" />
 
         {isNewUser && <OnboardingBanner />}
 

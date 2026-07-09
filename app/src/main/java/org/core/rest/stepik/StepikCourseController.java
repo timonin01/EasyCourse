@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/stepik")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class StepikCourseController {
 
     private final StepikCourseSyncService stepikCourseSyncService;

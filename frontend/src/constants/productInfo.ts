@@ -1,7 +1,7 @@
 import { BookOpen, Layers, RefreshCw, Sparkles } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export const PRODUCT_TAGLINE = 'Создавайте и публикуйте курсы на Stepik — быстро и удобно';
+export const PRODUCT_TAGLINE = 'Создавайте и публикуйте курсы на Stepik быстро и удобно';
 
 export const PRODUCT_DESCRIPTION =
   'EasyCourse — редактор онлайн-курсов для авторов Stepik. Собирайте модули, уроки и шаги в одном месте, редактируйте контент, генерируйте задания с помощью ИИ и синхронизируйте результат с платформой Stepik.';

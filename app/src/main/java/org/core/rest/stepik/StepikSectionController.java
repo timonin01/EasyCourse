@@ -19,7 +19,6 @@ import java.util.List;
 @RequestMapping("/api/v1/stepik/sections")
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Slf4j
-@CrossOrigin(origins = "*")
 public class StepikSectionController {
 
     private final StepikSectionSyncService stepikSectionSyncService;

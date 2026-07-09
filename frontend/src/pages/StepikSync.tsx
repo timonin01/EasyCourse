@@ -16,6 +16,7 @@ import {
 import { StepikIcon } from '../components/StepikIcon';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
+import { VideoStepsWarningBanner } from '../components/VideoStepsWarningBanner';
 import { Card, Button, Input, Modal, Badge, PageHeader, EmptyState, StepikSyncSkeleton, ContentReveal, StaggerList, StaggerItem } from '../components/ui';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
 import { stepikApi, SyncProgress } from '../api/stepik.api';
@@ -41,21 +42,21 @@ export function StepikSync() {
   const { user } = useAuthStore();
   const { courses, setCourses, updateCourse } = useCourseStore();
   const { hasConfig: hasStepikConfig, isCheckingConfig } = useStepikOAuthStatus();
-  
+
   const [activeTab, setActiveTab] = useState<TabType>('upload');
   const [isLoading, setIsLoading] = useState(courses.length === 0);
-  
+
   const [selectedCourse, setSelectedCourse] = useState<CourseWithDetails | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
-  
+
   const [syncingItems, setSyncingItems] = useState<Set<number>>(new Set());
   const [deletingItems, setDeletingItems] = useState<Set<number>>(new Set());
-  
+
   const [stepikCourseId, setStepikCourseId] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadStage, setDownloadStage] = useState<string>('');
-  
+
   const [captchaModal, setCaptchaModal] = useState<{
     isOpen: boolean;
     challenge?: CaptchaChallenge;
@@ -130,7 +131,7 @@ export function StepikSync() {
 
     try {
       const result = await stepikApi.syncCourse(selectedCourse.id);
-      
+
       if (result.requiresCaptcha) {
         setCaptchaModal({
           isOpen: true,
@@ -159,7 +160,7 @@ export function StepikSync() {
 
   const handleSyncModel = async (modelId: number) => {
     if (!selectedCourse) return;
-    
+
     const section = selectedCourse.sections?.find(m => m.id === modelId);
     if (!section) return;
 
@@ -172,7 +173,7 @@ export function StepikSync() {
         await stepikApi.updateSectionInStepik(section.id);
         toast.success('Модуль обновлён в Stepik!');
       }
-      
+
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
@@ -190,7 +191,7 @@ export function StepikSync() {
 
   const handleSyncLesson = async (lessonId: number) => {
     if (!selectedCourse) return;
-    
+
     const lesson = selectedCourse.lessons?.find(l => l.id === lessonId);
     if (!lesson) return;
 
@@ -203,7 +204,7 @@ export function StepikSync() {
         await stepikApi.updateLessonInStepik(lesson.id);
         toast.success('Урок обновлён в Stepik!');
       }
-      
+
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
@@ -221,7 +222,7 @@ export function StepikSync() {
 
   const handleSyncStep = async (stepId: number) => {
     if (!selectedCourse) return;
-    
+
     const step = selectedCourse.steps?.find(s => s.id === stepId);
     if (!step) return;
 
@@ -234,7 +235,7 @@ export function StepikSync() {
         await stepikApi.updateStepInStepik(step.id);
         toast.success('Шаг обновлён в Stepik!');
       }
-      
+
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
@@ -252,17 +253,17 @@ export function StepikSync() {
 
   const handleDeleteModelFromStepik = async (modelId: number) => {
     if (!selectedCourse) return;
-    
+
     const section = selectedCourse.sections?.find(m => m.id === modelId);
     if (!section || !section.stepikSectionId) return;
-    
+
     if (!confirm('Удалить модуль из Stepik? Это действие нельзя отменить.')) return;
 
     setDeletingItems(prev => new Set(prev).add(modelId));
     try {
       await stepikApi.deleteSectionFromStepik(section.id);
       toast.success('Модуль удален из Stepik!');
-      
+
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
@@ -280,17 +281,17 @@ export function StepikSync() {
 
   const handleDeleteLessonFromStepik = async (lessonId: number) => {
     if (!selectedCourse) return;
-    
+
     const lesson = selectedCourse.lessons?.find(l => l.id === lessonId);
     if (!lesson || !lesson.stepikLessonId) return;
-    
+
     if (!confirm('Удалить урок из Stepik? Это действие нельзя отменить.')) return;
 
     setDeletingItems(prev => new Set(prev).add(lessonId));
     try {
       await stepikApi.deleteLessonFromStepik(lesson.id);
       toast.success('Урок удален из Stepik!');
-      
+
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
@@ -308,17 +309,17 @@ export function StepikSync() {
 
   const handleDeleteStepFromStepik = async (stepId: number) => {
     if (!selectedCourse) return;
-    
+
     const step = selectedCourse.steps?.find(s => s.id === stepId);
     if (!step || !step.stepikStepId) return;
-    
+
     if (!confirm('Удалить шаг из Stepik? Это действие нельзя отменить.')) return;
 
     setDeletingItems(prev => new Set(prev).add(stepId));
     try {
       await stepikApi.deleteStepFromStepik(step.id);
       toast.success('Шаг удален из Stepik!');
-      
+
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
@@ -477,6 +478,8 @@ export function StepikSync() {
         title="Синхронизация со Stepik"
         description="Выгружайте и загружайте курсы с платформы Stepik"
       />
+
+      <VideoStepsWarningBanner />
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
