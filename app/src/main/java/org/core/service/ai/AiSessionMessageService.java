@@ -42,14 +42,21 @@ public class AiSessionMessageService {
     private final AiMessageRepository aiMessageRepository;
     private final AiMessageHelper aiMessageHelper;
 
-    public void saveMessageToChatHistory(Long userId,
-                                         String sessionId,
-                                         AiMessageRole messageRole,
-                                         ChatType chatType,
-                                         String content,
-                                         @Nullable String stepType,
-                                         @Nullable StepikBlockRequest payload) {
-        AiSession aiSession = resolveSession(userId, sessionId, chatType, messageRole, content, stepType);
+    public void saveMessageToChatHistory(Long userId, String sessionId, AiMessageRole messageRole, ChatType chatType,
+                                         String content, @Nullable String stepType, @Nullable StepikBlockRequest payload) {
+        saveMessage(userId, sessionId, messageRole, chatType, content, stepType, null,
+                aiMessageHelper.serializePayload(payload));
+    }
+
+    public void saveCourseAgentMessage(Long userId, String sessionId, Long courseId, AiMessageRole messageRole,
+                                       String content, @Nullable String payloadJson) {
+        saveMessage(userId, sessionId, messageRole, ChatType.COURSE_AGENT, content, null, courseContextKey(courseId),
+                payloadJson);
+    }
+
+    private void saveMessage(Long userId, String sessionId, AiMessageRole messageRole, ChatType chatType, String content,
+                             @Nullable String stepType, @Nullable String contextKey, @Nullable String payloadJson) {
+        AiSession aiSession = resolveSession(userId, sessionId, chatType, messageRole, content, stepType, contextKey);
 
         int nextOrder = aiMessageRepository.countByAiSession_Id(aiSession.getId()) + 1;
 
@@ -58,7 +65,7 @@ public class AiSessionMessageService {
                 .messageRole(messageRole)
                 .content(content)
                 .stepType(stepType)
-                .payloadJson(aiMessageHelper.serializePayload(payload))
+                .payloadJson(payloadJson)
                 .sortOrder(nextOrder)
                 .build();
 
@@ -78,6 +85,29 @@ public class AiSessionMessageService {
         return aiSessionRepository
                 .findFirstByUser_IdAndChatTypeOrderByUpdatedAtDesc(userId, chatType)
                 .map(AiSession::getSessionId);
+    }
+
+    @Transactional
+    public Optional<String> getLatestCourseAgentSessionId(Long userId, Long courseId) {
+        String contextKey = courseContextKey(courseId);
+        Optional<AiSession> session = aiSessionRepository
+                .findFirstByUser_IdAndChatTypeAndContextKeyOrderByUpdatedAtDesc(
+                        userId,
+                        ChatType.COURSE_AGENT,
+                        contextKey);
+        if (session.isPresent()) {
+            return session.map(AiSession::getSessionId);
+        }
+
+        return aiSessionRepository
+                .findFirstByUser_IdAndChatTypeAndContextKeyIsNullOrderByUpdatedAtDesc(
+                        userId,
+                        ChatType.COURSE_AGENT)
+                .map(legacySession -> {
+                    legacySession.setContextKey(contextKey);
+                    aiSessionRepository.save(legacySession);
+                    return legacySession.getSessionId();
+                });
     }
 
     @Transactional(readOnly = true)
@@ -116,6 +146,28 @@ public class AiSessionMessageService {
                 .toList();
     }
 
+    @Transactional
+    public List<AiMessageHistoryDTO> getCourseAgentSessionHistory(
+            Long userId, Long courseId, String sessionId) {
+        AiSession session = aiSessionRepository.findBySessionId(sessionId)
+                .orElse(null);
+        if (session == null) {
+            return List.of();
+        }
+        validateSessionOwner(session, userId);
+        if (session.getChatType() != ChatType.COURSE_AGENT) {
+            throw new IllegalArgumentException("Session does not belong to course");
+        }
+        String contextKey = courseContextKey(courseId);
+        if (session.getContextKey() == null) {
+            session.setContextKey(contextKey);
+            aiSessionRepository.save(session);
+        } else if (!contextKey.equals(session.getContextKey())) {
+            throw new IllegalArgumentException("Session does not belong to course");
+        }
+        return loadSessionHistory(session);
+    }
+
     public void clearSession(Long userId, String sessionId) {
         Optional<AiSession> sessionOptional = aiSessionRepository.findBySessionId(sessionId);
         if (sessionOptional.isEmpty()) {
@@ -134,7 +186,10 @@ public class AiSessionMessageService {
                 .role(message.getMessageRole().name().toLowerCase())
                 .content(message.getContent())
                 .stepType(message.getStepType())
-                .generatedStep(aiMessageHelper.deserializePayload(message.getPayloadJson()))
+                .generatedStep(message.getAiSession().getChatType() == ChatType.GENERATE
+                        ? aiMessageHelper.deserializePayload(message.getPayloadJson())
+                        : null)
+                .payloadJson(message.getPayloadJson())
                 .build();
     }
 
@@ -159,20 +214,26 @@ public class AiSessionMessageService {
                 .build();
     }
 
-    private AiSession resolveSession(Long userId,
-                                     String sessionId,
-                                     ChatType chatType,
-                                     AiMessageRole messageRole,
-                                     String content,
-                                     @Nullable String stepType) {
+    private AiSession resolveSession(Long userId, String sessionId, ChatType chatType, AiMessageRole messageRole, String content,
+                                     @Nullable String stepType, @Nullable String contextKey) {
         return aiSessionRepository.findBySessionId(sessionId)
                 .map(session -> {
-                    if (!session.getUser().getId().equals(userId)) {
-                        throw new IllegalArgumentException("Session does not belong to user");
+                    validateSessionOwner(session, userId);
+                    if (session.getChatType() != chatType) {
+                        throw new IllegalArgumentException("Session has incompatible chat type");
+                    }
+                    if (contextKey != null) {
+                        if (session.getContextKey() == null) {
+                            session.setContextKey(contextKey);
+                            aiSessionRepository.save(session);
+                        } else if (!contextKey.equals(session.getContextKey())) {
+                            throw new IllegalArgumentException("Session does not belong to course");
+                        }
                     }
                     return session;
                 })
-                .orElseGet(() -> createSession(userId, sessionId, chatType, messageRole, content, stepType));
+                .orElseGet(() -> createSession(
+                        userId, sessionId, chatType, messageRole, content, stepType, contextKey));
     }
 
     private AiSession createSession(Long userId,
@@ -180,7 +241,8 @@ public class AiSessionMessageService {
                                     ChatType chatType,
                                     AiMessageRole messageRole,
                                     String content,
-                                    @Nullable String stepType) {
+                                    @Nullable String stepType,
+                                    @Nullable String contextKey) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with " + userId + " not found"));
 
@@ -190,9 +252,34 @@ public class AiSessionMessageService {
                 .sessionId(sessionId)
                 .chatType(chatType)
                 .stepType(stepType)
+                .contextKey(contextKey)
                 .title(title)
                 .build();
         return aiSessionRepository.save(session);
+    }
+
+    private List<AiMessageHistoryDTO> loadSessionHistory(AiSession session) {
+        List<AiMessage> messages = aiMessageRepository.findByAiSession_IdAndMessageRoleNotOrderBySortOrderDesc(
+                session.getId(),
+                AiMessageRole.SYSTEM,
+                PageRequest.of(0, messageLimit)
+        );
+        List<AiMessage> ordered = new ArrayList<>(messages);
+        Collections.reverse(ordered);
+        return ordered.stream().map(this::toHistoryDto).toList();
+    }
+
+    private void validateSessionOwner(AiSession session, Long userId) {
+        if (!session.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Session does not belong to user");
+        }
+    }
+
+    private String courseContextKey(Long courseId) {
+        if (courseId == null) {
+            throw new IllegalArgumentException("Course id is required");
+        }
+        return "course:" + courseId;
     }
 
 }
