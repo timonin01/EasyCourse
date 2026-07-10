@@ -4,6 +4,7 @@ export { Dashboard } from './Dashboard';
 export { Courses } from './Courses';
 export { CourseEditor } from './CourseEditor';
 export { AIGenerator } from './AIGenerator';
+export { CourseAgent } from './CourseAgent';
 export { Settings } from './Settings';
 export { StepikSync } from './StepikSync';
 export { CourseAudit } from './CourseAudit';

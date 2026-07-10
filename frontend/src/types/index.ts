@@ -216,6 +216,7 @@ export interface ChatMessage {
   content: string;
   stepType?: string;
   generatedStep?: StepikBlockRequest;
+  payloadJson?: string;
 }
 
 // Batch generation types
@@ -317,6 +318,72 @@ export interface ApiError {
   status: number;
   error: string;
   message: string;
+}
+
+// ---------------------------------------------------------------------------
+// Course Agent (агентский режим уровня курса)
+// ---------------------------------------------------------------------------
+
+export type CourseAgentIntent =
+  | 'CREATE_SECTION'
+  | 'CREATE_LESSON'
+  | 'CREATE_STEPS'
+  | 'MODIFY_STEP'
+  | 'DELETE_SECTION'
+  | 'DELETE_LESSON'
+  | 'DELETE_STEP'
+  | 'UNKNOWN';
+
+export type CourseAgentAction =
+  | 'NEED_CLARIFICATION'
+  | 'SHOW_PLAN'
+  | 'PLAN_CANCELLED'
+  | 'DRAFT_READY'
+  | 'STEP_MODIFIED'
+  | 'ENTITY_DELETED'
+  | 'ERROR';
+
+export interface CourseAgentLessonPlan {
+  title: string;
+  steps: CountStepDTO[];
+}
+
+export interface CourseAgentSectionPlan {
+  title: string;
+  description?: string;
+  lessons: CourseAgentLessonPlan[];
+}
+
+export interface CoursePlanDTO {
+  intent: CourseAgentIntent;
+  message?: string;
+  targetSectionId?: number;
+  targetSectionTitle?: string;
+  targetLessonId?: number;
+  targetLessonTitle?: string;
+  targetStepId?: number;
+  targetStepTitle?: string;
+  section?: CourseAgentSectionPlan;
+  lessons?: CourseAgentLessonPlan[];
+  steps?: CountStepDTO[];
+}
+
+export interface EntityCandidate {
+  type: 'section' | 'lesson' | 'step';
+  id: number;
+  label: string;
+}
+
+export interface CourseAgentResponse {
+  action: CourseAgentAction;
+  intent?: CourseAgentIntent;
+  message?: string;
+  plan?: CoursePlanDTO;
+  candidates?: EntityCandidate[];
+  createdSectionIds?: number[];
+  createdLessonIds?: number[];
+  createdStepIds?: number[];
+  step?: Step;
 }
 
 /** Возвращает тип шага для отображения. Если backend вернул TEXT, но в stepikBlockData блок с name "code" — показываем CODE. */

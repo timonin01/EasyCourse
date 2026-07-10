@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useAIGeneratorStore } from '../../../store';
+import { BATCH_GENERATION_UI_ENABLED } from '../../../constants/featureFlags';
 import { useSubscription } from '../../../hooks/useSubscription';
 import type { AIGeneratorMode } from '../types';
 import { useLessonsLoader } from './useLessonsLoader';
@@ -10,6 +12,12 @@ import { useBlockEditModal } from './useBlockEditModal';
 export function useAIGeneratorPage() {
   const { mode, setMode, stepType, setStepType, generatedStep, setGeneratedStep, selectedLessonId, setSelectedLessonId } =
     useAIGeneratorStore();
+
+  useEffect(() => {
+    if (!BATCH_GENERATION_UI_ENABLED && mode === 'batch') {
+      setMode('chat');
+    }
+  }, [mode, setMode]);
 
   const { isPro, canSelectModel, maxBatchSteps, refresh: refreshSubscription } = useSubscription();
   const lessons = useLessonsLoader();

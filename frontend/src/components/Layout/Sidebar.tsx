@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Sparkles,
+  Bot,
   Settings,
   LogOut,
   GraduationCap,
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/courses', icon: BookOpen, label: 'Мои курсы' },
   { to: '/stepik-sync', icon: RefreshCw, label: 'Stepik Sync' },
   { to: '/ai-generator', icon: Sparkles, label: 'AI Генератор' },
+  { to: '/course-agent', icon: Bot, label: 'AI Агент курса' },
   { to: '/course-audit', icon: ClipboardCheck, label: 'Аудит курса' },
   { to: '/settings', icon: Settings, label: 'Настройки' },
 ];
