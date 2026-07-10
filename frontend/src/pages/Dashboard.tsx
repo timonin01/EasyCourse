@@ -11,6 +11,7 @@ import {
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
 import { VideoStepsWarningBanner } from '../components/VideoStepsWarningBanner';
+import { CourseAgentPromoCard } from '../components/dashboard/CourseAgentPromoCard';
 import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
 import { Card, Button, StatCard, EmptyState, DashboardSkeleton, StaggerList, StaggerItem, ContentReveal, PageHeader, Badge } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
@@ -93,6 +94,8 @@ export function Dashboard() {
         {isNewUser && <OnboardingBanner />}
 
         <DashboardSubscriptionWidget />
+
+        <CourseAgentPromoCard className="mb-8" hasCourses={!isNewUser} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {stats.map((stat) => (

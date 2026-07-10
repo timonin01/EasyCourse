@@ -7,6 +7,7 @@ import {
   Layers,
   Lock,
   Sparkles,
+  Bot,
   FileText,
   RotateCcw,
   PenLine,
@@ -26,7 +27,7 @@ import {
   type CourseAuditPdfExportOptions,
 } from '../components/courseAudit/CourseAuditPdfExportModal';
 import { agentApi, coursesApi, lessonsApi, sectionsApi } from '../api';
-import { useAuthStore, useAIGeneratorStore, useCourseStore } from '../store';
+import { useAuthStore, useCourseStore, useCourseAgentStore } from '../store';
 import { fadeInUp } from '../components/ui/motion';
 import { useSubscription } from '../hooks/useSubscription';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -46,29 +47,29 @@ import {
   normalizeAuditMarkdown,
   stripSectionHeading,
 } from '../utils/parseCourseAuditSections';
+import { buildAuditAgentHandoffPrompt } from '../utils/buildAuditAgentHandoff';
+import type { MergedAuditHintGroup } from '../utils/parseCourseAuditHints';
 
 type AuditTab = 'report' | 'existing' | 'newContent';
 
 function HintCard({
-  groupKey,
   location,
   prompts,
   isNewContent,
   courseLessons,
   selectedLessonId,
   onLessonChange,
-  onOpenBatch,
   onCopyPrompt,
+  onOpenInAgent,
 }: {
-  groupKey: string;
   location: string | null;
   prompts: string[];
   isNewContent: boolean;
   courseLessons: CourseLessonContext[];
   selectedLessonId: string;
-  onLessonChange: (groupKey: string, lessonId: string) => void;
-  onOpenBatch: (groupKey: string, combinedPrompt: string) => void;
+  onLessonChange: (lessonId: string) => void;
   onCopyPrompt: (prompt: string) => void;
+  onOpenInAgent: () => void;
 }) {
   const combinedPrompt = prompts.join('\n');
 
@@ -104,57 +105,39 @@ function HintCard({
       )}
 
       {isNewContent ? (
-        <>
-          <p className="mb-3 text-xs text-amber-200/80">
-            Сначала создайте модуль/урок в редакторе курса, затем выберите его ниже или скопируйте
-            промпт.
-          </p>
-          <LessonPickerSelect
-            label="Урок (после создания)"
-            value={selectedLessonId}
-            onChange={(lessonId) => onLessonChange(groupKey, lessonId)}
-            lessons={courseLessons}
-          />
-          <div className="mt-3 flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-              icon={<ClipboardCopy className="h-3.5 w-3.5" />}
-              onClick={() => onCopyPrompt(combinedPrompt)}
-            >
-              Копировать
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-              disabled={!selectedLessonId}
-              onClick={() => onOpenBatch(groupKey, combinedPrompt)}
-            >
-              Открыть batch
-            </Button>
-          </div>
-        </>
+        <p className="mb-3 text-xs text-amber-200/80">
+          AI-агент создаст модуль или урок по этому промпту. При необходимости сначала создайте структуру вручную.
+        </p>
       ) : (
-        <>
-          <LessonPickerSelect
-            label="Урок для генерации"
-            value={selectedLessonId}
-            onChange={(lessonId) => onLessonChange(groupKey, lessonId)}
-            lessons={courseLessons}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            className="mt-3 w-full"
-            disabled={!selectedLessonId}
-            onClick={() => onOpenBatch(groupKey, combinedPrompt)}
-          >
-            Открыть batch
-          </Button>
-        </>
+        <LessonPickerSelect
+          label="Урок для агента"
+          value={selectedLessonId}
+          onChange={onLessonChange}
+          lessons={courseLessons}
+        />
       )}
+
+      <div className="mt-3 flex gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="flex-1"
+          icon={<ClipboardCopy className="h-3.5 w-3.5" />}
+          onClick={() => onCopyPrompt(combinedPrompt)}
+        >
+          Копировать
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          className="flex-1"
+          icon={<Bot className="h-3.5 w-3.5" />}
+          disabled={!isNewContent && !selectedLessonId}
+          onClick={onOpenInAgent}
+        >
+          Открыть в агенте
+        </Button>
+      </div>
     </div>
   );
 }
@@ -162,12 +145,12 @@ function HintCard({
 export function CourseAudit() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const setPendingAgentRequest = useCourseAgentStore((state) => state.setPendingRequest);
   const { isPro, refresh: refreshSubscription } = useSubscription();
   const subscriptionStatus = useSubscriptionStore((state) => state.status);
   const isSubscriptionLoading = useSubscriptionStore((state) => state.isLoading);
   const cachedCourses = useCourseStore((state) => state.courses);
   const setCachedCourses = useCourseStore((state) => state.setCourses);
-  const { setMode, setSelectedLessonId, setPendingBatchUserInput } = useAIGeneratorStore();
 
   const [courses, setCourses] = useState<Course[]>(cachedCourses);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
@@ -321,20 +304,6 @@ export function CourseAudit() {
   const auditedCourse = courses.find((c) => String(c.id) === auditedCourseId);
   const showCoursePicker = !isAnalyzing && !analyzeResult;
 
-  const handleOpenBatch = (groupKey: string, prompt: string) => {
-    const lessonId = hintLessonIds[groupKey];
-    if (!lessonId) {
-      toast.error('Выберите урок для batch-генерации');
-      return;
-    }
-
-    setSelectedLessonId(Number(lessonId));
-    setPendingBatchUserInput(prompt);
-    setMode('batch');
-    navigate('/ai-generator');
-    toast.success('Промпт перенесён в batch-генератор');
-  };
-
   const handleCopyPrompt = async (prompt: string) => {
     try {
       await navigator.clipboard.writeText(prompt);
@@ -342,6 +311,37 @@ export function CourseAudit() {
     } catch {
       toast.error('Не удалось скопировать');
     }
+  };
+
+  const handleOpenInAgent = (group: MergedAuditHintGroup) => {
+    if (!auditedCourseId) {
+      toast.error('Сначала выполните аудит курса');
+      return;
+    }
+
+    const groupKey = getHintLessonKey(group.hint);
+    const selectedLessonId = hintLessonIds[groupKey];
+    const isExisting = group.hint.target === 'existing';
+
+    if (isExisting && !selectedLessonId) {
+      toast.error('Выберите урок для AI-агента');
+      return;
+    }
+
+    const lesson = selectedLessonId
+      ? courseLessons.find((item) => item.id === Number(selectedLessonId))
+      : null;
+
+    setPendingAgentRequest({
+      courseId: Number(auditedCourseId),
+      prompt: buildAuditAgentHandoffPrompt(group.hint, group.prompts, lesson),
+      lessonId: lesson?.id ?? group.hint.suggestedLessonId ?? undefined,
+      sectionTitle: lesson?.sectionTitle ?? group.hint.sectionTitle,
+      lessonTitle: lesson?.title ?? group.hint.lessonTitle,
+      target: group.hint.target,
+    });
+    navigate('/course-agent');
+    toast.success('Промпт перенесён в AI-агент');
   };
 
   const handleExportPdf = async (options: CourseAuditPdfExportOptions) => {
@@ -398,17 +398,16 @@ export function CourseAudit() {
           return (
             <HintCard
               key={groupKey}
-              groupKey={groupKey}
               location={formatHintLocation(group.hint)}
               prompts={group.prompts}
               isNewContent={group.hint.target !== 'existing'}
               courseLessons={courseLessons}
               selectedLessonId={hintLessonIds[groupKey] ?? ''}
-              onLessonChange={(key, lessonId) =>
-                setHintLessonIds((prev) => ({ ...prev, [key]: lessonId }))
+              onLessonChange={(lessonId) =>
+                setHintLessonIds((prev) => ({ ...prev, [groupKey]: lessonId }))
               }
-              onOpenBatch={handleOpenBatch}
               onCopyPrompt={handleCopyPrompt}
+              onOpenInAgent={() => handleOpenInAgent(group)}
             />
           );
         })
@@ -601,7 +600,7 @@ export function CourseAudit() {
               <Card className="p-5">
                 <div className="mb-4 flex items-center gap-2">
                   <Layers className="h-5 w-5 text-primary-400" />
-                  <h2 className="text-lg font-semibold text-dark-100">Batch-подсказки</h2>
+                  <h2 className="text-lg font-semibold text-dark-100">Подсказки для AI-агента</h2>
                 </div>
 
                 {activeHintGroups.length === 0 ? (

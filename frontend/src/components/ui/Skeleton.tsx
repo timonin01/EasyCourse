@@ -56,6 +56,7 @@ export function DashboardSkeleton() {
         <Skeleton className="h-5 w-96 max-w-full" />
       </div>
       <Skeleton className="h-28 w-full rounded-xl" />
+      <Skeleton className="h-36 w-full rounded-xl" />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <StatCardSkeleton />
         <StatCardSkeleton />

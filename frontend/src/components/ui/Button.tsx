@@ -85,7 +85,16 @@ export function Button({
       return <Loader2 className={clsx(iconSizes[size], 'animate-spin')} />;
     }
     if (icon) {
-      return <span className={iconSizes[size]}>{icon}</span>;
+      return (
+        <span
+          className={clsx(
+            'inline-flex shrink-0 items-center justify-center [&>svg]:h-full [&>svg]:w-full',
+            iconSizes[size],
+          )}
+        >
+          {icon}
+        </span>
+      );
     }
     return null;
   };

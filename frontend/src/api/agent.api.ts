@@ -1,7 +1,7 @@
 import api from './axios';
 import axios from 'axios';
 import { aiRequestConfig } from '../config/api';
-import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse, CourseAuditPdfExportRequest } from '../types';
+import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse, CourseAuditPdfExportRequest, CoursePlanDTO, CourseAgentResponse, CourseAgentIntent, EntityCandidate } from '../types';
 
 export const agentApi = {
   // Chat with AI
@@ -193,6 +193,136 @@ export const agentApi = {
   // Direct AI chat (without agent)
   directChat: async (message: string, aiName: 'DeepSeek' | 'YandexGPT' = 'YandexGPT'): Promise<string> => {
     const response = await api.post<string>('/v1/ai/chat', { message, aiName }, aiRequestConfig);
+    return response.data;
+  },
+
+  // -------------------------------------------------------------------------
+  // Course Agent (агентский режим уровня курса)
+  // -------------------------------------------------------------------------
+
+  // Свободный запрос агенту курса: вернёт план / уточнение / результат правки шага
+  courseAgentChat: async (
+    courseId: number,
+    sessionId: string,
+    userInput: string,
+    llmModel?: string
+  ): Promise<CourseAgentResponse> => {
+    const params = new URLSearchParams({ sessionId });
+    if (llmModel) {
+      params.append('llmModel', llmModel);
+    }
+    const response = await api.post<CourseAgentResponse>(
+      `/agent/course/${courseId}/chat?${params}`,
+      userInput,
+      { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
+    );
+    return response.data;
+  },
+
+  getLatestCourseAgentSession: async (courseId: number): Promise<string | null> => {
+    const response = await api.get<{ sessionId: string | null }>(
+      `/agent/course/${courseId}/sessions/latest`
+    );
+    return response.data?.sessionId ?? null;
+  },
+
+  getCourseAgentHistory: async (
+    courseId: number,
+    sessionId: string
+  ): Promise<ChatMessage[]> => {
+    const response = await api.get<ChatMessage[]>(
+      `/agent/course/${courseId}/sessions/${encodeURIComponent(sessionId)}/history`
+    );
+    return response.data;
+  },
+
+  courseAgentSelectCandidate: async (
+    courseId: number,
+    sessionId: string,
+    intent: CourseAgentIntent,
+    candidate: EntityCandidate,
+    originalInput: string,
+    llmModel?: string
+  ): Promise<CourseAgentResponse> => {
+    const params = new URLSearchParams({ sessionId });
+    if (llmModel) {
+      params.append('llmModel', llmModel);
+    }
+    const response = await api.post<CourseAgentResponse>(
+      `/agent/course/${courseId}/select-candidate?${params}`,
+      { intent, candidate, originalInput },
+      { headers: { 'Content-Type': 'application/json' }, ...aiRequestConfig }
+    );
+    return response.data;
+  },
+
+  courseAgentEditPlan: async (
+    courseId: number,
+    sessionId: string,
+    plan: CoursePlanDTO,
+    instruction: string,
+    llmModel?: string
+  ): Promise<CourseAgentResponse> => {
+    const params = new URLSearchParams({ sessionId });
+    if (llmModel) {
+      params.append('llmModel', llmModel);
+    }
+    const query = params.toString();
+    const response = await api.post<CourseAgentResponse>(
+      `/agent/course/${courseId}/edit-plan${query ? `?${query}` : ''}`,
+      { plan, instruction },
+      { headers: { 'Content-Type': 'application/json' }, ...aiRequestConfig }
+    );
+    return response.data;
+  },
+
+  // Выполнить подтверждённый план: создать модуль/уроки/шаги в БД
+  courseAgentExecutePlan: async (
+    courseId: number,
+    sessionId: string,
+    plan: CoursePlanDTO,
+    llmModel?: string
+  ): Promise<CourseAgentResponse> => {
+    const params = new URLSearchParams({ sessionId });
+    if (llmModel) {
+      params.append('llmModel', llmModel);
+    }
+    const response = await api.post<CourseAgentResponse>(
+      `/agent/course/${courseId}/execute-plan?${params}`,
+      { plan },
+      { headers: { 'Content-Type': 'application/json' }, ...aiRequestConfig }
+    );
+    return response.data;
+  },
+
+  courseAgentCancelPlan: async (
+    courseId: number,
+    sessionId: string
+  ): Promise<CourseAgentResponse> => {
+    const params = new URLSearchParams({ sessionId });
+    const response = await api.post<CourseAgentResponse>(
+      `/agent/course/${courseId}/cancel-plan?${params}`
+    );
+    return response.data;
+  },
+
+  // Точечная правка конкретного шага по id
+  courseAgentModifyStep: async (
+    courseId: number,
+    stepId: number,
+    sessionId: string,
+    userInput: string,
+    llmModel?: string
+  ): Promise<CourseAgentResponse> => {
+    const params = new URLSearchParams({ sessionId });
+    if (llmModel) {
+      params.append('llmModel', llmModel);
+    }
+    const response = await api.post<CourseAgentResponse>(
+      `/agent/course/${courseId}/steps/${stepId}/modify?${params}`,
+      userInput,
+      { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
+    );
     return response.data;
   },
 };

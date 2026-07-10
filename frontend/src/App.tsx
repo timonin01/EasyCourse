@@ -7,6 +7,7 @@ import {
   Courses, 
   CourseEditor, 
   AIGenerator, 
+  CourseAgent,
   Settings,
   StepikSync,
   CourseAudit,
@@ -66,6 +67,11 @@ export default function App() {
       <Route path="/ai-generator" element={
         <PrivateRoute>
           <AIGenerator />
+        </PrivateRoute>
+      } />
+      <Route path="/course-agent" element={
+        <PrivateRoute>
+          <CourseAgent />
         </PrivateRoute>
       } />
       <Route path="/course-audit" element={

@@ -1,12 +1,17 @@
 import { motion } from 'framer-motion';
 import type { AIGeneratorMode } from '../types';
 import { easeOut } from '../../../components/ui/motion';
+import { BATCH_GENERATION_UI_ENABLED } from '../../../constants/featureFlags';
 
-const MODES: { id: AIGeneratorMode; label: string }[] = [
+const ALL_MODES: { id: AIGeneratorMode; label: string }[] = [
   { id: 'chat', label: '💬 Свободный чат' },
   { id: 'generate', label: '✨ Генерация шагов' },
   { id: 'batch', label: '📦 Batch генерация' },
 ];
+
+const MODES = BATCH_GENERATION_UI_ENABLED
+  ? ALL_MODES
+  : ALL_MODES.filter((mode) => mode.id !== 'batch');
 
 interface ModeToggleProps {
   mode: AIGeneratorMode;

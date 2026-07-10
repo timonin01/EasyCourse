@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ChatMessage, StepikBlockRequest, Lesson } from '../types';
+import { BATCH_GENERATION_UI_ENABLED } from '../constants/featureFlags';
+
+type AIGeneratorMode = 'chat' | 'generate' | 'batch';
+
+function resolveMode(mode: AIGeneratorMode): AIGeneratorMode {
+  if (!BATCH_GENERATION_UI_ENABLED && mode === 'batch') {
+    return 'chat';
+  }
+  return mode;
+}
 
 interface AIGeneratorState {
   // Mode
@@ -66,7 +76,7 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
       pendingBatchUserInput: null,
       
       // Actions
-      setMode: (mode) => set({ mode }),
+      setMode: (mode) => set({ mode: resolveMode(mode) }),
       
       setStepType: (stepType) => set({ stepType }),
       
@@ -182,6 +192,14 @@ export const useAIGeneratorStore = create<AIGeneratorState>()(
         stepType: state.stepType,
         selectedLessonId: state.selectedLessonId,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<AIGeneratorState> | undefined;
+        return {
+          ...currentState,
+          ...persisted,
+          mode: resolveMode(persisted?.mode ?? currentState.mode),
+        };
+      },
     }
   )
 );
