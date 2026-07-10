@@ -1,7 +1,6 @@
 package org.core.service.agent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.config.LlmModelConfig;
 import org.core.dto.agent.ChatMessage;
@@ -41,6 +40,15 @@ public class StepContentModifier {
     }
 
     public StepikBlockRequest modifyStepContent(String sessionId, String userInput, String stepType, StepikBlockRequest stepikBlockRequest, LlmModel llmModel) {
+        return modifyStepContent(sessionId, userInput, stepType, stepikBlockRequest, llmModel, null);
+    }
+
+    public StepikBlockRequest modifyStepContent(String sessionId, String userInput, String stepType,
+                                                StepikBlockRequest stepikBlockRequest, LlmModel llmModel,
+                                                List<ChatMessage> persistentHistory) {
+        if (persistentHistory != null) {
+            return modifyWithPersistentHistory(userInput, stepType, stepikBlockRequest, llmModel, persistentHistory);
+        }
         try {
             List<ChatMessage> history = contextStore.getHistory(sessionId);
             List<ChatMessage> historyForLLM = new ArrayList<>();
@@ -97,6 +105,36 @@ public class StepContentModifier {
             throw e;
         } catch (Exception e) {
             log.error("Error generating step for session {}: {}", sessionId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate step. Please try again.", e);
+        }
+    }
+
+    private StepikBlockRequest modifyWithPersistentHistory(String userInput, String stepType, StepikBlockRequest stepikBlockRequest,
+                                                           LlmModel llmModel, List<ChatMessage> persistentHistory) {
+        try {
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(systemPromptService.getPromptForQuery(stepType))
+                    .stepType(stepType)
+                    .build());
+            messages.addAll(persistentHistory);
+            messages.add(ChatMessage.builder()
+                    .role("user")
+                    .content(String.format(
+                            "Текущий контент шага (JSON):\n%s\n\nЗапрос пользователя: %s",
+                            objectMapper.writeValueAsString(stepikBlockRequest),
+                            userInput))
+                    .build());
+
+            String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
+            String aiResponse = modelUri != null && !modelUri.trim().isEmpty()
+                    ? llmProvider.chat(messages, modelUri)
+                    : llmProvider.chat(messages);
+            return responseParser.parseResponse(aiResponse, stepType);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
             throw new RuntimeException("Failed to generate step. Please try again.", e);
         }
     }
