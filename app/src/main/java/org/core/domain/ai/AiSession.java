@@ -3,6 +3,8 @@ package org.core.domain.ai;
 import jakarta.persistence.*;
 import lombok.*;
 import org.core.domain.User;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,11 +32,15 @@ public class AiSession {
     private String sessionId;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "chat_type", nullable = false, length = 20)
     private ChatType chatType;
 
     @Column(name = "step_type", length = 30)
     private String stepType;
+
+    @Column(name = "context_key", length = 80)
+    private String contextKey;
 
     @Column(name = "title")
     private String title;

@@ -13,4 +13,10 @@ public interface AiSessionRepository extends JpaRepository<AiSession, Long> {
 
     Optional<AiSession> findFirstByUser_IdAndChatTypeAndStepTypeOrderByUpdatedAtDesc(
             Long userId, ChatType chatType, String stepType);
+
+    Optional<AiSession> findFirstByUser_IdAndChatTypeAndContextKeyOrderByUpdatedAtDesc(
+            Long userId, ChatType chatType, String contextKey);
+
+    Optional<AiSession> findFirstByUser_IdAndChatTypeAndContextKeyIsNullOrderByUpdatedAtDesc(
+            Long userId, ChatType chatType);
 }
