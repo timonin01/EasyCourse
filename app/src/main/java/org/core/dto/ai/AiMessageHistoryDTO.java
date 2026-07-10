@@ -18,4 +18,5 @@ public class AiMessageHistoryDTO {
     private String content;
     private String stepType;
     private StepikBlockRequest generatedStep;
+    private String payloadJson;
 }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.2.xsd">
+
+    <changeSet id="28-add-ai-session-context-key" author="easycourse">
+        <addColumn tableName="ai_session">
+            <column name="context_key" type="VARCHAR(80)"/>
+        </addColumn>
+        <createIndex indexName="idx_ai_session_user_type_context_updated" tableName="ai_session">
+            <column name="user_id"/>
+            <column name="chat_type"/>
+            <column name="context_key"/>
+            <column name="updated_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

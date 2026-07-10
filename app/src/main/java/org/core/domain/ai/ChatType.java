@@ -3,6 +3,7 @@ package org.core.domain.ai;
 public enum ChatType {
 
     CHAT,
-    GENERATE
+    GENERATE,
+    COURSE_AGENT
 
 }
