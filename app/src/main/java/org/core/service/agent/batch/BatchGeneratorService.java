@@ -31,12 +31,20 @@ public class BatchGeneratorService {
     private final BatchAnalyzerService batchAnalyzerService;
 
     public List<StepikBlockRequest> generateBatchRequests(Long userId, String sessionId, BatchStepDTO batchStepDTO) {
+        return generateBatchRequests(userId, sessionId, batchStepDTO, List.of());
+    }
+
+    public List<StepikBlockRequest> generateBatchRequests(Long userId, String sessionId, BatchStepDTO batchStepDTO,
+                                                        List<StepikBlockRequest> externalTextContext) {
         if (batchStepDTO == null || batchStepDTO.getSteps() == null || batchStepDTO.getSteps().isEmpty()) {
             throw new RuntimeException("BatchStepDTO is null or empty");
         }
 
         List<StepikBlockRequest> stepikBlockRequests = new ArrayList<>();
-        List<StepikBlockRequest> textBlockRequests = new ArrayList<>();
+        List<StepikBlockRequest> priorTheory = externalTextContext == null
+                ? new ArrayList<>()
+                : new ArrayList<>(externalTextContext);
+        List<StepikBlockRequest> generatedTextInBatch = new ArrayList<>();
         for (CountStepDTO countStepDTO : batchStepDTO.getSteps()) {
             String type = countStepDTO.getType();
             String systemPrompt = systemPromptService.getPromptForQuery(type);
@@ -44,61 +52,66 @@ public class BatchGeneratorService {
             boolean stepUseTextContext = countStepDTO.getUseSummarizedEnabled() == null || countStepDTO.getUseSummarizedEnabled();
             if (countStepDTO.getCount() == 1) {
                 String userInput = countStepDTO.getSpecificInput();
+                if (!"text".equals(type) && stepUseTextContext) {
+                    userInput = appendTheoryContext(userInput, priorTheory, generatedTextInBatch);
+                }
                 StepikBlockRequest request = agenService.generateStep(userId, sessionId, userInput, type, null, false);
                 stepikBlockRequests.add(request);
                 if ("text".equals(type)) {
-                    textBlockRequests.clear();
-                    textBlockRequests.add(request);
+                    generatedTextInBatch.clear();
+                    generatedTextInBatch.add(request);
                 }
             } else {
                 try {
                     String summariesContentFromTextBlock = null;
-                    if (!"text".equals(type) && stepUseTextContext && !textBlockRequests.isEmpty()) {
-                        summariesContentFromTextBlock = batchAnalyzerService.summariesTextSteps(textBlockRequests);
+                    if (!"text".equals(type) && stepUseTextContext) {
+                        List<StepikBlockRequest> allText = mergeTextBlocks(priorTheory, generatedTextInBatch);
+                        if (!allText.isEmpty()) {
+                            summariesContentFromTextBlock = batchAnalyzerService.summariesTextSteps(allText);
+                        }
                     }
                     systemPrompt = promptModifierService.modifyPromptForBatch(systemPrompt, countStepDTO.getCount(), summariesContentFromTextBlock, type);
                     String userInputForBatch = countStepDTO.getSpecificInput();
                     List<StepikBlockRequest> batchBlockRequests = generateBatchSteps(userInputForBatch, systemPrompt, type, countStepDTO.getCount());
                     stepikBlockRequests.addAll(batchBlockRequests);
                     if ("text".equals(type)) {
-                        textBlockRequests.clear();
-                        textBlockRequests.addAll(batchBlockRequests);
+                        generatedTextInBatch.clear();
+                        generatedTextInBatch.addAll(batchBlockRequests);
                     }
                     log.info("Batch tasks successfully done for type {}", type);
                 } catch (Exception ex) {
                     log.error("Batch generation failed for type {}, falling back to per-step generation: {}", type, ex.getMessage());
-//                    String contextFromTextMessage = null;
-//                    if (!"text".equals(type) && stepUseTextContext && !textBlockRequests.isEmpty()) {
-//                        contextFromTextMessage = batchAnalyzerService.summariesTextSteps(textBlockRequests);
-//                    }
-//                    for (int i = 0; i < countStepDTO.getCount(); i++) {
-//                        try {
-//                            String individualInput = countStepDTO.getSpecificInput();
-//                            if ("text".equals(type)) {
-//                                individualInput = "теория " + individualInput;
-//                            } else {
-//                                individualInput += " (задание " + (i + 1) + " из " + countStepDTO.getCount() + ", уникальное)";
-//                                if (contextFromTextMessage != null && !contextFromTextMessage.isBlank()) {
-//                                    individualInput += "\n\nКонтекст из теории:\n" + contextFromTextMessage;
-//                                }
-//                            }
-//                            StepikBlockRequest request = agenService.generateStep(sessionId, individualInput, type);
-//                            stepikBlockRequests.add(request);
-//                            if ("text".equals(type)) {
-//                                textBlockRequests.add(request);
-//                            }
-//                            log.info("Successfully generated step {}/{} individually for type {}", i + 1, countStepDTO.getCount(), type);
-//                        } catch (Exception individualError) {
-//                            log.error("Failed to generate individual step {}/{} for type {}: {}",
-//                                    i + 1, countStepDTO.getCount(), type, individualError.getMessage());
-//                        }
-//                    }
                 }
             }
         }
 
         log.info("Generated list StepikBlockRequest for batch uploading, list: {}", stepikBlockRequests);
         return stepikBlockRequests;
+    }
+
+    private List<StepikBlockRequest> mergeTextBlocks(List<StepikBlockRequest> priorTheory,
+                                                     List<StepikBlockRequest> generatedTextInBatch) {
+        List<StepikBlockRequest> allText = new ArrayList<>();
+        if (priorTheory != null) {
+            allText.addAll(priorTheory);
+        }
+        if (generatedTextInBatch != null) {
+            allText.addAll(generatedTextInBatch);
+        }
+        return allText;
+    }
+
+    private String appendTheoryContext(String userInput, List<StepikBlockRequest> priorTheory,
+                                       List<StepikBlockRequest> generatedTextInBatch) {
+        List<StepikBlockRequest> allText = mergeTextBlocks(priorTheory, generatedTextInBatch);
+        if (allText.isEmpty()) {
+            return userInput;
+        }
+        String summary = batchAnalyzerService.summariesTextSteps(allText);
+        if (summary == null || summary.isBlank()) {
+            return userInput;
+        }
+        return userInput + "\n\nКонтекст из теории урока:\n" + summary;
     }
 
     private List<StepikBlockRequest> generateBatchSteps(String userInput, String systemPrompt, String stepType, int count) {
