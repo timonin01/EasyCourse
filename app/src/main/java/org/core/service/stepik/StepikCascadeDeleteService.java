@@ -44,8 +44,7 @@ public class StepikCascadeDeleteService {
     private final LessonRepository lessonRepository;
 
     public void deleteFullCourseFromStepik(Long courseId, Long userId){
-        userContextBean.setUserId(userId);
-        try {
+        runWithRestoredUserContext(userId, () -> {
             Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
             if (course.getStepikCourseId() == null) {
                 log.error("Course with id: {} not synchronized with stepik", courseId);
@@ -79,9 +78,7 @@ public class StepikCascadeDeleteService {
 
             courseSyncService.deleteCourseFromStepik(courseId);
             log.info("Course {} cascade deletion success", courseId);
-        } finally {
-            userContextBean.clear();
-        }
+        });
     }
 
     public CompletableFuture<Void> deleteFullSectionFromStepik(Section section, Long userId) {
@@ -165,23 +162,35 @@ public class StepikCascadeDeleteService {
     }
 
     public void deleteFullSectionFromStepikById(Long sectionId, Long userId) {
-        userContextBean.setUserId(userId);
-        try {
+        runWithRestoredUserContext(userId, () -> {
             Section section = sectionRepository.findById(sectionId)
                     .orElseThrow(() -> new IllegalArgumentException("Section with id " + sectionId + " not found"));
             deleteFullSectionFromStepik(section, userId).join();
-        } finally {
-            userContextBean.clear();
-        }
+        });
     }
 
     public void deleteFullLessonFromStepikById(Long lessonId, Long userId) {
-        userContextBean.setUserId(userId);
-        try {
+        runWithRestoredUserContext(userId, () -> {
             Lesson lesson = lessonRepository.findById(lessonId)
                     .orElseThrow(() -> new IllegalArgumentException("Lesson with id " + lessonId + " not found"));
             deleteFullLessonFromStepik(lesson, userId).join();
+        });
+    }
+
+    private void runWithRestoredUserContext(Long userId, Runnable action) {
+        Long previousUserId = userContextBean.getUserId();
+        userContextBean.setUserId(userId);
+        try {
+            action.run();
         } finally {
+            restoreUserContext(previousUserId);
+        }
+    }
+
+    private void restoreUserContext(Long previousUserId) {
+        if (previousUserId != null) {
+            userContextBean.setUserId(previousUserId);
+        } else {
             userContextBean.clear();
         }
     }
