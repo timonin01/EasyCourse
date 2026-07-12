@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.core.dto.agent.ChatMessage;
+import org.core.enums.CourseAgentMode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,4 +31,5 @@ public class AgentResumeContext {
     private List<ChatMessage> loopMessages = new ArrayList<>();
     private String userInput;
     private String clarificationMessage;
+    private CourseAgentMode agentMode;
 }

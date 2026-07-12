@@ -17,6 +17,7 @@ import org.core.service.agent.analyzer.SectionAnalyzerService;
 import org.core.service.agent.course.CourseEntityResolver;
 import org.core.service.agent.course.CourseResolution;
 import org.core.service.agent.course.CourseSnapshotBuilder;
+import org.core.service.agent.course.tools.util.ContextHintParser;
 import org.core.service.agent.llmProvider.LlmProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,8 +62,16 @@ public class AnswerQuestionHandler {
     }
 
     public CourseToolResult handleAnswerQuestion(CourseAgentContext courseAgentContext, Map<String, Object> args) {
-        EntityHints hints = EntityHints.fromArgs(args);
-        String context = buildQueryContext(courseAgentContext.getCourse(), hints);
+        EntityHints hints = ContextHintParser.mergeAll(
+                EntityHints.fromArgs(args),
+                ContextHintParser.parseFromUserInput(courseAgentContext.getUserInput()),
+                ContextHintParser.parseFromHistory(courseAgentContext.getHistory()));
+        if (isWholeCourseQuestion(courseAgentContext.getUserInput())) {
+            hints = ContextHintParser.mergeAll(
+                    EntityHints.fromArgs(args),
+                    ContextHintParser.parseFromUserInput(courseAgentContext.getUserInput()));
+        }
+        String context = buildQueryContext(courseAgentContext.getCourse(), hints, courseAgentContext.getUserInput());
         String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(infoAnswerPrompt);
 
         List<ChatMessage> messages = new ArrayList<>();
@@ -82,13 +91,26 @@ public class AnswerQuestionHandler {
                 .build());
     }
 
-    private String buildQueryContext(Course course, EntityHints hints) {
+    private String buildQueryContext(Course course, EntityHints hints, String userInput) {
+        StringBuilder context = new StringBuilder(courseSnapshotBuilder.buildStructureIndex(course));
+        context.append('\n');
+
+        if (hints.sectionHint() != null && isRecommendationQuestion(userInput)) {
+            CourseResolution<Section> sectionResolution =
+                    entityResolver.resolveSection(course.getId(), hints.sectionHint());
+            if (sectionResolution.isFound()) {
+                context.append("--- Детали текущего модуля ---\n");
+                context.append(sectionAnalyzerService.sectionSummeryBuilder(sectionResolution.value()));
+                return context.toString();
+            }
+        }
+
         if (hints.stepHint() != null) {
             CourseResolution<Lesson> lessonResolution = entityResolver.resolveLesson(course, hints);
             if (lessonResolution.isFound()) {
                 Lesson lesson = lessonResolution.value();
-                StringBuilder context = new StringBuilder(
-                        sectionAnalyzerService.lessonSummeryBuilder(lesson, lesson.getSection()));
+                context.append("--- Детали текущего урока ---\n");
+                context.append(sectionAnalyzerService.lessonSummeryBuilder(lesson, lesson.getSection()));
                 Integer stepIndex = parseIndex(hints.stepHint());
                 if (stepIndex != null) {
                     List<Step> steps = stepRepository.findByLessonIdOrderByPositionAsc(lesson.getId());
@@ -104,17 +126,54 @@ public class AnswerQuestionHandler {
             CourseResolution<Lesson> lessonResolution = entityResolver.resolveLesson(course, hints);
             if (lessonResolution.isFound()) {
                 Lesson lesson = lessonResolution.value();
-                return sectionAnalyzerService.lessonSummeryBuilder(lesson, lesson.getSection());
+                context.append("--- Детали текущего урока ---\n");
+                context.append(sectionAnalyzerService.lessonSummeryBuilder(lesson, lesson.getSection()));
+                return context.toString();
             }
         }
         if (hints.sectionHint() != null) {
             CourseResolution<Section> sectionResolution =
                     entityResolver.resolveSection(course.getId(), hints.sectionHint());
             if (sectionResolution.isFound()) {
-                return sectionAnalyzerService.sectionSummeryBuilder(sectionResolution.value());
+                context.append("--- Детали текущего модуля ---\n");
+                context.append(sectionAnalyzerService.sectionSummeryBuilder(sectionResolution.value()));
+                return context.toString();
             }
         }
-        return courseSnapshotBuilder.buildCourseSnapshot(course);
+
+        context.append("--- Полная структура курса ---\n");
+        context.append(courseSnapshotBuilder.buildCourseSnapshot(course));
+        return context.toString();
+    }
+
+    private boolean isWholeCourseQuestion(String userInput) {
+        if (userInput == null || userInput.isBlank()) {
+            return false;
+        }
+        String lower = userInput.toLowerCase();
+        return lower.contains("в сам курс")
+                || lower.contains("во весь курс")
+                || lower.contains("в весь курс")
+                || lower.contains("по всему курсу")
+                || lower.contains("в курс что")
+                || lower.contains("в курс можно")
+                || (lower.contains("в курс") && (lower.contains("добав") || lower.contains("ещ")))
+                || lower.contains("не хватает в курсе")
+                || lower.contains("чего не хватает в курсе");
+    }
+
+    private boolean isRecommendationQuestion(String userInput) {
+        if (userInput == null || userInput.isBlank()) {
+            return false;
+        }
+        String lower = userInput.toLowerCase();
+        return lower.contains("добав")
+                || lower.contains("не хвата")
+                || lower.contains("чего не")
+                || lower.contains("что ещ")
+                || lower.contains("какие ещ")
+                || lower.contains("предлож")
+                || lower.contains("рекоменд");
     }
 
     private String buildStepDetail(Step step) {

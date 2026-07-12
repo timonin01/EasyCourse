@@ -7,12 +7,15 @@ import org.core.domain.Course;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.course.*;
 import org.core.dto.agent.tools.*;
+import org.core.enums.CourseAgentMode;
 import org.core.enums.LlmModel;
 import org.core.exception.exceptions.YandexGptException;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.batch.BatchStepParser;
 import org.core.service.agent.course.DeleteActionMetadataService;
+import org.core.service.agent.course.tools.handler.AnswerQuestionHandler;
 import org.core.service.agent.course.tools.handler.CourseToolExecutor;
+import org.core.service.agent.course.tools.util.AgentStepResponseParser;
 import org.core.service.agent.course.tools.util.CoursePlanMessageBuilder;
 import org.core.service.agent.course.tools.util.ToolArgsHelper;
 import org.core.service.agent.llmProvider.LlmProvider;
@@ -34,10 +37,15 @@ public class CourseAgentLoop {
     @Value("${course.agent.tools.prompt}")
     private String toolsPromptKey;
 
+    @Value("${course.agent.tools.ask.prompt}")
+    private String askToolsPromptKey;
+
     @Value("${course.agent.max.tokens}")
     private int agentMaxTokens;
 
     private final CourseToolExecutor toolExecutor;
+    private final AnswerQuestionHandler answerQuestionHandler;
+    private final AgentStepResponseParser agentStepResponseParser;
     private final CoursePlanMessageBuilder coursePlanMessageBuilder;
     private final SystemPromptService systemPromptService;
     private final LlmModelConfig llmModelConfig;
@@ -47,6 +55,8 @@ public class CourseAgentLoop {
     private final DeleteActionMetadataService deleteMetadataService;
 
     public CourseAgentLoop(CourseToolExecutor toolExecutor,
+                           AnswerQuestionHandler answerQuestionHandler,
+                           AgentStepResponseParser agentStepResponseParser,
                            CoursePlanMessageBuilder coursePlanMessageBuilder,
                            SystemPromptService systemPromptService,
                            LlmModelConfig llmModelConfig,
@@ -55,6 +65,8 @@ public class CourseAgentLoop {
                            DeleteActionMetadataService deleteMetadataService,
                            @Qualifier("yandexProvider") LlmProvider llmProvider) {
         this.toolExecutor = toolExecutor;
+        this.answerQuestionHandler = answerQuestionHandler;
+        this.agentStepResponseParser = agentStepResponseParser;
         this.coursePlanMessageBuilder = coursePlanMessageBuilder;
         this.systemPromptService = systemPromptService;
         this.llmModelConfig = llmModelConfig;
@@ -64,9 +76,22 @@ public class CourseAgentLoop {
         this.llmProvider = llmProvider;
     }
 
-    public CourseAgentResponse run(Course course, Long userId, String sessionId, String userInput, LlmModel llmModel, List<ChatMessage> history) {
-        CourseAgentContext courseAgentContext = new CourseAgentContext(course, userId, sessionId, userInput, llmModel, history);
+    public CourseAgentResponse run(Course course, Long userId, String sessionId, String userInput,
+                                   LlmModel llmModel, CourseAgentMode agentMode, List<ChatMessage> history) {
+        CourseAgentContext courseAgentContext = new CourseAgentContext(
+                course, userId, sessionId, userInput, llmModel, agentMode, history);
+        if (courseAgentContext.isAskMode()) {
+            return runAskMode(courseAgentContext);
+        }
         return runLoop(courseAgentContext, new ArrayList<>());
+    }
+
+    private CourseAgentResponse runAskMode(CourseAgentContext courseAgentContext) {
+        CourseToolResult toolResult = answerQuestionHandler.handleAnswerQuestion(courseAgentContext, Map.of());
+        if (toolResult.isImmediateExit() && toolResult.getImmediateResponse() != null) {
+            return toolResult.getImmediateResponse();
+        }
+        return CourseAgentResponse.error("Не удалось сформировать ответ. Уточните вопрос.");
     }
 
     private CourseAgentResponse runLoop(CourseAgentContext courseAgentContext, List<ChatMessage> contextLoopMessages) {
@@ -100,6 +125,12 @@ public class CourseAgentLoop {
                                 .message(firstNonBlank(message, "Готово."))
                                 .build();
                     }
+                    if (courseAgentContext.isAskMode()) {
+                        return CourseAgentResponse.builder()
+                                .action(CourseAgentAction.INFO_ANSWER)
+                                .message("В режиме «Спросить» изменения недоступны. Переключитесь в режим «Редактировать».")
+                                .build();
+                    }
                     return showPlan(courseAgentContext, firstNonBlank(message, null));
                 }
 
@@ -119,12 +150,16 @@ public class CourseAgentLoop {
 
     public CourseAgentResponse resume(Course course, Long userId, String sessionId,
                                       AgentResumeContext resumeContext, EntityCandidateDTO candidate,
-                                      LlmModel llmModel, List<ChatMessage> history) {
+                                      LlmModel llmModel, CourseAgentMode agentMode, List<ChatMessage> history) {
         if (resumeContext == null || resumeContext.getPendingTool() == null) {
             return CourseAgentResponse.error("Нет контекста для продолжения");
         }
 
-        CourseAgentContext courseAgentContext = new CourseAgentContext(course, userId, sessionId, resumeContext.getUserInput(), llmModel, history);
+        CourseAgentMode effectiveMode = resumeContext.getAgentMode() != null
+                ? resumeContext.getAgentMode()
+                : agentMode;
+        CourseAgentContext courseAgentContext = new CourseAgentContext(
+                course, userId, sessionId, resumeContext.getUserInput(), llmModel, effectiveMode, history);
         if (resumeContext.getCollectedActions() != null) {
             courseAgentContext.getPendingActions().addAll(resumeContext.getCollectedActions());
         }
@@ -160,6 +195,7 @@ public class CourseAgentLoop {
                     .loopMessages(new ArrayList<>(loopMessages))
                     .userInput(courseAgentContext.getUserInput())
                     .clarificationMessage(toolResult.getClarificationMessage())
+                    .agentMode(courseAgentContext.getAgentMode())
                     .build();
             return CourseAgentResponse.clarify(
                     toolResult.getClarificationMessage(),
@@ -175,7 +211,8 @@ public class CourseAgentLoop {
     }
 
     private AgentStepResponse callAgentLlm(CourseAgentContext courseAgentContext, List<ChatMessage> loopMessages) {
-        String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(toolsPromptKey);
+        String promptKey = courseAgentContext.isAskMode() ? askToolsPromptKey : toolsPromptKey;
+        String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(promptKey);
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(ChatMessage.builder().role("system").content(systemPrompt).build());
         messages.addAll(courseAgentContext.getHistory());
@@ -186,9 +223,8 @@ public class CourseAgentLoop {
 
         String modelUri = courseAgentContext.getLlmModel() != null ? llmModelConfig.getModelUri(courseAgentContext.getLlmModel()) : null;
         String aiResponse = llmProvider.chat(messages, modelUri, agentMaxTokens);
-        String json = batchStepParser.extractJsonFromResponse(aiResponse);
         try {
-            return objectMapper.readValue(json, AgentStepResponse.class);
+            return agentStepResponseParser.parse(aiResponse);
         } catch (Exception ex) {
             log.error("Failed to parse agent step response: {}", ex.getMessage());
             throw new YandexGptException("Не удалось разобрать ответ агента: " + ex.getMessage());

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.core.domain.Course;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.course.*;
+import org.core.enums.CourseAgentMode;
 import org.core.enums.LlmModel;
 import org.core.service.agent.course.tools.CourseAgentLoop;
 import org.core.service.agent.course.tools.util.CoursePlanHelper;
@@ -27,18 +28,19 @@ public class CourseAgentService {
     private final CoursePlanExecutionService planExecutionService;
     private final CourseStepModificationService stepModificationService;
 
-    public CourseAgentResponse handleChat(Long courseId, Long userId, String sessionId, String userInput, LlmModel llmModel) {
+    public CourseAgentResponse handleChat(Long courseId, Long userId, String sessionId, String userInput, LlmModel llmModel, CourseAgentMode agentMode) {
         Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         List<ChatMessage> history = memoryService.getLlmHistory(userId, courseId, sessionId);
         memoryService.saveUserMessage(userId, courseId, sessionId, userInput);
 
-        CourseAgentResponse response = agentLoop.run(course, userId, sessionId, userInput, llmModel, history);
+        CourseAgentResponse response = agentLoop.run(
+                course, userId, sessionId, userInput, llmModel, agentMode, history);
         memoryService.saveAssistantResponse(userId, courseId, sessionId, response);
         return response;
     }
 
     public CourseAgentResponse handleCandidate(Long courseId, Long userId, String sessionId,
-                                               CourseAgentCandidateRequest request, LlmModel llmModel) {
+                                               CourseAgentCandidateRequest request, LlmModel llmModel, CourseAgentMode agentMode) {
         Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         List<ChatMessage> history = memoryService.getLlmHistory(userId, courseId, sessionId);
         if (request != null && request.getCandidate() != null) {
@@ -48,7 +50,7 @@ public class CourseAgentService {
         CourseAgentResponse response = agentLoop.resume(course, userId, sessionId,
                 request == null ? null : request.getResumeContext(),
                 request == null ? null : request.getCandidate(),
-                llmModel, history);
+                llmModel, agentMode, history);
         memoryService.saveAssistantResponse(userId, courseId, sessionId, response);
         return response;
     }

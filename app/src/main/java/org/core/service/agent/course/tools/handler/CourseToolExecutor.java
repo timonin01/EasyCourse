@@ -48,6 +48,16 @@ public class CourseToolExecutor {
         CourseToolName toolName = CourseToolName.parse(toolCall.getName());
         Map<String, Object> args = toolCall.getArgs() == null ? Map.of() : toolCall.getArgs();
 
+        if (courseAgentContext.isAskMode()) {
+            if (toolName.isMutationTool()) {
+                return CourseToolResult.fail(
+                        "В режиме «Спросить» изменения недоступны. Переключитесь в режим «Редактировать».");
+            }
+            if (toolName == CourseToolName.FINISH) {
+                return CourseToolResult.ok("finish");
+            }
+        }
+
         checkCourseSnapshot(courseAgentContext);
 
         return switch (toolName) {
