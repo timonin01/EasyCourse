@@ -324,21 +324,20 @@ export interface ApiError {
 // Course Agent (агентский режим уровня курса)
 // ---------------------------------------------------------------------------
 
-export type CourseAgentIntent =
+export type PlanActionType =
   | 'CREATE_SECTION'
-  | 'CREATE_LESSON'
+  | 'CREATE_LESSONS'
   | 'CREATE_STEPS'
-  | 'MODIFY_STEP'
   | 'DELETE_SECTION'
   | 'DELETE_LESSON'
-  | 'DELETE_STEP'
-  | 'UNKNOWN';
+  | 'DELETE_STEP';
 
 export type CourseAgentAction =
   | 'NEED_CLARIFICATION'
   | 'SHOW_PLAN'
   | 'PLAN_CANCELLED'
   | 'DRAFT_READY'
+  | 'INFO_ANSWER'
   | 'STEP_MODIFIED'
   | 'ENTITY_DELETED'
   | 'ERROR';
@@ -354,18 +353,35 @@ export interface CourseAgentSectionPlan {
   lessons: CourseAgentLessonPlan[];
 }
 
-export interface CoursePlanDTO {
-  intent: CourseAgentIntent;
-  message?: string;
+export interface PlanActionDTO {
+  type: PlanActionType;
   targetSectionId?: number;
   targetSectionTitle?: string;
   targetLessonId?: number;
   targetLessonTitle?: string;
   targetStepId?: number;
   targetStepTitle?: string;
+  /** Synced entities will also be removed on Stepik when the plan is confirmed. */
+  deleteFromStepik?: boolean;
+  cascadeLessonCount?: number;
+  cascadeStepCount?: number;
   section?: CourseAgentSectionPlan;
   lessons?: CourseAgentLessonPlan[];
   steps?: CountStepDTO[];
+}
+
+export interface AgentResumeContext {
+  pendingTool?: string;
+  pendingArgs?: Record<string, unknown>;
+  collectedActions?: PlanActionDTO[];
+  loopMessages?: ChatMessage[];
+  userInput?: string;
+  clarificationMessage?: string;
+}
+
+export interface CoursePlanDTO {
+  message?: string;
+  actions?: PlanActionDTO[];
 }
 
 export interface EntityCandidate {
@@ -376,10 +392,10 @@ export interface EntityCandidate {
 
 export interface CourseAgentResponse {
   action: CourseAgentAction;
-  intent?: CourseAgentIntent;
   message?: string;
   plan?: CoursePlanDTO;
   candidates?: EntityCandidate[];
+  resumeContext?: AgentResumeContext;
   createdSectionIds?: number[];
   createdLessonIds?: number[];
   createdStepIds?: number[];

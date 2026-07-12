@@ -41,7 +41,7 @@ export function extractApiErrorMessage(error: unknown, fallback: string): string
   }
 
   if (isNetworkError(error)) {
-    return 'Сервер недоступен. Проверьте, что backend запущен (Docker: порт 80, локально: 8080).';
+    return 'Сервер недоступен. Запустите Docker (docker compose up -d) и проверьте прокси Vite → http://127.0.0.1:8081';
   }
 
   if (!error || typeof error !== 'object' || !('response' in error)) {
@@ -60,4 +60,13 @@ export function extractApiErrorMessage(error: unknown, fallback: string): string
   }
 
   return fallback;
+}
+
+/** 404 от Spring с UserNotFoundException, а не от nginx/Apache при неверном proxy. */
+export function isBackendUserNotFound(error: unknown): boolean {
+  if (getApiErrorStatus(error) !== 404) {
+    return false;
+  }
+  const message = extractApiErrorMessage(error, '').toLowerCase();
+  return message.includes('user was not found') || message.includes('user not found');
 }

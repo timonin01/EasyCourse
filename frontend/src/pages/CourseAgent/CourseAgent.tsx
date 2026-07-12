@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { CSSProperties } from 'react';
+import toast from 'react-hot-toast';
+import { stepsApi } from '../../api';
+import type { Step } from '../../types';
 import { MainLayout } from '../../components/Layout';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { useResizableWidth } from '../../hooks/useResizableWidth';
 import { CourseAgentChatPanel } from './components/CourseAgentChatPanel';
 import { CourseTreePanel } from './components/CourseTreePanel';
+import { StepPreviewModal } from './components/StepPreviewModal';
 import type { CourseTreeSelection } from './types';
 import { useCourseAgent } from './useCourseAgent';
 import { useCourseStructure } from './useCourseStructure';
 import { buildContextPrompt } from './utils/contextPrompt';
+import { resolveTreeNode } from './utils/resolveTreeNode';
 
 export function CourseAgent() {
   const agent = useCourseAgent();
@@ -19,6 +24,9 @@ export function CourseAgent() {
   const structure = useCourseStructure(agent.selectedCourseId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [treeSelection, setTreeSelection] = useState<CourseTreeSelection | null>(null);
+  const [previewStep, setPreviewStep] = useState<Step | null>(null);
+  const [previewStepLoading, setPreviewStepLoading] = useState(false);
+  const [stepModalOpen, setStepModalOpen] = useState(false);
 
   const { width: treeWidth, isResizing, startResize } = useResizableWidth({
     storageKey: 'course-agent-tree-width',
@@ -42,14 +50,18 @@ export function CourseAgent() {
       return;
     }
 
-    if (agent.pendingPlan?.targetSectionId) {
-      structure.expandToNode('section', agent.pendingPlan.targetSectionId);
-    }
-    if (agent.pendingPlan?.targetLessonId) {
-      structure.expandToNode('lesson', agent.pendingPlan.targetLessonId);
-    }
-    if (agent.pendingPlan?.targetStepId) {
-      structure.expandToNode('step', agent.pendingPlan.targetStepId);
+    if (agent.pendingPlan?.actions) {
+      for (const action of agent.pendingPlan.actions) {
+        if (action.targetSectionId) {
+          structure.expandToNode('section', action.targetSectionId);
+        }
+        if (action.targetLessonId) {
+          structure.expandToNode('lesson', action.targetLessonId);
+        }
+        if (action.targetStepId) {
+          structure.expandToNode('step', action.targetStepId);
+        }
+      }
     }
     for (const candidate of agent.candidates) {
       structure.expandToNode(candidate.type, candidate.id);
@@ -93,9 +105,52 @@ export function CourseAgent() {
   const handleSelectNode = useCallback((selection: CourseTreeSelection) => {
     setTreeSelection(selection);
     structure.expandToNode(selection.type, selection.id);
+
+    if (selection.type === 'step') {
+      setStepModalOpen(true);
+      setPreviewStepLoading(true);
+      void stepsApi.getStep(selection.id)
+        .then(setPreviewStep)
+        .catch((error) => {
+          console.error('Failed to load step preview:', error);
+          toast.error('Не удалось загрузить содержимое шага');
+          setPreviewStep(null);
+          setStepModalOpen(false);
+        })
+        .finally(() => setPreviewStepLoading(false));
+      return;
+    }
+
+    setStepModalOpen(false);
+    setPreviewStep(null);
     const context = buildContextPrompt(selection, structure.sections);
     agent.appendInputContext(context);
   }, [agent.appendInputContext, structure.expandToNode, structure.sections]);
+
+  const handleClosePreview = useCallback(() => {
+    setStepModalOpen(false);
+    setPreviewStep(null);
+    setPreviewStepLoading(false);
+    if (treeSelection?.type === 'step') {
+      setTreeSelection(null);
+    }
+  }, [treeSelection?.type]);
+
+  const handleAddStepToChat = useCallback(() => {
+    if (!treeSelection || treeSelection.type !== 'step') {
+      return;
+    }
+    const context = buildContextPrompt(treeSelection, structure.sections);
+    agent.appendInputContext(context);
+    handleClosePreview();
+  }, [agent.appendInputContext, handleClosePreview, structure.sections, treeSelection]);
+
+  const previewMeta = useMemo(() => {
+    if (!treeSelection || treeSelection.type !== 'step') {
+      return {};
+    }
+    return resolveTreeNode(treeSelection, structure.sections);
+  }, [structure.sections, treeSelection]);
 
   const handleRefreshStructure = useCallback(() => {
     void structure.loadStructure();
@@ -113,7 +168,7 @@ export function CourseAgent() {
           <PageHeader
             title="AI-агент курса"
             description="Опишите задачу в чате или выберите элемент в структуре курса справа"
-            icon={<Sparkles className="h-5 w-5" />}
+            icon={<Bot className="h-5 w-5" />}
             iconAccent="purple"
             className="mb-0"
           />
@@ -124,6 +179,9 @@ export function CourseAgent() {
               value={agent.selectedCourseId ? String(agent.selectedCourseId) : ''}
               onChange={(event) => {
                 setTreeSelection(null);
+                setPreviewStep(null);
+                setPreviewStepLoading(false);
+                setStepModalOpen(false);
                 agent.setSelectedCourseId(event.target.value ? Number(event.target.value) : null);
               }}
             />
@@ -138,6 +196,7 @@ export function CourseAgent() {
               pendingPlan={agent.pendingPlan}
               isLoading={agent.isLoading}
               isExecuting={agent.isExecuting}
+              loadingStatus={agent.loadingStatus}
               input={agent.input}
               messagesEndRef={messagesEndRef}
               onInputChange={agent.setInput}
@@ -147,6 +206,7 @@ export function CourseAgent() {
               onConfirmPlan={() => void agent.confirmPlan()}
               onCancelPlan={() => void agent.cancelPlan()}
               onChangePlan={agent.updatePlan}
+              onResetSession={() => void agent.resetSession()}
             />
           </div>
 
@@ -186,6 +246,16 @@ export function CourseAgent() {
           </div>
         </div>
       </div>
+
+      <StepPreviewModal
+        isOpen={stepModalOpen}
+        step={previewStep}
+        isLoading={previewStepLoading}
+        sectionTitle={previewMeta.sectionTitle}
+        lessonTitle={previewMeta.lessonTitle}
+        onClose={handleClosePreview}
+        onAddToChat={handleAddStepToChat}
+      />
     </MainLayout>
   );
 }

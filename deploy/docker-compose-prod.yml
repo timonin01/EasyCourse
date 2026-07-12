@@ -18,6 +18,8 @@ services:
       timeout: 20s
       retries: 10
       start_period: 40s
+    ports:
+      - "127.0.0.1:3306:3306"
 
   redis:
     image: redis:7-alpine
@@ -34,7 +36,7 @@ services:
 
   easy-course-app:
     build:
-      context: ../app
+      context: .
       dockerfile: Dockerfile
     image: easy-course-app:prod
     container_name: easycourse-app
@@ -60,7 +62,7 @@ services:
 
   easy-course-frontend:
     build:
-      context: ..
+      context: .
       dockerfile: frontend/Dockerfile
     image: easy-course-frontend:prod
     container_name: easycourse-frontend
@@ -75,8 +77,9 @@ services:
       - "443:443"
     volumes:
       - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - /dev/null:/etc/nginx/conf.d/default.conf:ro
       - certbot_www:/var/www/certbot:ro
-      - certbot_certs:/etc/letsencrypt:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - easy-course-app
       - easy-course-frontend
@@ -86,7 +89,7 @@ services:
     container_name: easycourse-certbot
     volumes:
       - certbot_www:/var/www/certbot
-      - certbot_certs:/etc/letsencrypt
+      - /etc/letsencrypt:/etc/letsencrypt
     entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
     restart: unless-stopped
 
@@ -94,4 +97,3 @@ volumes:
   mysql_data:
   redis_data:
   certbot_www:
-  certbot_certs:

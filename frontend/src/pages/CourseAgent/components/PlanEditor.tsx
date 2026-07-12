@@ -113,15 +113,28 @@ export function LessonPlanEditor({
     <div className="space-y-3">
       {lessons.map((lesson, lessonIndex) => (
         <div key={lessonIndex} className="rounded-lg border border-dark-700 bg-dark-900 p-3">
-          <Input
-            label={`Урок ${lessonIndex + 1}`}
-            value={lesson.title}
-            disabled={disabled}
-            onChange={(event) => onChange(lessons.map((item, index) => (
-              index === lessonIndex ? { ...item, title: event.target.value } : item
-            )))}
-            className="py-2 text-sm"
-          />
+          <div className="mb-2 flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <Input
+                label={`Урок ${lessonIndex + 1}`}
+                value={lesson.title}
+                disabled={disabled}
+                onChange={(event) => onChange(lessons.map((item, index) => (
+                  index === lessonIndex ? { ...item, title: event.target.value } : item
+                )))}
+                className="py-2 text-sm"
+              />
+            </div>
+            <button
+              type="button"
+              aria-label={`Удалить урок ${lessonIndex + 1}`}
+              disabled={disabled || lessons.length <= 1}
+              onClick={() => onChange(lessons.filter((_, index) => index !== lessonIndex))}
+              className="mt-6 flex h-9 w-8 shrink-0 items-center justify-center rounded-lg text-dark-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
           <div className="mt-3">
             <StepPlanEditor
               steps={lesson.steps ?? []}
@@ -133,6 +146,21 @@ export function LessonPlanEditor({
           </div>
         </div>
       ))}
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={<Plus />}
+        disabled={disabled}
+        onClick={() => onChange([
+          ...lessons,
+          {
+            title: `Урок ${lessons.length + 1}`,
+            steps: [{ type: 'text', count: 1, specificInput: 'По теме урока', useSummarizedEnabled: false }],
+          },
+        ])}
+      >
+        Добавить урок
+      </Button>
     </div>
   );
 }

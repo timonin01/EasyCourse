@@ -10,8 +10,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        // Docker: nginx на :80 → app-1/app-2. Локальный jar без Docker — :8080
-        target: process.env.VITE_DEV_API_PROXY ?? 'http://localhost:80',
+        target: process.env.VITE_DEV_API_PROXY ?? 'http://127.0.0.1:8081',
         changeOrigin: true,
         timeout: 600_000,
         proxyTimeout: 600_000,
