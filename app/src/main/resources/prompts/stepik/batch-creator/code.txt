@@ -10,7 +10,7 @@
     "options": null,
     "source": {
       "code": "def generate():\n    return []\n\ndef check(reply, clue):\n    return reply.strip() == clue.strip()",
-      "templates_data": "::java17",
+      "templates_data": "::python3",
       "test_cases": [["ввод для stdin", "ожидаемый stdout"]],
       "execution_time_limit": 5,
       "execution_memory_limit": 256,
@@ -26,18 +26,18 @@
   }
 ]
 
-ПРИМЕР правильного ответа для 2 заданий:
+ПРИМЕР правильного ответа для 2 заданий (Python-курс):
 
 [
   {
     "name": "code",
-    "text": "Напишите функцию, которая принимает два числа и возвращает их сумму.",
+    "text": "Напишите функцию, которая принимает список целых чисел и возвращает второй по величине элемент. Если элементов меньше двух — верните None.",
     "video": null,
     "options": null,
     "source": {
       "code": "def generate():\n    return []\n\ndef check(reply, clue):\n    return reply.strip() == clue.strip()",
-      "templates_data": "::java17",
-      "test_cases": [["2 3", "5"], ["5 7", "12"]],
+      "templates_data": "::python3",
+      "test_cases": [["3 1 4 1 5", "4"], ["10", "None"], ["5 5 5 5", "5"]],
       "execution_time_limit": 5,
       "execution_memory_limit": 256,
       "samples_count": 1,
@@ -52,13 +52,13 @@
   },
   {
     "name": "code",
-    "text": "Напишите функцию для вычисления факториала числа n.",
+    "text": "Реализуйте функцию, которая группирует слова из строки по первой букве (регистр не важен) и возвращает словарь.",
     "video": null,
     "options": null,
     "source": {
       "code": "def generate():\n    return []\n\ndef check(reply, clue):\n    return reply.strip() == clue.strip()",
-      "templates_data": "::java17",
-      "test_cases": [["3", "6"], ["5", "120"]],
+      "templates_data": "::python3",
+      "test_cases": [["hello world apple", "{'h': ['hello'], 'w': ['world'], 'a': ['apple']}"]],
       "execution_time_limit": 5,
       "execution_memory_limit": 256,
       "samples_count": 1,
@@ -75,12 +75,14 @@
 
 КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА:
 1. Верни JSON массив с указанным количеством объектов
-2. source.code — ВСЕГДА на Python, используй def (не func)
-3. source.code — дефолтный чекер: generate() return [], check() с reply.strip() == clue.strip()
-4. source.test_cases — ОБЯЗАТЕЛЬНО, минимум один элемент [["stdin", "stdout"]]
-5. stdin — это СЫРЫЕ ДАННЫЕ (числа/строки), НЕ описания типа "create object"
-6. ТОЛЬКО JSON массив, который начинается с [ и заканчивается ]. НЕ оборачивай массив в объект типа {"json": [...]}. НЕ используй markdown ```. НЕ добавляй дополнительный текст
-7. Каждое задание уникально
-8. Сохрани ВСЮ структуру source - не упрощай!
+2. source.code — ВСЕГДА на Python (def generate/check), это чекер Stepik
+3. source.templates_data — язык СТУДЕНТА: бери из «Язык программирования курса» в user-сообщении. Python → ::python3, Java → ::java21. НЕ смешивай языки в одном batch.
+4. source.test_cases — ОБЯЗАТЕЛЬНО, минимум 2 элемента с разными входами
+5. stdin — СЫРЫЕ ДАННЫЕ, не описания
+6. ТОЛЬКО JSON массив без markdown
+7. Каждое задание уникально и средней+ сложности — не «сложи два числа»
+8. СЛОЖНОСТЬ: проверяй понимание темы урока; минимум 2–3 test_cases с граничными случаями
+9. ЯЗЫК: templates_data = язык из «Язык программирования курса» в user-сообщении
+10. Сохрани ВСЮ структуру source
 
-КРИТИЧЕСКИ ВАЖНО: ВСЕГДА возвращай валидный JSON массив, даже если запрос кажется недостаточно конкретным. НЕ задавай уточняющих вопросов. Если тема указана обобщенно (например, "по Java core"), создай задания на любые подходящие темы из этой области. НЕ возвращай текст вместо JSON.
+КРИТИЧЕСКИ ВАЖНО: ВСЕГДА возвращай валидный JSON массив. НЕ задавай уточняющих вопросов. НЕ возвращай текст вместо JSON.
