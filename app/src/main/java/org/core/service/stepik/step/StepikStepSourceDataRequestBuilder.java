@@ -44,6 +44,7 @@ public class StepikStepSourceDataRequestBuilder {
     private final CodeTasksStepRequestBlockValidator codeValidator;
     private final MatchingTasksStepRequestBlockValidator matchingValidator;
     private final MathStepRequestBlockValidator mathValidator;
+    private final StepikBlockJsonNormalizer stepikBlockJsonNormalizer;
 
     public StepikStepSourceRequestData createRequestDataForCreate(Step step) {
         StepikStepSourceRequestData requestData = new StepikStepSourceRequestData();
@@ -55,7 +56,8 @@ public class StepikStepSourceDataRequestBuilder {
 
         try {
             if (step.getStepikBlockData() != null && !step.getStepikBlockData().trim().isEmpty()) {
-                StepikBlockRequest stepikBlockRequest = objectMapper.readValue(step.getStepikBlockData(), StepikBlockRequest.class);
+                String normalizedJson = stepikBlockJsonNormalizer.normalize(step.getStepikBlockData(), step.getType());
+                StepikBlockRequest stepikBlockRequest = objectMapper.readValue(normalizedJson, StepikBlockRequest.class);
 
                 fillBlanksValidator.validateAndFixFillBlanksBlock(stepikBlockRequest, step.getId());
                 stringValidator.validateAndFixStringBlock(stepikBlockRequest, step.getId());
@@ -103,7 +105,8 @@ public class StepikStepSourceDataRequestBuilder {
 
         try {
             if (step.getStepikBlockData() != null && !step.getStepikBlockData().trim().isEmpty()) {
-                StepikBlockRequest stepikBlockRequest = objectMapper.readValue(step.getStepikBlockData(), StepikBlockRequest.class);
+                String normalizedJson = stepikBlockJsonNormalizer.normalize(step.getStepikBlockData(), step.getType());
+                StepikBlockRequest stepikBlockRequest = objectMapper.readValue(normalizedJson, StepikBlockRequest.class);
 
                 fillBlanksValidator.validateAndFixFillBlanksBlock(stepikBlockRequest, step.getId());
                 stringValidator.validateAndFixStringBlock(stepikBlockRequest, step.getId());

@@ -10,6 +10,7 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.enterWord.fillBlanks.request.StepikBlockFillBlanksRequest;
 import org.core.dto.stepik.step.enterWord.fillBlanks.request.StepikFillBlanksComponentRequest;
 import org.core.dto.stepik.step.enterWord.fillBlanks.request.StepikFillBlanksOptionRequest;
+import org.core.service.stepik.step.validator.FillBlanksStepRequestBlockValidator;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.List;
 public class FillBlanksStepParser {
 
     private final ObjectMapper objectMapper;
+    private final FillBlanksStepRequestBlockValidator fillBlanksValidator;
 
     public StepikBlockRequest parseFillBlanksRequest(String json) {
         try {
@@ -37,6 +39,7 @@ public class FillBlanksStepParser {
             if (!validateFillBlanksRequest(request)) {
                 throw new IllegalArgumentException("Invalid fill-blanks request structure");
             }
+            fillBlanksValidator.validateAndFixFillBlanksBlock(request, null);
             return request;
         } catch (Exception e) {
             log.error("Failed to parse fill-blanks request: {}", e.getMessage(), e);
@@ -50,7 +53,9 @@ public class FillBlanksStepParser {
         }
         
         for (StepikFillBlanksComponentRequest component : request.getSource().getComponents()) {
-            if ("blank".equalsIgnoreCase(component.getType()) && component.getOptions() != null) {
+            String componentType = component.getType() != null ? component.getType().trim().toLowerCase() : "";
+            if (("blank".equals(componentType) || "input".equals(componentType) || "select".equals(componentType))
+                    && component.getOptions() != null) {
                 boolean hasAnyCorrect = component.getOptions().stream()
                         .anyMatch(o -> Boolean.TRUE.equals(o.getIs_correct()));
                 
@@ -143,7 +148,9 @@ public class FillBlanksStepParser {
                     log.warn("Fill-blanks validation failed: text component has empty text");
                     return false;
                 }
-            } else if ("blank".equalsIgnoreCase(component.getType())) {
+            } else if ("blank".equalsIgnoreCase(component.getType())
+                    || "input".equalsIgnoreCase(component.getType())
+                    || "select".equalsIgnoreCase(component.getType())) {
                 List<StepikFillBlanksOptionRequest> options = component.getOptions();
                 if (options == null || options.isEmpty()) {
                     log.warn("Fill-blanks validation failed: blank component has no options");
