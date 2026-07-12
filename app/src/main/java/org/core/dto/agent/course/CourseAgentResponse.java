@@ -17,11 +17,11 @@ import java.util.List;
 public class CourseAgentResponse {
 
     private CourseAgentAction action;
-    private CourseAgentIntent intent;
     private String message;
     private CoursePlanDTO plan;
 
     private List<EntityCandidateDTO> candidates;
+    private AgentResumeContext resumeContext;
 
     private List<Long> createdSectionIds;
     private List<Long> createdLessonIds;
@@ -37,12 +37,12 @@ public class CourseAgentResponse {
     }
 
     public static CourseAgentResponse clarify(String message, List<EntityCandidateDTO> candidates,
-                                              CourseAgentIntent intent) {
+                                              AgentResumeContext resumeContext) {
         return CourseAgentResponse.builder()
                 .action(CourseAgentAction.NEED_CLARIFICATION)
-                .intent(intent)
                 .message(message)
                 .candidates(candidates)
+                .resumeContext(resumeContext)
                 .build();
     }
 }

@@ -1,8 +1,6 @@
-package org.core.dto.agent.course;
+package org.core.dto.agent.tools;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,13 +11,10 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CoursePlanDTO {
+public class AgentStepResponse {
 
+    private String thought;
+    private List<CourseToolCall> toolCalls = new ArrayList<>();
     private String message;
-
-    @Builder.Default
-    private List<PlanActionDTO> actions = new ArrayList<>();
 }

@@ -3,14 +3,11 @@ package org.core.service.agent.course;
 import lombok.RequiredArgsConstructor;
 import org.core.domain.Course;
 import org.core.dto.agent.ChatMessage;
-import org.core.dto.agent.course.CourseAgentAction;
-import org.core.dto.agent.course.CourseAgentCandidateRequest;
-import org.core.dto.agent.course.CourseAgentIntent;
-import org.core.dto.agent.course.CourseAgentResponse;
-import org.core.dto.agent.course.CoursePlanDTO;
-import org.core.dto.ai.AiMessageHistoryDTO;
+import org.core.dto.agent.course.*;
 import org.core.enums.LlmModel;
-import org.core.service.agent.course.router.CourseIntentClassifier;
+import org.core.service.agent.course.tools.CourseAgentLoop;
+import org.core.service.agent.course.tools.util.CoursePlanHelper;
+import org.core.service.agent.course.tools.util.CoursePlanMessageBuilder;
 import org.core.util.UserAccessService;
 import org.springframework.stereotype.Service;
 
@@ -20,56 +17,38 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CourseAgentService {
 
-    private final CourseIntentClassifier intentClassifier;
-    private final CourseAgentPlanningService planningService;
-    private final CourseAgentClarificationService clarificationService;
-    private final CourseStepModificationService stepModificationService;
-    private final CourseDraftGenerationService draftGenerationService;
-    private final CourseAgentDeletionService deletionService;
+    private final CourseAgentLoop agentLoop;
+    private final CoursePlannerService plannerService;
     private final CoursePlanValidator planValidator;
+    private final CoursePlanHelper coursePlanHelper;
+    private final CoursePlanMessageBuilder coursePlanMessageBuilder;
     private final CourseAgentMemoryService memoryService;
     private final UserAccessService userAccessService;
+    private final CoursePlanExecutionService planExecutionService;
+    private final CourseStepModificationService stepModificationService;
 
-    public CourseAgentResponse handleChat(Long courseId, Long userId, String sessionId,
-                                          String userInput, LlmModel llmModel) {
+    public CourseAgentResponse handleChat(Long courseId, Long userId, String sessionId, String userInput, LlmModel llmModel) {
         Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         List<ChatMessage> history = memoryService.getLlmHistory(userId, courseId, sessionId);
         memoryService.saveUserMessage(userId, courseId, sessionId, userInput);
-        CourseIntentResult intent = intentClassifier.classify(userInput, history);
 
-        CourseAgentResponse response = switch (intent.intent()) {
-            case CREATE_SECTION -> planningService.planSection(course, userInput, llmModel, history);
-            case CREATE_LESSON -> planningService.planLessons(
-                    course, intent, userInput, llmModel, history);
-            case CREATE_STEPS -> planningService.planSteps(course, intent, userInput);
-            case MODIFY_STEP -> stepModificationService.modifyByIntent(
-                    course, sessionId, userInput, intent, llmModel, history);
-            case DELETE_SECTION -> deletionService.planDeleteSection(course, intent);
-            case DELETE_LESSON -> deletionService.planDeleteLesson(course, intent);
-            case DELETE_STEP -> deletionService.planDeleteStep(course, intent);
-            case UNKNOWN -> CourseAgentResponse.clarify(
-                    "Не удалось понять запрос. Уточните, что нужно: создать модуль, добавить урок, "
-                            + "добавить шаги в урок, исправить шаг или удалить модуль, урок или шаг.",
-                    List.of(),
-                    CourseAgentIntent.UNKNOWN);
-        };
+        CourseAgentResponse response = agentLoop.run(course, userId, sessionId, userInput, llmModel, history);
         memoryService.saveAssistantResponse(userId, courseId, sessionId, response);
         return response;
     }
 
     public CourseAgentResponse handleCandidate(Long courseId, Long userId, String sessionId,
                                                CourseAgentCandidateRequest request, LlmModel llmModel) {
-        userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
+        Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         List<ChatMessage> history = memoryService.getLlmHistory(userId, courseId, sessionId);
         if (request != null && request.getCandidate() != null) {
-            memoryService.saveUserMessage(
-                    userId,
-                    courseId,
-                    sessionId,
-                    "Выбран вариант: " + request.getCandidate().getLabel());
+            memoryService.saveUserMessage(userId, courseId, sessionId, "Выбран вариант: " + request.getCandidate().getLabel());
         }
-        CourseAgentResponse response = clarificationService.handleCandidate(
-                courseId, userId, sessionId, request, llmModel, history);
+
+        CourseAgentResponse response = agentLoop.resume(course, userId, sessionId,
+                request == null ? null : request.getResumeContext(),
+                request == null ? null : request.getCandidate(),
+                llmModel, history);
         memoryService.saveAssistantResponse(userId, courseId, sessionId, response);
         return response;
     }
@@ -77,49 +56,75 @@ public class CourseAgentService {
     public CourseAgentResponse editPlan(Long courseId, Long userId, String sessionId,
                                         CoursePlanDTO currentPlan, String instruction, LlmModel llmModel) {
         userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
-        if (currentPlan != null && CourseAgentDeletionService.isDeleteIntent(currentPlan.getIntent())) {
+        if (currentPlan != null && coursePlanHelper.hasDeleteActions(currentPlan.getActions())) {
             return CourseAgentResponse.error(
                     "План удаления нельзя изменить через чат. Подтвердите удаление или отмените план.");
         }
         List<ChatMessage> history = memoryService.getLlmHistory(userId, courseId, sessionId);
         memoryService.saveUserMessage(userId, courseId, sessionId, instruction);
-        CourseAgentResponse response = planningService.editPlan(
-                courseId, userId, currentPlan, instruction, llmModel, history);
+
+        planValidator.validate(courseId, userId, currentPlan);
+        CoursePlanDTO editedPlan = plannerService.editPlan(currentPlan, instruction, llmModel, history);
+        planValidator.validate(courseId, userId, editedPlan);
+        if (editedPlan.getMessage() == null || editedPlan.getMessage().isBlank()) {
+            editedPlan.setMessage(coursePlanMessageBuilder.buildSummary(editedPlan.getActions()));
+        }
+
+        CourseAgentResponse response = CourseAgentResponse.builder()
+                .action(CourseAgentAction.SHOW_PLAN)
+                .message(editedPlan.getMessage())
+                .plan(editedPlan)
+                .build();
         memoryService.saveAssistantResponse(userId, courseId, sessionId, response);
         return response;
     }
 
-    public CourseAgentResponse executePlan(Long courseId, Long userId, String sessionId,
-                                           CoursePlanDTO plan) {
+    public CourseAgentResponse executePlan(Long courseId, Long userId, String sessionId, CoursePlanDTO plan) {
         userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
-        if (plan == null || plan.getIntent() == null) {
+        if (plan == null || plan.getActions() == null || plan.getActions().isEmpty()) {
             return CourseAgentResponse.error("Пустой или некорректный план");
         }
         planValidator.validate(courseId, userId, plan);
 
-        if (CourseAgentDeletionService.isDeleteIntent(plan.getIntent())) {
-            CourseAgentResponse response = deletionService.executeDelete(courseId, userId, plan);
-            memoryService.saveAssistantResponse(userId, courseId, sessionId, response);
-            return response;
+        List<PlanActionDTO> deleteActions = plan.getActions().stream()
+                .filter(action -> action != null && coursePlanHelper.isDeleteAction(action.getType()))
+                .toList();
+        List<PlanActionDTO> createActions = plan.getActions().stream()
+                .filter(action -> action != null && coursePlanHelper.isCreateAction(action.getType()))
+                .toList();
+
+        if (!deleteActions.isEmpty()) {
+            planExecutionService.executeDeleteActions(courseId, userId, deleteActions);
         }
 
-        ExecutionDraftResult result =
-                draftGenerationService.executePlan(courseId, userId, sessionId, plan);
+        CourseAgentResponse agentResponse = null;
+        if (!createActions.isEmpty()) {
+            ExecutionDraftResult result = planExecutionService.executeCreateActions(courseId, userId, sessionId, createActions);
+            agentResponse = CourseAgentResponse.builder()
+                    .action(CourseAgentAction.DRAFT_READY)
+                    .message(String.format(
+                            "Готово: создано модулей %d, уроков %d, шагов %d. "
+                                    + "Проверьте черновик и синхронизируйте со Stepik вручную.",
+                            result.sectionIds().size(),
+                            result.lessonIds().size(),
+                            result.stepIds().size()))
+                    .createdSectionIds(result.sectionIds())
+                    .createdLessonIds(result.lessonIds())
+                    .createdStepIds(result.stepIds())
+                    .build();
+        } else if (!deleteActions.isEmpty()) {
+            agentResponse = CourseAgentResponse.builder()
+                    .action(CourseAgentAction.ENTITY_DELETED)
+                    .message(String.format(
+                            "Удалено %d элемент(ов) из черновика курса. Синхронизация со Stepik не выполнялась.",
+                            deleteActions.size()))
+                    .build();
+        } else {
+            return CourseAgentResponse.error("В плане нет действий для выполнения");
+        }
 
-        CourseAgentResponse response = CourseAgentResponse.builder()
-                .action(CourseAgentAction.DRAFT_READY)
-                .message(String.format(
-                        "Готово: создано модулей %d, уроков %d, шагов %d. "
-                                + "Проверьте черновик и синхронизируйте со Stepik вручную.",
-                        result.sectionIds().size(),
-                        result.lessonIds().size(),
-                        result.stepIds().size()))
-                .createdSectionIds(result.sectionIds())
-                .createdLessonIds(result.lessonIds())
-                .createdStepIds(result.stepIds())
-                .build();
-        memoryService.saveAssistantResponse(userId, courseId, sessionId, response);
-        return response;
+        memoryService.saveAssistantResponse(userId, courseId, sessionId, agentResponse);
+        return agentResponse;
     }
 
     public CourseAgentResponse cancelPlan(Long courseId, Long userId, String sessionId) {
@@ -133,7 +138,7 @@ public class CourseAgentService {
     }
 
     public CourseAgentResponse modifyStepById(Long courseId, Long userId, Long stepId,
-                                              String sessionId, String userInput, LlmModel llmModel) {
+                                            String sessionId, String userInput, LlmModel llmModel) {
         userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         List<ChatMessage> history = memoryService.getLlmHistory(userId, courseId, sessionId);
         memoryService.saveUserMessage(userId, courseId, sessionId, userInput);
@@ -148,8 +153,13 @@ public class CourseAgentService {
         return memoryService.getLatestSessionId(userId, courseId).orElse(null);
     }
 
-    public List<AiMessageHistoryDTO> getHistory(Long courseId, Long userId, String sessionId) {
+    public List<org.core.dto.ai.AiMessageHistoryDTO> getHistory(Long courseId, Long userId, String sessionId) {
         userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         return memoryService.getHistory(userId, courseId, sessionId);
+    }
+
+    public void clearSession(Long courseId, Long userId, String sessionId) {
+        userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
+        memoryService.clearSession(userId, courseId, sessionId);
     }
 }

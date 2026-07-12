@@ -2,12 +2,10 @@ package org.core.service.agent.course;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.domain.Course;
 import org.core.domain.Lesson;
 import org.core.domain.Step;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.course.CourseAgentAction;
-import org.core.dto.agent.course.CourseAgentIntent;
 import org.core.dto.agent.course.CourseAgentResponse;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
@@ -35,44 +33,6 @@ public class CourseStepModificationService {
     private final CourseStepTypeMapper stepTypeMapper;
     private final CoursePlanValidator planValidator;
     private final UserAccessService userAccessService;
-
-    public CourseAgentResponse modifyByIntent(Course course, String sessionId, String userInput,
-                                              CourseIntentResult intent, LlmModel llmModel,
-                                              List<ChatMessage> history) {
-        CourseResolution<Lesson> lessonResolution = entityResolver.resolveLesson(course, intent);
-        if (lessonResolution.isAmbiguous()) {
-            return CourseAgentResponse.clarify(
-                    "Уточните, в каком уроке находится шаг:",
-                    lessonResolution.candidates(),
-                    CourseAgentIntent.MODIFY_STEP);
-        }
-        if (!lessonResolution.isFound()) {
-            return CourseAgentResponse.clarify(
-                    "Не нашёл урок с этим шагом. Уточните модуль и урок.",
-                    List.of(),
-                    CourseAgentIntent.MODIFY_STEP);
-        }
-        return modifyByLesson(lessonResolution.value(), sessionId, intent.stepHint(), userInput, llmModel, history);
-    }
-
-    public CourseAgentResponse modifyByLesson(Lesson lesson, String sessionId, String stepHint,
-                                              String userInput, LlmModel llmModel,
-                                              List<ChatMessage> history) {
-        CourseResolution<Step> stepResolution = entityResolver.resolveStep(lesson.getId(), stepHint);
-        if (stepResolution.isAmbiguous()) {
-            return CourseAgentResponse.clarify(
-                    "Уточните, какой именно шаг исправить:",
-                    stepResolution.candidates(),
-                    CourseAgentIntent.MODIFY_STEP);
-        }
-        if (!stepResolution.isFound()) {
-            return CourseAgentResponse.clarify(
-                    "Не нашёл указанный шаг в выбранном уроке.",
-                    List.of(),
-                    CourseAgentIntent.MODIFY_STEP);
-        }
-        return modifyInternal(stepResolution.value().getId(), sessionId, userInput, llmModel, history);
-    }
 
     public CourseAgentResponse modifyById(Long courseId, Long userId, Long stepId, String sessionId,
                                           String userInput, LlmModel llmModel,

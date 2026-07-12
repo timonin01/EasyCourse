@@ -1,4 +1,4 @@
-package org.core.dto.agent.course;
+package org.core.dto.agent.tools;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
@@ -6,14 +6,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CourseAgentCandidateRequest {
+public class CourseToolCall {
 
-    private AgentResumeContext resumeContext;
-    private EntityCandidateDTO candidate;
-    private String originalInput;
+    private String name;
+    private Map<String, Object> args = new HashMap<>();
 }
