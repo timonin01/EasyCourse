@@ -1,12 +1,10 @@
 package org.core.dto.agent.course;
 
-public enum CourseAgentIntent {
+public enum PlanActionType {
     CREATE_SECTION,
-    CREATE_LESSON,
+    CREATE_LESSONS,
     CREATE_STEPS,
-    MODIFY_STEP,
     DELETE_SECTION,
     DELETE_LESSON,
-    DELETE_STEP,
-    UNKNOWN
+    DELETE_STEP
 }

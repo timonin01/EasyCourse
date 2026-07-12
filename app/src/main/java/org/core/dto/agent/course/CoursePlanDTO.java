@@ -6,8 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.core.dto.agent.batchAnalyzer.CountStepDTO;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -18,21 +18,8 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoursePlanDTO {
 
-    private CourseAgentIntent intent;
     private String message;
 
-    private Long targetSectionId;
-    private String targetSectionTitle;
-
-    private Long targetLessonId;
-    private String targetLessonTitle;
-
-    private Long targetStepId;
-    private String targetStepTitle;
-
-    private SectionPlanDTO section;
-
-    private List<LessonPlanDTO> lessons;
-
-    private List<CountStepDTO> steps;
+    @Builder.Default
+    private List<PlanActionDTO> actions = new ArrayList<>();
 }

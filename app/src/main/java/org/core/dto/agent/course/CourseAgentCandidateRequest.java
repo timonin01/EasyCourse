@@ -13,7 +13,7 @@ import lombok.Setter;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CourseAgentCandidateRequest {
 
-    private CourseAgentIntent intent;
+    private AgentResumeContext resumeContext;
     private EntityCandidateDTO candidate;
     private String originalInput;
 }

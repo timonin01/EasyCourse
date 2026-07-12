@@ -6,6 +6,7 @@ public enum CourseAgentAction {
     SHOW_PLAN,
     PLAN_CANCELLED,
     DRAFT_READY,
+    INFO_ANSWER,
     STEP_MODIFIED,
     ENTITY_DELETED,
     ERROR
