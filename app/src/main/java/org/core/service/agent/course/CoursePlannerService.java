@@ -24,7 +24,8 @@ import java.util.List;
 @Slf4j
 public class CoursePlannerService {
 
-    private static final String PLAN_REVISION_PROMPT = "course-agent-plan-revision";
+    @Value("${course.plan.revision.prompt}")
+    private String planRevisionPrompt;
 
     @Value("${course.planner.max.tokens}")
     private int plannerMaxTokens;
@@ -53,12 +54,7 @@ public class CoursePlannerService {
         this.objectMapper = objectMapper;
     }
 
-    public SectionPlanDTO planSection(String courseSnapshot, String userInput, LlmModel llmModel) {
-        return planSection(courseSnapshot, userInput, llmModel, List.of());
-    }
-
-    public SectionPlanDTO planSection(String courseSnapshot, String userInput, LlmModel llmModel,
-                                      List<ChatMessage> history) {
+    public SectionPlanDTO planSection(String courseSnapshot, String userInput, LlmModel llmModel, List<ChatMessage> history) {
         String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(sectionPlannerPrompt);
         String userContent = "СНИМОК КУРСА:\n" + courseSnapshot + "\n\nЗАПРОС ПОЛЬЗОВАТЕЛЯ:\n" + userInput;
         String json = callPlanner(systemPrompt, userContent, llmModel, history);
@@ -72,10 +68,6 @@ public class CoursePlannerService {
             log.error("Failed to parse SectionPlanDTO from planner response: {}", ex.getMessage());
             throw new YandexGptException("Не удалось разобрать план модуля от LLM: " + ex.getMessage());
         }
-    }
-
-    public List<LessonPlanDTO> planLessons(String sectionSnapshot, String userInput, LlmModel llmModel) {
-        return planLessons(sectionSnapshot, userInput, llmModel, List.of());
     }
 
     public List<LessonPlanDTO> planLessons(String sectionSnapshot, String userInput, LlmModel llmModel,
@@ -92,26 +84,18 @@ public class CoursePlannerService {
         }
     }
 
-    public CoursePlanDTO editPlan(CoursePlanDTO currentPlan, String instruction, LlmModel llmModel) {
-        return editPlan(currentPlan, instruction, llmModel, List.of());
-    }
-
-    public CoursePlanDTO editPlan(CoursePlanDTO currentPlan, String instruction, LlmModel llmModel,
-                                  List<ChatMessage> history) {
+    public CoursePlanDTO editPlan(CoursePlanDTO currentPlan, String instruction, LlmModel llmModel, List<ChatMessage> history) {
         try {
-            String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(PLAN_REVISION_PROMPT);
+            String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(planRevisionPrompt);
             String userContent = "ТЕКУЩИЙ ПЛАН:\n"
                     + objectMapper.writeValueAsString(currentPlan)
                     + "\n\nКОРРЕКТИРОВКА ПОЛЬЗОВАТЕЛЯ:\n"
                     + instruction;
             String json = callPlanner(systemPrompt, userContent, llmModel, history);
             CoursePlanDTO editedPlan = objectMapper.readValue(json, CoursePlanDTO.class);
-
-            editedPlan.setIntent(currentPlan.getIntent());
-            editedPlan.setTargetSectionId(currentPlan.getTargetSectionId());
-            editedPlan.setTargetSectionTitle(currentPlan.getTargetSectionTitle());
-            editedPlan.setTargetLessonId(currentPlan.getTargetLessonId());
-            editedPlan.setTargetLessonTitle(currentPlan.getTargetLessonTitle());
+            if (editedPlan.getActions() == null || editedPlan.getActions().isEmpty()) {
+                editedPlan.setActions(currentPlan.getActions());
+            }
             return editedPlan;
         } catch (Exception ex) {
             log.error("Failed to revise course plan: {}", ex.getMessage());
@@ -119,12 +103,7 @@ public class CoursePlannerService {
         }
     }
 
-    private String callPlanner(String systemPrompt, String userContent, LlmModel llmModel) {
-        return callPlanner(systemPrompt, userContent, llmModel, List.of());
-    }
-
-    private String callPlanner(String systemPrompt, String userContent, LlmModel llmModel,
-                               List<ChatMessage> history) {
+    private String callPlanner(String systemPrompt, String userContent, LlmModel llmModel, List<ChatMessage> history) {
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(ChatMessage.builder().role("system").content(systemPrompt).build());
         if (history != null) {

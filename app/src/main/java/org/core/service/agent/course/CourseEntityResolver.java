@@ -7,6 +7,7 @@ import org.core.domain.Lesson;
 import org.core.domain.Section;
 import org.core.domain.Step;
 import org.core.dto.agent.course.EntityCandidateDTO;
+import org.core.dto.agent.tools.EntityHints;
 import org.core.repository.LessonRepository;
 import org.core.repository.SectionRepository;
 import org.core.repository.StepRepository;
@@ -15,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 @Service
@@ -39,6 +42,136 @@ public class CourseEntityResolver {
                 s -> buildSectionCandidate(s));
     }
 
+    /**
+     * Finds modules whose title (or a significant word from it) appears in the user text.
+     * Used when the LLM omits sectionHint but the user named modules explicitly.
+     */
+    public List<Section> findSectionsMentionedInText(Long courseId, String text, java.util.Set<Long> excludeSectionIds) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        String lowerText = text.toLowerCase();
+        List<Section> sections = sectionRepository.findByCourseIdOrderByPositionAsc(courseId);
+        List<Section> matched = new ArrayList<>();
+        for (Section section : sections) {
+            if (excludeSectionIds != null && excludeSectionIds.contains(section.getId())) {
+                continue;
+            }
+            if (isSectionMentionedInText(section, lowerText)) {
+                matched.add(section);
+            }
+        }
+        return matched;
+    }
+
+    private boolean isSectionMentionedInText(Section section, String lowerText) {
+        String title = section.getTitle();
+        if (title == null || title.isBlank()) {
+            return false;
+        }
+        String lowerTitle = title.toLowerCase().trim();
+        if (lowerText.contains(lowerTitle)) {
+            return true;
+        }
+        for (String word : lowerTitle.split("\\W+")) {
+            if (word.length() >= 3 && lowerText.contains(word)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    public List<Lesson> findLessonsMentionedInText(Long courseId, String text, Set<Long> excludeLessonIds) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        String lowerText = text.toLowerCase();
+        List<Section> sections = sectionRepository.findByCourseIdOrderByPositionAsc(courseId);
+        List<Lesson> matched = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        if (excludeLessonIds != null) {
+            seen.addAll(excludeLessonIds);
+        }
+
+        for (Section section : sections) {
+            List<Lesson> sectionLessons = lessonRepository.findByModelIdOrderByPositionAsc(section.getId());
+            for (Lesson lesson : sectionLessons) {
+                if (seen.contains(lesson.getId())) {
+                    continue;
+                }
+                if (isLessonMentionedInText(lesson, lowerText)) {
+                    matched.add(lesson);
+                    seen.add(lesson.getId());
+                }
+            }
+        }
+
+        for (Section section : sections) {
+            if (!isSectionMentionedInText(section, lowerText)) {
+                continue;
+            }
+            Long sectionId = section.getId();
+            boolean hasLessonFromSection = matched.stream()
+                    .anyMatch(lesson -> lesson.getSection().getId().equals(sectionId));
+            if (hasLessonFromSection) {
+                continue;
+            }
+            for (Lesson lesson : lessonRepository.findByModelIdOrderByPositionAsc(sectionId)) {
+                if (seen.contains(lesson.getId())) {
+                    continue;
+                }
+                matched.add(lesson);
+                seen.add(lesson.getId());
+            }
+        }
+
+        return matched;
+    }
+
+    public List<Lesson> findLessonsExplicitlyNamedInText(Long courseId, String text, Set<Long> excludeLessonIds) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        String lowerText = text.toLowerCase();
+        List<Section> sections = sectionRepository.findByCourseIdOrderByPositionAsc(courseId);
+        List<Lesson> matched = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        if (excludeLessonIds != null) {
+            seen.addAll(excludeLessonIds);
+        }
+
+        for (Section section : sections) {
+            for (Lesson lesson : lessonRepository.findByModelIdOrderByPositionAsc(section.getId())) {
+                if (seen.contains(lesson.getId())) {
+                    continue;
+                }
+                if (isLessonMentionedInText(lesson, lowerText)) {
+                    matched.add(lesson);
+                    seen.add(lesson.getId());
+                }
+            }
+        }
+        return matched;
+    }
+
+    private boolean isLessonMentionedInText(Lesson lesson, String lowerText) {
+        String title = lesson.getTitle();
+        if (title == null || title.isBlank()) {
+            return false;
+        }
+        String lowerTitle = title.toLowerCase().trim();
+        if (lowerText.contains(lowerTitle)) {
+            return true;
+        }
+        for (String word : lowerTitle.split("\\W+")) {
+            if (word.length() >= 3 && lowerText.contains(word)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public CourseResolution<Lesson> resolveLesson(Long sectionId, String lessonHint) {
         List<Lesson> lessons = lessonRepository.findByModelIdOrderByPositionAsc(sectionId);
         return resolve(lessons,
@@ -58,15 +191,15 @@ public class CourseEntityResolver {
                 this::buildLessonCandidate);
     }
 
-    public CourseResolution<Lesson> resolveLesson(Course course, CourseIntentResult intent) {
-        if (intent.sectionHint() == null) {
-            return resolveLessonAcrossCourse(course.getId(), intent.lessonHint());
+    public CourseResolution<Lesson> resolveLesson(Course course, EntityHints hints) {
+        if (hints.sectionHint() == null) {
+            return resolveLessonAcrossCourse(course.getId(), hints.lessonHint());
         }
 
         CourseResolution<Section> sectionResolution =
-                resolveSection(course.getId(), intent.sectionHint());
+                resolveSection(course.getId(), hints.sectionHint());
         if (sectionResolution.isFound()) {
-            return resolveLesson(sectionResolution.value().getId(), intent.lessonHint());
+            return resolveLesson(sectionResolution.value().getId(), hints.lessonHint());
         }
         if (sectionResolution.isAmbiguous()) {
             return CourseResolution.ambiguous(sectionResolution.candidates());
@@ -147,8 +280,10 @@ public class CourseEntityResolver {
     }
 
     private EntityCandidateDTO buildLessonCandidate(Lesson l) {
+        String sectionTitle = l.getSection() != null ? l.getSection().getTitle() : "";
+        String moduleSuffix = sectionTitle.isBlank() ? "" : " («" + sectionTitle + "»)";
         return new EntityCandidateDTO("lesson", l.getId(),
-                "Урок " + l.getPosition() + ": " + l.getTitle());
+                "Урок " + l.getPosition() + ": " + l.getTitle() + moduleSuffix);
     }
 
     private EntityCandidateDTO buildStepCandidate(Step step) {

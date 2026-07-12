@@ -40,4 +40,15 @@ public class CourseSnapshotBuilder {
     public String buildSectionSnapshot(Section section) {
         return sectionAnalyzerService.sectionSummeryBuilder(section);
     }
+
+    public String buildSectionSnapshot(Section section, Course course) {
+        StringBuilder snapshot = new StringBuilder();
+        snapshot.append("Курс: ").append(course.getTitle()).append('\n');
+        if (course.getDescription() != null && !course.getDescription().isBlank()) {
+            snapshot.append("Описание курса: ").append(course.getDescription().trim()).append('\n');
+        }
+        snapshot.append('\n');
+        snapshot.append(sectionAnalyzerService.sectionSummeryBuilder(section));
+        return snapshot.toString();
+    }
 }
