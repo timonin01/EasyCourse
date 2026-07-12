@@ -7,12 +7,12 @@ export function buildContextPrompt(
 ): string {
   for (const sectionNode of sections) {
     if (selection.type === 'section' && sectionNode.section.id === selection.id) {
-      return `Для модуля «${sectionNode.section.title}»:`;
+      return `Контекст: модуль «${sectionNode.section.title}».`;
     }
 
     for (const lessonNode of sectionNode.lessons) {
       if (selection.type === 'lesson' && lessonNode.lesson.id === selection.id) {
-        return `Для урока «${lessonNode.lesson.title}» в модуле «${sectionNode.section.title}»:`;
+        return `Контекст: урок «${lessonNode.lesson.title}», модуль «${sectionNode.section.title}».`;
       }
 
       for (const step of lessonNode.steps ?? []) {

@@ -1,7 +1,7 @@
 import api from './axios';
 import axios from 'axios';
 import { aiRequestConfig } from '../config/api';
-import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse, CourseAuditPdfExportRequest, CoursePlanDTO, CourseAgentResponse, CourseAgentIntent, EntityCandidate } from '../types';
+import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse, CourseAuditPdfExportRequest, CoursePlanDTO, CourseAgentResponse, AgentResumeContext, EntityCandidate } from '../types';
 
 export const agentApi = {
   // Chat with AI
@@ -236,10 +236,20 @@ export const agentApi = {
     return response.data;
   },
 
+  clearCourseAgentSession: async (
+    courseId: number,
+    sessionId: string
+  ): Promise<string> => {
+    const response = await api.delete<string>(
+      `/agent/course/${courseId}/sessions/${encodeURIComponent(sessionId)}`
+    );
+    return response.data;
+  },
+
   courseAgentSelectCandidate: async (
     courseId: number,
     sessionId: string,
-    intent: CourseAgentIntent,
+    resumeContext: AgentResumeContext,
     candidate: EntityCandidate,
     originalInput: string,
     llmModel?: string
@@ -250,7 +260,7 @@ export const agentApi = {
     }
     const response = await api.post<CourseAgentResponse>(
       `/agent/course/${courseId}/select-candidate?${params}`,
-      { intent, candidate, originalInput },
+      { resumeContext, candidate, originalInput },
       { headers: { 'Content-Type': 'application/json' }, ...aiRequestConfig }
     );
     return response.data;

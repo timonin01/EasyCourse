@@ -7,15 +7,20 @@ import type {
   Course,
   CoursePlanDTO,
   CourseAgentResponse,
-  CourseAgentIntent,
+  AgentResumeContext,
   EntityCandidate,
   ChatMessage,
 } from '../../types';
 import type { CourseTreeHighlight } from './types';
 import { buildTreeHighlight } from './utils/planHighlight';
-import { isDeleteIntent } from './utils/planIntent';
+import { isDeletePlan } from './utils/planIntent';
 import { useCourseAgentStore } from '../../store';
 import type { CourseAgentPendingRequest } from '../../utils/buildAuditAgentHandoff';
+import {
+  getChatLoadingPhases,
+  getExecuteLoadingPhases,
+  pickLoadingPhase,
+} from './utils/loadingStatus';
 
 export type CourseAgentChatMessage = {
   id: string;
@@ -73,7 +78,7 @@ function restoreStateFromHistory(history: ChatMessage[]) {
       lastUserInput: '',
       pendingPlan: null,
       candidates: [] as EntityCandidate[],
-      clarificationIntent: null as CourseAgentIntent | null,
+      resumeContext: null as AgentResumeContext | null,
     };
   }
 
@@ -95,8 +100,8 @@ function restoreStateFromHistory(history: ChatMessage[]) {
     candidates: lastResponse?.action === 'NEED_CLARIFICATION'
       ? (lastResponse.candidates ?? [])
       : [],
-    clarificationIntent: lastResponse?.action === 'NEED_CLARIFICATION'
-      ? (lastResponse.intent ?? null)
+    resumeContext: lastResponse?.action === 'NEED_CLARIFICATION'
+      ? (lastResponse.resumeContext ?? null)
       : null,
   };
 }
@@ -127,9 +132,10 @@ export function useCourseAgent() {
   const [input, setInput] = useState('');
   const [pendingPlan, setPendingPlan] = useState<CoursePlanDTO | null>(null);
   const [candidates, setCandidates] = useState<EntityCandidate[]>([]);
-  const [clarificationIntent, setClarificationIntent] = useState<CourseAgentIntent | null>(null);
+  const [resumeContext, setResumeContext] = useState<AgentResumeContext | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [createdHighlight, setCreatedHighlight] = useState<CourseTreeHighlight | null>(null);
   const [pendingHandoff, setPendingHandoff] = useState<CourseAgentPendingRequest | null>(null);
 
@@ -137,6 +143,35 @@ export function useCourseAgent() {
   const lastUserInputRef = useRef<string>('');
   const structureRefreshRef = useRef<(() => void) | undefined>(undefined);
   const pendingHandoffRef = useRef<CourseAgentPendingRequest | null>(null);
+  const loadingStartedAtRef = useRef<number | null>(null);
+  const wasBusyRef = useRef(false);
+
+  useEffect(() => {
+    const busy = isLoading || isExecuting;
+    if (busy && !wasBusyRef.current) {
+      loadingStartedAtRef.current = Date.now();
+    }
+    if (!busy) {
+      loadingStartedAtRef.current = null;
+      setLoadingStatus(null);
+      wasBusyRef.current = false;
+      return;
+    }
+    wasBusyRef.current = busy;
+
+    const phases = isExecuting
+      ? getExecuteLoadingPhases()
+      : getChatLoadingPhases(Boolean(pendingPlan));
+
+    const tick = () => {
+      const startedAt = loadingStartedAtRef.current ?? Date.now();
+      setLoadingStatus(pickLoadingPhase(phases, Date.now() - startedAt));
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 2000);
+    return () => window.clearInterval(interval);
+  }, [isLoading, isExecuting, pendingPlan]);
 
   const applyPendingHandoff = useCallback((handoff: CourseAgentPendingRequest) => {
     pendingHandoffRef.current = handoff;
@@ -208,7 +243,7 @@ export function useCourseAgent() {
     setMessages([]);
     setPendingPlan(null);
     setCandidates([]);
-    setClarificationIntent(null);
+    setResumeContext(null);
     setInput('');
     setIsLoading(true);
 
@@ -238,7 +273,7 @@ export function useCourseAgent() {
         lastUserInputRef.current = restored.lastUserInput;
         setPendingPlan(restored.pendingPlan);
         setCandidates(restored.candidates);
-        setClarificationIntent(restored.clarificationIntent);
+        setResumeContext(restored.resumeContext);
       } catch (error) {
         if (!cancelled) {
           console.error('Course agent history error:', error);
@@ -285,10 +320,10 @@ export function useCourseAgent() {
     }
     if (res.action === 'NEED_CLARIFICATION') {
       setCandidates(res.candidates ?? []);
-      setClarificationIntent(res.intent ?? null);
+      setResumeContext(res.resumeContext ?? null);
     } else {
       setCandidates([]);
-      setClarificationIntent(null);
+      setResumeContext(null);
     }
     if (res.action === 'DRAFT_READY') {
       toast.success('Черновик создан');
@@ -329,8 +364,8 @@ export function useCourseAgent() {
 
     adoptSessionId(selectedCourseId, sessionIdRef.current);
 
-    const planToRevise = pendingPlan && !isDeleteIntent(pendingPlan.intent) ? pendingPlan : null;
-    if (pendingPlan && isDeleteIntent(pendingPlan.intent)) {
+    const planToRevise = pendingPlan && !isDeletePlan(pendingPlan) ? pendingPlan : null;
+    if (pendingPlan && isDeletePlan(pendingPlan)) {
       toast.error('План удаления нельзя изменить через чат. Подтвердите удаление или отмените план.');
       return;
     }
@@ -395,7 +430,7 @@ export function useCourseAgent() {
   }, [selectedCourseId, applyResponse]);
 
   const chooseCandidate = useCallback(async (candidate: EntityCandidate) => {
-    if (!selectedCourseId || !clarificationIntent) return;
+    if (!selectedCourseId || !resumeContext) return;
     setCandidates([]);
     setIsLoading(true);
     pushMessage('user', `Выбран вариант: ${candidate.label}`);
@@ -403,7 +438,7 @@ export function useCourseAgent() {
       const res = await agentApi.courseAgentSelectCandidate(
         selectedCourseId,
         sessionIdRef.current,
-        clarificationIntent,
+        resumeContext,
         candidate,
         lastUserInputRef.current
       );
@@ -414,7 +449,7 @@ export function useCourseAgent() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCourseId, clarificationIntent, pushMessage, applyResponse]);
+  }, [selectedCourseId, resumeContext, pushMessage, applyResponse]);
 
   const updatePlan = useCallback((plan: CoursePlanDTO) => {
     setPendingPlan(plan);
@@ -445,6 +480,33 @@ export function useCourseAgent() {
     setPendingHandoff(null);
   }, []);
 
+  const resetSession = useCallback(async () => {
+    if (!selectedCourseId) {
+      return;
+    }
+    const previousSessionId = sessionIdRef.current;
+    setIsLoading(true);
+    try {
+      await agentApi.clearCourseAgentSession(selectedCourseId, previousSessionId);
+    } catch (error) {
+      console.error('Course agent clear session error:', error);
+      toast.error('Не удалось сбросить историю на сервере');
+    } finally {
+      const nextSessionId = newSessionId();
+      adoptSessionId(selectedCourseId, nextSessionId);
+      sessionIdRef.current = nextSessionId;
+      lastUserInputRef.current = '';
+      setMessages([]);
+      setPendingPlan(null);
+      setCandidates([]);
+      setResumeContext(null);
+      setInput('');
+      setCreatedHighlight(null);
+      setIsLoading(false);
+      toast.success('История сессии сброшена');
+    }
+  }, [selectedCourseId, adoptSessionId]);
+
   return {
     courses,
     courseOptions,
@@ -457,11 +519,13 @@ export function useCourseAgent() {
     candidates,
     isLoading,
     isExecuting,
+    loadingStatus,
     handleSend,
     confirmPlan,
     cancelPlan,
     chooseCandidate,
     updatePlan,
+    resetSession,
     appendInputContext,
     registerStructureRefresh,
     treeHighlight,

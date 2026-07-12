@@ -287,7 +287,7 @@ export function StepView({ step, variant = 'full' }: StepViewProps) {
                         className="text-dark-100 prose prose-invert max-w-none"
                         dangerouslySetInnerHTML={{ __html: component.text || '' }}
                       />
-                    ) : (component.type === 'blank' || component.type === 'input') ? (
+                    ) : (component.type === 'blank' || component.type === 'input' || component.type === 'select') ? (
                       <div>
                         {component.text ? (
                           <div 

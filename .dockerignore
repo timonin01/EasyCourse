@@ -1,0 +1,12 @@
+**/.git
+**/.gradle
+**/out
+**/node_modules
+frontend
+deploy
+.cursor
+*.md
+.idea
+**/build
+!app/build/libs/
+!app/build/libs/*.jar

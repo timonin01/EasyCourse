@@ -6,7 +6,7 @@ import { Button, Input, PasswordInput, FadeIn } from '../components/ui';
 import { ProductIntro } from '../components/auth/ProductIntro';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
-import { extractApiErrorMessage, getApiErrorStatus, isNetworkError } from '../utils/apiError';
+import { extractApiErrorMessage, getApiErrorStatus, isBackendUserNotFound, isNetworkError } from '../utils/apiError';
 
 export function Login() {
   const navigate = useNavigate();
@@ -34,8 +34,10 @@ export function Login() {
         toast.error(extractApiErrorMessage(error, 'Сервер недоступен'));
       } else {
         const status = getApiErrorStatus(error);
-        if (status === 404) {
+        if (status === 404 && isBackendUserNotFound(error)) {
           toast.error('Пользователь с таким email не найден');
+        } else if (status === 404) {
+          toast.error('API недоступен (404). Перезапустите Vite и Docker: backend на http://127.0.0.1:8081');
         } else if (status === 401) {
           toast.error('Неверный пароль');
         } else if (status === 403) {

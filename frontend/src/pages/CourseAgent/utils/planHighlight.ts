@@ -1,5 +1,10 @@
-import type { CoursePlanDTO, EntityCandidate } from '../../../types';
-import type { CourseTreeHighlight } from '../types';
+import type { CoursePlanDTO, EntityCandidate, PlanActionDTO } from '../../../types';
+
+export interface CourseTreeHighlight {
+  sectionIds: Set<number>;
+  lessonIds: Set<number>;
+  stepIds: Set<number>;
+}
 
 export function buildTreeHighlight(
   plan: CoursePlanDTO | null,
@@ -8,18 +13,14 @@ export function buildTreeHighlight(
   createdLessonIds?: number[],
   createdStepIds?: number[],
 ): CourseTreeHighlight {
-  const sectionIds = new Set<number>(createdSectionIds ?? []);
-  const lessonIds = new Set<number>(createdLessonIds ?? []);
-  const stepIds = new Set<number>(createdStepIds ?? []);
+  const sectionIds = new Set<number>();
+  const lessonIds = new Set<number>();
+  const stepIds = new Set<number>();
 
-  if (plan?.targetSectionId) {
-    sectionIds.add(plan.targetSectionId);
-  }
-  if (plan?.targetLessonId) {
-    lessonIds.add(plan.targetLessonId);
-  }
-  if (plan?.targetStepId) {
-    stepIds.add(plan.targetStepId);
+  if (plan?.actions) {
+    for (const action of plan.actions) {
+      collectFromAction(action, sectionIds, lessonIds, stepIds);
+    }
   }
 
   for (const candidate of candidates) {
@@ -32,5 +33,26 @@ export function buildTreeHighlight(
     }
   }
 
+  createdSectionIds?.forEach((id) => sectionIds.add(id));
+  createdLessonIds?.forEach((id) => lessonIds.add(id));
+  createdStepIds?.forEach((id) => stepIds.add(id));
+
   return { sectionIds, lessonIds, stepIds };
+}
+
+function collectFromAction(
+  action: PlanActionDTO,
+  sectionIds: Set<number>,
+  lessonIds: Set<number>,
+  stepIds: Set<number>,
+) {
+  if (action.targetSectionId) {
+    sectionIds.add(action.targetSectionId);
+  }
+  if (action.targetLessonId) {
+    lessonIds.add(action.targetLessonId);
+  }
+  if (action.targetStepId) {
+    stepIds.add(action.targetStepId);
+  }
 }
