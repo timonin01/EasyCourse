@@ -30,12 +30,9 @@ public class FillBlanksStepRequestBlockValidator {
             }
 
             String type = c.getType() != null ? c.getType().trim().toLowerCase() : "";
-            boolean isBlankOrInput = "blank".equals(type) || "input".equals(type);
-            if (type.isEmpty() || (!"text".equals(type) && !isBlankOrInput)) {
-                type = !c.getOptions().isEmpty() ? "input" : "text";
-            }
-            if ("blank".equals(type)) {
-                type = "input";
+            boolean isBlankLike = "blank".equals(type) || "input".equals(type) || "select".equals(type);
+            if (type.isEmpty() || (!"text".equals(type) && !isBlankLike)) {
+                type = !c.getOptions().isEmpty() ? resolveBlankComponentType(c) : "text";
             }
 
             if ("text".equals(type)) {
@@ -66,13 +63,29 @@ public class FillBlanksStepRequestBlockValidator {
                 out.add(textComp);
             }
             StepikFillBlanksComponentRequest inputComp = new StepikFillBlanksComponentRequest();
-            inputComp.setType("input");
+            inputComp.setType(resolveBlankComponentType(c));
             inputComp.setText("");
             inputComp.setOptions(c.getOptions());
             out.add(inputComp);
         }
 
         fillBlanksRequest.getSource().setComponents(out);
+    }
+
+    /**
+     * Stepik shows answer choices only for {@code select} components.
+     * Use {@code input} when all options are acceptable synonyms (free-text grading).
+     */
+    private String resolveBlankComponentType(StepikFillBlanksComponentRequest component) {
+        String type = component.getType() != null ? component.getType().trim().toLowerCase() : "";
+        if ("select".equals(type)) {
+            return "select";
+        }
+        if (component.getOptions() != null
+                && component.getOptions().stream().anyMatch(o -> Boolean.FALSE.equals(o.getIs_correct()))) {
+            return "select";
+        }
+        return "input";
     }
 
 }

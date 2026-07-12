@@ -15,6 +15,7 @@ import org.core.dto.step.UpdateStepDTO;
 import org.core.dto.stepik.step.StepikBlockResponse;
 import org.core.repository.StepRepository;
 import org.core.util.UserAccessService;
+import org.core.service.stepik.step.StepikBlockJsonNormalizer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ public class StepService {
 
     private final UserContextBean userContextBean;
     private final UserAccessService userAccessService;
+    private final StepikBlockJsonNormalizer stepikBlockJsonNormalizer;
 
     public StepResponseDTO createStep(CreateStepDTO createStepDTO){
         Long contextUserId = userContextBean.getUserId();
@@ -49,7 +51,8 @@ public class StepService {
 
         if (createStepDTO.getStepikBlock() != null) {
             try {
-                step.setStepikBlockData(objectMapper.writeValueAsString(createStepDTO.getStepikBlock()));
+                String rawJson = objectMapper.writeValueAsString(createStepDTO.getStepikBlock());
+                step.setStepikBlockData(stepikBlockJsonNormalizer.normalize(rawJson, createStepDTO.getType()));
             } catch (Exception e) {
                 log.error("Error serializing stepik block data", e);
                 throw new RuntimeException("Error serializing stepik block data", e);
@@ -113,9 +116,11 @@ public class StepService {
         }
         if (updateDto.getStepikBlock() != null) {
             try {
-                String serializedBlock = objectMapper.writeValueAsString(updateDto.getStepikBlock());
-                log.debug("Serializing stepik block for step {}: {}", updateDto.getStepId(), serializedBlock);
-                step.setStepikBlockData(serializedBlock);
+                String rawJson = objectMapper.writeValueAsString(updateDto.getStepikBlock());
+                String normalized = stepikBlockJsonNormalizer.normalize(
+                        rawJson, updateDto.getType() != null ? updateDto.getType() : step.getType());
+                log.debug("Serializing stepik block for step {}: {}", updateDto.getStepId(), normalized);
+                step.setStepikBlockData(normalized);
             } catch (Exception e) {
                 log.error("Error serializing stepik block data for step {}", updateDto.getStepId(), e);
                 throw new RuntimeException("Error serializing stepik block data", e);
@@ -195,10 +200,11 @@ public class StepService {
         StepikBlockResponse stepikBlock = null;
         if (step.getStepikBlockData() != null) {
             try {
-                JsonNode jsonNode = objectMapper.readTree(step.getStepikBlockData());
-                
+                String normalized = stepikBlockJsonNormalizer.normalize(step.getStepikBlockData(), step.getType());
+                JsonNode jsonNode = objectMapper.readTree(normalized);
+
                 if (jsonNode.has("name") && !jsonNode.get("name").isNull()) {
-                    stepikBlock = objectMapper.readValue(step.getStepikBlockData(), StepikBlockResponse.class);
+                    stepikBlock = objectMapper.readValue(normalized, StepikBlockResponse.class);
                 } else {
                     log.warn("Step {} has stepikBlockData with null or missing name field, skipping deserialization", step.getId());
                 }
