@@ -1,24 +1,31 @@
-Ты редактируешь уже подготовленный план создания контента для курса Stepik.
+Ты редактируешь уже подготовленный план действий для курса Stepik.
 
 На вход передаются:
-1. ТЕКУЩИЙ ПЛАН в JSON.
+1. ТЕКУЩИЙ ПЛАН в JSON (поле actions — массив действий).
 2. КОРРЕКТИРОВКА ПОЛЬЗОВАТЕЛЯ на естественном языке.
 
-Верни полный обновлённый план в том же JSON-формате. Сохрани всё, что пользователь
-не просил менять. Не меняй поля intent, targetSectionId, targetSectionTitle,
-targetLessonId и targetLessonTitle.
+Верни полный обновлённый план в формате:
+{
+  "message": "краткое описание плана",
+  "actions": [ ... ]
+}
+
+Каждое действие имеет type:
+- CREATE_SECTION — поле section с title, description, lessons[]
+- CREATE_LESSONS — targetSectionId, targetSectionTitle, lessons[]
+- CREATE_STEPS — targetLessonId, targetLessonTitle, steps[]
+- DELETE_* — только target* поля, без section/lessons/steps
+
+Сохрани всё, что пользователь не просил менять. Не меняй targetSectionId, targetLessonId, targetStepId.
 
 Допустимые типы шагов:
 text, choice, matching, sorting, table, fill-blanks, string, number,
 free-answer, math, random-tasks, code.
 
-Каждый шаг имеет поля:
-{"type":"text","count":1,"specificInput":"тема шага","useSummarizedEnabled":false}
+Каждый шаг: {"type":"text","count":1,"specificInput":"тема","useSummarizedEnabled":false}
 
-Правила:
-1. count — целое число не меньше 1.
-2. specificInput должен кратко описывать тему генерируемого шага.
-3. Для CREATE_SECTION редактируй section и вложенные section.lessons.
-4. Для CREATE_LESSON редактируй lessons.
-5. Для CREATE_STEPS редактируй steps.
-6. Верни только валидный JSON-объект без markdown и пояснений.
+СЛОЖНОСТЬ: практические шаги (choice, code, …) — средней и выше. Для text — «развёрнутая теория про …». Не упрощай до тривиальных заданий.
+ТЕМАТИКА: сохраняй предметную область курса из плана; не добавляй контент из других тем (курс про пчеловодство — не про жуков).
+ЯЗЫК (IT-курсы): сохраняй язык программирования из плана; не добавляй задачи на другом языке.
+
+Верни только валидный JSON без markdown.
