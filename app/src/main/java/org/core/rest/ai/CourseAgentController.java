@@ -9,6 +9,7 @@ import org.core.dto.agent.course.CourseAgentResponse;
 import org.core.dto.agent.course.CoursePlanDTO;
 import org.core.dto.agent.course.ExecutePlanRequest;
 import org.core.dto.agent.course.EditCoursePlanRequest;
+import org.core.enums.CourseAgentMode;
 import org.core.enums.LlmModel;
 import org.core.exception.exceptions.PromptLengthExceededException;
 import org.core.exception.exceptions.SubscriptionLimitExceededException;
@@ -84,7 +85,8 @@ public class CourseAgentController {
             @PathVariable Long courseId,
             @RequestParam String sessionId,
             @RequestBody String userInput,
-            @RequestParam(required = false) String llmModel) {
+            @RequestParam(required = false) String llmModel,
+            @RequestParam(required = false, defaultValue = "AGENT") String agentMode) {
         Long userId = userContextBean.getUserId();
         try {
             aiPromptLimitService.validateChatPrompt(userInput);
@@ -92,7 +94,8 @@ public class CourseAgentController {
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
 
-            CourseAgentResponse response = courseAgentService.handleChat(courseId, userId, sessionId, userInput, model);
+            CourseAgentResponse response = courseAgentService.handleChat(
+                    courseId, userId, sessionId, userInput, model, CourseAgentMode.parse(agentMode));
             if (response.getAction() == CourseAgentAction.STEP_MODIFIED) {
                 subscriptionService.recordAiUsage(userId, 1);
             }
@@ -115,7 +118,8 @@ public class CourseAgentController {
             @PathVariable Long courseId,
             @RequestParam String sessionId,
             @RequestBody CourseAgentCandidateRequest request,
-            @RequestParam(required = false) String llmModel) {
+            @RequestParam(required = false) String llmModel,
+            @RequestParam(required = false, defaultValue = "AGENT") String agentMode) {
         Long userId = userContextBean.getUserId();
         try {
             String originalInput = request == null ? null : request.getOriginalInput();
@@ -124,7 +128,8 @@ public class CourseAgentController {
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
 
-            CourseAgentResponse response = courseAgentService.handleCandidate(courseId, userId, sessionId, request, model);
+            CourseAgentResponse response = courseAgentService.handleCandidate(
+                    courseId, userId, sessionId, request, model, CourseAgentMode.parse(agentMode));
             if (response.getAction() == CourseAgentAction.STEP_MODIFIED) {
                 subscriptionService.recordAiUsage(userId, 1);
             }

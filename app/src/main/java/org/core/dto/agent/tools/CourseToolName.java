@@ -18,4 +18,13 @@ public enum CourseToolName {
         }
         return CourseToolName.valueOf(value.trim().toUpperCase());
     }
+
+    public boolean isMutationTool() {
+        return switch (this) {
+            case PROPOSE_CREATE_SECTION, PROPOSE_CREATE_LESSONS, PROPOSE_CREATE_STEPS,
+                 PROPOSE_DELETE_SECTION, PROPOSE_DELETE_LESSON, PROPOSE_DELETE_STEP,
+                 MODIFY_STEP -> true;
+            default -> false;
+        };
+    }
 }
