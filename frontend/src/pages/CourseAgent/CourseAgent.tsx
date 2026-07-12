@@ -194,6 +194,8 @@ export function CourseAgent() {
               messages={agent.messages}
               candidates={agent.candidates}
               pendingPlan={agent.pendingPlan}
+              agentMode={agent.agentMode}
+              onAgentModeChange={agent.setAgentMode}
               isLoading={agent.isLoading}
               isExecuting={agent.isExecuting}
               loadingStatus={agent.loadingStatus}

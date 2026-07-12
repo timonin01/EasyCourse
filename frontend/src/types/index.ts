@@ -377,6 +377,7 @@ export interface AgentResumeContext {
   loopMessages?: ChatMessage[];
   userInput?: string;
   clarificationMessage?: string;
+  agentMode?: 'ASK' | 'AGENT';
 }
 
 export interface CoursePlanDTO {

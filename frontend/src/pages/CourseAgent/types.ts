@@ -22,3 +22,5 @@ export type CourseTreeHighlight = {
   lessonIds: Set<number>;
   stepIds: Set<number>;
 };
+
+export type CourseAgentMode = 'ASK' | 'AGENT';

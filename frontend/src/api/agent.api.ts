@@ -205,9 +205,10 @@ export const agentApi = {
     courseId: number,
     sessionId: string,
     userInput: string,
-    llmModel?: string
+    llmModel?: string,
+    agentMode: 'ASK' | 'AGENT' = 'AGENT',
   ): Promise<CourseAgentResponse> => {
-    const params = new URLSearchParams({ sessionId });
+    const params = new URLSearchParams({ sessionId, agentMode });
     if (llmModel) {
       params.append('llmModel', llmModel);
     }
@@ -252,9 +253,10 @@ export const agentApi = {
     resumeContext: AgentResumeContext,
     candidate: EntityCandidate,
     originalInput: string,
-    llmModel?: string
+    llmModel?: string,
+    agentMode: 'ASK' | 'AGENT' = 'AGENT',
   ): Promise<CourseAgentResponse> => {
-    const params = new URLSearchParams({ sessionId });
+    const params = new URLSearchParams({ sessionId, agentMode });
     if (llmModel) {
       params.append('llmModel', llmModel);
     }

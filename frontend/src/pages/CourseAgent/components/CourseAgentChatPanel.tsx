@@ -1,4 +1,4 @@
-import { Bot, Loader2, RotateCcw, Send, Sparkles, User } from 'lucide-react';
+import { Bot, Loader2, MessageCircleQuestion, Pencil, RotateCcw, Send, Sparkles, User } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { KeyboardEvent, RefObject } from 'react';
 import { Button } from '../../../components/ui/Button';
@@ -6,12 +6,15 @@ import { Card } from '../../../components/ui/Card';
 import { Textarea } from '../../../components/ui/Textarea';
 import type { EntityCandidate, CoursePlanDTO } from '../../../types';
 import type { CourseAgentChatMessage } from '../useCourseAgent';
+import type { CourseAgentMode } from '../types';
 import { PlanPanel } from './PlanPanel';
 
 interface CourseAgentChatPanelProps {
   messages: CourseAgentChatMessage[];
   candidates: EntityCandidate[];
   pendingPlan: CoursePlanDTO | null;
+  agentMode: CourseAgentMode;
+  onAgentModeChange: (mode: CourseAgentMode) => void;
   isLoading: boolean;
   isExecuting: boolean;
   loadingStatus: string | null;
@@ -31,6 +34,8 @@ export function CourseAgentChatPanel({
   messages,
   candidates,
   pendingPlan,
+  agentMode,
+  onAgentModeChange,
   isLoading,
   isExecuting,
   loadingStatus,
@@ -46,10 +51,45 @@ export function CourseAgentChatPanel({
   onResetSession,
 }: CourseAgentChatPanelProps) {
   const canResetSession = messages.length > 0 || candidates.length > 0 || pendingPlan != null;
+  const isAskMode = agentMode === 'ASK';
 
   return (
     <Card className="flex min-h-0 flex-1 flex-col overflow-hidden" padding="none">
-      <div className="flex shrink-0 items-center justify-end border-b border-dark-700/60 px-4 py-2">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-dark-700/60 px-4 py-2">
+        <div
+          className="inline-flex rounded-lg border border-dark-700 bg-dark-850 p-0.5"
+          role="group"
+          aria-label="Режим агента"
+        >
+          <button
+            type="button"
+            onClick={() => onAgentModeChange('ASK')}
+            disabled={isLoading || isExecuting}
+            className={clsx(
+              'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+              isAskMode
+                ? 'bg-dark-700 text-dark-100'
+                : 'text-dark-500 hover:text-dark-300',
+            )}
+          >
+            <MessageCircleQuestion className="h-3.5 w-3.5" />
+            Спросить
+          </button>
+          <button
+            type="button"
+            onClick={() => onAgentModeChange('AGENT')}
+            disabled={isLoading || isExecuting}
+            className={clsx(
+              'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+              !isAskMode
+                ? 'bg-dark-700 text-dark-100'
+                : 'text-dark-500 hover:text-dark-300',
+            )}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Редактировать
+          </button>
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -69,12 +109,17 @@ export function CourseAgentChatPanel({
             </div>
             <h3 className="mb-2 text-lg font-medium text-dark-200">AI-агент курса</h3>
             <p className="max-w-lg text-sm text-dark-500">
-              Создавайте и изменяйте курс или задавайте вопросы о структуре.
-              Например: «Создай модуль про наследование»,
-              «Добавь урок в модуль Основы и урок в модуль ООП»,
-              «Удали урок «Введение» и урок «Заключение»»,
-              «Удали шаг 1 в уроке A и шаг 3 в уроке B»,
-              «Сколько шагов в уроке про циклы?».
+              {isAskMode
+                ? 'Задавайте вопросы о структуре и содержимом курса. Выберите модуль или урок в дереве справа и спросите, что внутри.'
+                : 'Создавайте и изменяйте курс: новые модули, уроки, шаги, удаление и правки.'}
+              {!isAskMode && (
+                <>
+                  {' '}
+                  Например: «Создай модуль про наследование»,
+                  «Добавь урок в модуль Основы»,
+                  «Удали урок «Введение»».
+                </>
+              )}
             </p>
           </div>
         ) : (
@@ -136,7 +181,7 @@ export function CourseAgentChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
-      {pendingPlan && (
+      {pendingPlan && !isAskMode && (
         <div className="flex min-h-0 max-h-[min(50vh,28rem)] shrink-0 flex-col border-t border-dark-700/60">
           <PlanPanel
             plan={pendingPlan}
@@ -155,9 +200,13 @@ export function CourseAgentChatPanel({
               value={input}
               onChange={(event) => onInputChange(event.target.value)}
               onKeyDown={onKeyDown}
-              placeholder={pendingPlan
-                ? 'Напишите, что скорректировать в плане…'
-                : 'Опишите задачу для агента…'}
+              placeholder={
+                pendingPlan && !isAskMode
+                  ? 'Напишите, что скорректировать в плане…'
+                  : isAskMode
+                    ? 'Спросите о курсе, модуле или уроке…'
+                    : 'Опишите, что создать или изменить…'
+              }
               rows={3}
               disabled={isLoading || isExecuting}
               className="min-h-[4.5rem] resize-none"

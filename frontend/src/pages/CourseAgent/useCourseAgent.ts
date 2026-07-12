@@ -11,7 +11,7 @@ import type {
   EntityCandidate,
   ChatMessage,
 } from '../../types';
-import type { CourseTreeHighlight } from './types';
+import type { CourseTreeHighlight, CourseAgentMode } from './types';
 import { buildTreeHighlight } from './utils/planHighlight';
 import { isDeletePlan } from './utils/planIntent';
 import { useCourseAgentStore } from '../../store';
@@ -41,6 +41,28 @@ function newSessionId(): string {
 
 function courseSessionStorageKey(courseId: number): string {
   return `course-agent-session-${courseId}`;
+}
+
+const AGENT_MODE_STORAGE_KEY = 'course-agent-mode';
+
+function readStoredAgentMode(): CourseAgentMode {
+  try {
+    const stored = localStorage.getItem(AGENT_MODE_STORAGE_KEY);
+    if (stored === 'ASK') {
+      return 'ASK';
+    }
+    return 'AGENT';
+  } catch {
+    return 'AGENT';
+  }
+}
+
+function writeStoredAgentMode(mode: CourseAgentMode): void {
+  try {
+    localStorage.setItem(AGENT_MODE_STORAGE_KEY, mode);
+  } catch {
+    // ignore quota / private mode
+  }
 }
 
 function readStoredSessionId(courseId: number): string | null {
@@ -138,6 +160,12 @@ export function useCourseAgent() {
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [createdHighlight, setCreatedHighlight] = useState<CourseTreeHighlight | null>(null);
   const [pendingHandoff, setPendingHandoff] = useState<CourseAgentPendingRequest | null>(null);
+  const [agentMode, setAgentModeState] = useState<CourseAgentMode>(readStoredAgentMode);
+
+  const setAgentMode = useCallback((mode: CourseAgentMode) => {
+    setAgentModeState(mode);
+    writeStoredAgentMode(mode);
+  }, []);
 
   const sessionIdRef = useRef<string>(newSessionId());
   const lastUserInputRef = useRef<string>('');
@@ -364,8 +392,8 @@ export function useCourseAgent() {
 
     adoptSessionId(selectedCourseId, sessionIdRef.current);
 
-    const planToRevise = pendingPlan && !isDeletePlan(pendingPlan) ? pendingPlan : null;
-    if (pendingPlan && isDeletePlan(pendingPlan)) {
+    const planToRevise = agentMode === 'AGENT' && pendingPlan && !isDeletePlan(pendingPlan) ? pendingPlan : null;
+    if (agentMode === 'AGENT' && pendingPlan && isDeletePlan(pendingPlan)) {
       toast.error('План удаления нельзя изменить через чат. Подтвердите удаление или отмените план.');
       return;
     }
@@ -382,7 +410,13 @@ export function useCourseAgent() {
             planToRevise,
             trimmed
           )
-        : await agentApi.courseAgentChat(selectedCourseId, sessionIdRef.current, trimmed);
+        : await agentApi.courseAgentChat(
+            selectedCourseId,
+            sessionIdRef.current,
+            trimmed,
+            undefined,
+            agentMode,
+          );
       applyResponse(res);
     } catch (error) {
       console.error('Course agent chat error:', error);
@@ -391,7 +425,7 @@ export function useCourseAgent() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCourseId, pendingPlan, pushMessage, applyResponse, adoptSessionId]);
+  }, [selectedCourseId, pendingPlan, pushMessage, applyResponse, adoptSessionId, agentMode]);
 
   const handleSend = useCallback(() => {
     void sendChat(input);
@@ -440,7 +474,9 @@ export function useCourseAgent() {
         sessionIdRef.current,
         resumeContext,
         candidate,
-        lastUserInputRef.current
+        lastUserInputRef.current,
+        undefined,
+        agentMode,
       );
       applyResponse(res);
     } catch (error) {
@@ -449,7 +485,7 @@ export function useCourseAgent() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCourseId, resumeContext, pushMessage, applyResponse]);
+  }, [selectedCourseId, resumeContext, pushMessage, applyResponse, agentMode]);
 
   const updatePlan = useCallback((plan: CoursePlanDTO) => {
     setPendingPlan(plan);
@@ -526,6 +562,8 @@ export function useCourseAgent() {
     chooseCandidate,
     updatePlan,
     resetSession,
+    agentMode,
+    setAgentMode,
     appendInputContext,
     registerStructureRefresh,
     treeHighlight,
