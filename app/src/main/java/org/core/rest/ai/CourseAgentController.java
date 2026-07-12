@@ -3,18 +3,17 @@ package org.core.rest.ai;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
-import org.core.dto.agent.batchAnalyzer.CountStepDTO;
 import org.core.dto.agent.course.CourseAgentAction;
 import org.core.dto.agent.course.CourseAgentCandidateRequest;
 import org.core.dto.agent.course.CourseAgentResponse;
 import org.core.dto.agent.course.CoursePlanDTO;
 import org.core.dto.agent.course.ExecutePlanRequest;
-import org.core.dto.agent.course.LessonPlanDTO;
 import org.core.dto.agent.course.EditCoursePlanRequest;
 import org.core.enums.LlmModel;
 import org.core.exception.exceptions.PromptLengthExceededException;
 import org.core.exception.exceptions.SubscriptionLimitExceededException;
 import org.core.service.agent.course.CourseAgentService;
+import org.core.service.agent.course.util.StepsCounter;
 import org.core.service.ai.AiPromptLimitService;
 import org.core.service.subscription.SubscriptionService;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +31,7 @@ public class CourseAgentController {
     private final CourseAgentService courseAgentService;
     private final SubscriptionService subscriptionService;
     private final AiPromptLimitService aiPromptLimitService;
+    private final StepsCounter stepsCounter;
     private final UserContextBean userContextBean;
 
     @GetMapping("/{courseId}/sessions/latest")
@@ -60,6 +60,22 @@ public class CourseAgentController {
         } catch (Exception e) {
             log.error("Error loading course agent history: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body("Ошибка при загрузке истории агента");
+        }
+    }
+
+    @DeleteMapping("/{courseId}/sessions/{sessionId}")
+    public ResponseEntity<?> clearSession(
+            @PathVariable Long courseId,
+            @PathVariable String sessionId) {
+        Long userId = userContextBean.getUserId();
+        try {
+            courseAgentService.clearSession(courseId, userId, sessionId.trim());
+            return ResponseEntity.ok("Session cleared");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error clearing course agent session: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body("Ошибка при сбросе сессии агента");
         }
     }
 
@@ -108,8 +124,7 @@ public class CourseAgentController {
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
 
-            CourseAgentResponse response = courseAgentService.handleCandidate(
-                    courseId, userId, sessionId, request, model);
+            CourseAgentResponse response = courseAgentService.handleCandidate(courseId, userId, sessionId, request, model);
             if (response.getAction() == CourseAgentAction.STEP_MODIFIED) {
                 subscriptionService.recordAiUsage(userId, 1);
             }
@@ -184,13 +199,13 @@ public class CourseAgentController {
         Long userId = userContextBean.getUserId();
         try {
             CoursePlanDTO coursePlan = executePlanRequest != null ? executePlanRequest.getPlan() : null;
-            if (coursePlan == null || coursePlan.getIntent() == null) {
+            if (coursePlan == null || coursePlan.getActions() == null || coursePlan.getActions().isEmpty()) {
                 return ResponseEntity.badRequest().body("Пустой или некорректный план");
             }
 
             LlmModel model = parseLlmModel(llmModel);
             subscriptionService.validateModelAccess(userId, model);
-            int plannedSteps = countPlannedSteps(coursePlan);
+            int plannedSteps = stepsCounter.countPlannedSteps(coursePlan);
             if (plannedSteps > 0) {
                 subscriptionService.validateAiGenerationAllowed(userId, plannedSteps);
             }
@@ -254,32 +269,4 @@ public class CourseAgentController {
         return LlmModel.valueOf(llmModel.toUpperCase());
     }
 
-    private int countPlannedSteps(CoursePlanDTO plan) {
-        return switch (plan.getIntent()) {
-            case CREATE_SECTION -> plan.getSection() == null ? 0 : countLessonSteps(plan.getSection().getLessons());
-            case CREATE_LESSON -> countLessonSteps(plan.getLessons());
-            case CREATE_STEPS -> countSteps(plan.getSteps());
-            default -> 0;
-        };
-    }
-
-    private int countLessonSteps(List<LessonPlanDTO> lessons) {
-        if (lessons == null) {
-            return 0;
-        }
-        int total = 0;
-        for (LessonPlanDTO lesson : lessons) {
-            total += countSteps(lesson.getSteps());
-        }
-        return total;
-    }
-
-    private int countSteps(List<CountStepDTO> steps) {
-        if (steps == null) {
-            return 0;
-        }
-        return steps.stream()
-                .mapToInt(s -> s.getCount() == null || s.getCount() < 1 ? 1 : s.getCount())
-                .sum();
-    }
 }

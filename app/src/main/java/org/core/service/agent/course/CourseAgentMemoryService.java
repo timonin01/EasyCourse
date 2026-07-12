@@ -62,6 +62,11 @@ public class CourseAgentMemoryService {
         return sessionMessageService.getLatestCourseAgentSessionId(userId, courseId);
     }
 
+    public void clearSession(Long userId, Long courseId, String sessionId) {
+        getHistory(userId, courseId, sessionId);
+        sessionMessageService.clearSession(userId, sessionId);
+    }
+
     private String serialize(CourseAgentResponse response) {
         try {
             return objectMapper.writeValueAsString(response);
