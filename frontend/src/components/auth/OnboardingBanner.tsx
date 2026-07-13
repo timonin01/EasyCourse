@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Plus, Settings, Sparkles } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { ONBOARDING_STEPS } from '../../constants/productInfo';
+import { STEPIK_OAUTH_SETTINGS_PATH } from '../../constants/settingsSections';
 
 export function OnboardingBanner() {
   return (
@@ -31,7 +32,7 @@ export function OnboardingBanner() {
             Создать первый курс
           </Button>
         </Link>
-        <Link to="/settings">
+        <Link to={STEPIK_OAUTH_SETTINGS_PATH}>
           <Button variant="secondary" icon={<Settings className="w-4 h-4" />}>
             Настроить Stepik
           </Button>

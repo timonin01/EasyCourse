@@ -1,0 +1,3 @@
+export const STEPIK_OAUTH_SETTINGS_SECTION_ID = 'stepik-oauth';
+
+export const STEPIK_OAUTH_SETTINGS_PATH = `/settings#${STEPIK_OAUTH_SETTINGS_SECTION_ID}`;

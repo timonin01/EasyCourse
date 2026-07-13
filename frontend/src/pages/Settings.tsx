@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Save, Key, User, Lock, ExternalLink, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
@@ -9,8 +10,10 @@ import { useAuthStore } from '../store';
 import { useStepikOAuthStatus } from '../hooks/useStepikOAuthStatus';
 import { extractApiErrorMessage, getApiErrorStatus } from '../utils/apiError';
 import { validateEmail, validateUserName } from '../utils/validation';
+import { STEPIK_OAUTH_SETTINGS_SECTION_ID } from '../constants/settingsSections';
 
 export function Settings() {
+  const location = useLocation();
   const { user, updateUser } = useAuthStore();
   const { hasConfig, setHasConfig } = useStepikOAuthStatus();
   const hasStepikConfig = hasConfig === true;
@@ -47,6 +50,21 @@ export function Settings() {
     };
     void loadStepikForm();
   }, [user?.id, hasConfig]);
+
+  useEffect(() => {
+    if (location.hash !== `#${STEPIK_OAUTH_SETTINGS_SECTION_ID}`) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(STEPIK_OAUTH_SETTINGS_SECTION_ID)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, location.hash]);
 
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
@@ -232,7 +250,7 @@ export function Settings() {
 
         {/* Stepik Integration */}
         <StaggerItem>
-        <Card>
+        <Card id={STEPIK_OAUTH_SETTINGS_SECTION_ID} className="scroll-mt-24">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-dark-100 flex items-center gap-2">
               <Key className="w-5 h-5 text-primary-400" />
