@@ -1,4 +1,4 @@
-package org.core.service.ai;
+package org.core.service.ai.yandex;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
-import org.core.service.ai.YandexGptService;
+import org.core.service.ai.yandex.YandexGptService;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
