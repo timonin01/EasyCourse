@@ -1,4 +1,4 @@
-package org.core.dto.deepseek;
+package org.core.dto.ai.deepseek;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

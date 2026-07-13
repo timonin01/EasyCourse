@@ -1,4 +1,4 @@
-package org.core.dto.yandexgpt;
+package org.core.dto.ai.deepseek;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,10 +10,12 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Alternative {
+public class Choice {
 
+    private int index;
     private Message message;
-    
-    @JsonProperty("status")
-    private String status;
+
+    @JsonProperty("finish_reason")
+    private String finishReason;
+
 }

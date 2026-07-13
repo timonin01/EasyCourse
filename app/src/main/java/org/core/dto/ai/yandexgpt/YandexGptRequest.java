@@ -1,4 +1,4 @@
-package org.core.dto.yandexgpt;
+package org.core.dto.ai.yandexgpt;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

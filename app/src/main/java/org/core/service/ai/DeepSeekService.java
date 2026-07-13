@@ -2,8 +2,8 @@ package org.core.service.ai;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.core.dto.deepseek.DeepSeekRequest;
-import org.core.dto.deepseek.DeepSeekResponse;
+import org.core.dto.ai.deepseek.DeepSeekRequest;
+import org.core.dto.ai.deepseek.DeepSeekResponse;
 import org.core.exception.exceptions.DeepSeekException;
 import org.core.service.AiService;
 import org.springframework.beans.factory.annotation.Value;

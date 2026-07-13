@@ -1,4 +1,4 @@
-package org.core.dto.deepseek;
+package org.core.dto.ai.deepseek;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
