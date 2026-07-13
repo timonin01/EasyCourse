@@ -36,6 +36,9 @@ public class AnswerQuestionHandler {
     @Value("${course.info.answer.prompt}")
     private String infoAnswerPrompt;
 
+    @Value("${course.info.answer.ask.prompt}")
+    private String infoAnswerAskPrompt;
+
     private final SystemPromptService systemPromptService;
     private final LlmModelConfig llmModelConfig;
     private final LlmProvider llmProvider;
@@ -72,7 +75,8 @@ public class AnswerQuestionHandler {
                     ContextHintParser.parseFromUserInput(courseAgentContext.getUserInput()));
         }
         String context = buildQueryContext(courseAgentContext.getCourse(), hints, courseAgentContext.getUserInput());
-        String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(infoAnswerPrompt);
+        String promptKey = courseAgentContext.isAskMode() ? infoAnswerAskPrompt : infoAnswerPrompt;
+        String systemPrompt = systemPromptService.getAnalyzerPromptByQuery(promptKey);
 
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(ChatMessage.builder().role("system").content(systemPrompt).build());

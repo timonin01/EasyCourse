@@ -28,6 +28,7 @@ import {
   countPendingStepikUploads,
   hasPendingStepikUploads,
 } from '../utils/stepikSyncStatus';
+import { STEPIK_OAUTH_SETTINGS_PATH } from '../constants/settingsSections';
 
 type TabType = 'upload' | 'download';
 
@@ -456,7 +457,7 @@ export function StepikSync() {
             action={
               <Button
                 icon={<Settings className="w-4 h-4" />}
-                onClick={() => navigate('/settings')}
+                onClick={() => navigate(STEPIK_OAUTH_SETTINGS_PATH)}
               >
                 Перейти в настройки
               </Button>

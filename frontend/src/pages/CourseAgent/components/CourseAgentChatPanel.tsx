@@ -216,10 +216,10 @@ export function CourseAgentChatPanel({
             variant="primary"
             onClick={onSend}
             disabled={isLoading || isExecuting || !input.trim()}
-            className="h-9 w-9 shrink-0 p-0"
+            className="h-10 w-10 shrink-0 p-0"
             aria-label="Отправить"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </div>

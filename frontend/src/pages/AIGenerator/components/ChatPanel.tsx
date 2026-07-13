@@ -163,8 +163,13 @@ export function ChatPanel({
                     onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
                   />
                 </div>
-                <Button onClick={onSend} disabled={!input.trim() || isLoading} className="ml-auto h-9 w-9 flex-shrink-0">
-                  <Send className="w-4 h-4" />
+                <Button
+                  onClick={onSend}
+                  disabled={!input.trim() || isLoading}
+                  className="ml-auto h-10 w-10 shrink-0 p-0"
+                  aria-label="Отправить"
+                >
+                  <Send className="h-5 w-5" />
                 </Button>
               </div>
             </div>
