@@ -8,7 +8,7 @@ import org.core.dto.agent.batchAnalyzer.CountStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.service.agent.AgentService;
 import org.core.service.agent.SystemPromptService;
-import org.core.service.ai.YandexGptService;
+import org.core.service.ai.yandex.YandexGptService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 

@@ -1,4 +1,4 @@
-package org.core.dto.yandexgpt;
+package org.core.dto.ai.yandexgpt;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -6,15 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class YandexGptResponse {
+public class Alternative {
 
-    private Result result;
+    private Message message;
     
-    private Error error;
+    @JsonProperty("status")
+    private String status;
 }

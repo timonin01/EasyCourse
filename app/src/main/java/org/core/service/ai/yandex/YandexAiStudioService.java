@@ -1,4 +1,4 @@
-package org.core.service.ai;
+package org.core.service.ai.yandex;
 
 import com.openai.client.OpenAIClient;
 import com.openai.models.responses.Response;

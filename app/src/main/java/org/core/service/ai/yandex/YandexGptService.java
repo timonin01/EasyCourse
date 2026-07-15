@@ -1,13 +1,13 @@
-package org.core.service.ai;
+package org.core.service.ai.yandex;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
-import org.core.dto.yandexgpt.Message;
-import org.core.dto.yandexgpt.YandexGptRequest;
-import org.core.dto.yandexgpt.YandexGptResponse;
+import org.core.dto.ai.yandexgpt.Message;
+import org.core.dto.ai.yandexgpt.YandexGptRequest;
+import org.core.dto.ai.yandexgpt.YandexGptResponse;
 import org.core.exception.exceptions.YandexGptException;
 import org.core.service.AiService;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,4 +1,4 @@
-package org.core.dto.yandexgpt;
+package org.core.dto.ai.yandexgpt;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

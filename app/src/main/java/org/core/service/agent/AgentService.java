@@ -2,6 +2,7 @@ package org.core.service.agent;
 
 import lombok.extern.slf4j.Slf4j;
 import org.core.config.LlmModelConfig;
+import org.core.config.StepGenerationTokenConfig;
 import org.core.domain.ai.AiMessageRole;
 import org.core.domain.ai.ChatType;
 import org.core.dto.agent.ChatMessage;
@@ -10,8 +11,6 @@ import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.enums.LlmModel;
 import org.core.service.agent.llmProvider.LlmProvider;
 import org.core.service.ai.AiSessionMessageService;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -29,6 +28,7 @@ public class AgentService {
     private final StepikResponseParser responseParser;
     private final StepTypeClassifier stepTypeClassifier;
     private final LlmModelConfig llmModelConfig;
+    private final StepGenerationTokenConfig stepGenerationTokenConfig;
 
     public AgentService(ContextStore contextStore,
                         AiSessionMessageService aiSessionMessageService,
@@ -36,16 +36,16 @@ public class AgentService {
                         StepikResponseParser responseParser,
                         StepTypeClassifier stepTypeClassifier,
                         LlmModelConfig llmModelConfig,
-                        @Value("${default.llm.provider}") String defaultProvider,
-                        @Qualifier("yandexProvider") LlmProvider yandexProvider,
-                        @Qualifier("deepseekProvider") LlmProvider deepseekProvider){
+                        StepGenerationTokenConfig stepGenerationTokenConfig,
+                        LlmProvider llmProvider){
         this.aiSessionMessageService = aiSessionMessageService;
         this.systemPromptService = systemPromptService;
         this.responseParser = responseParser;
         this.contextStore = contextStore;
         this.stepTypeClassifier = stepTypeClassifier;
         this.llmModelConfig = llmModelConfig;
-        this.llmProvider = "yandex".equalsIgnoreCase(defaultProvider) ? yandexProvider : deepseekProvider;
+        this.stepGenerationTokenConfig = stepGenerationTokenConfig;
+        this.llmProvider = llmProvider;
     }
 
     public String handleUserMessage(Long userId, String sessionId, String userInput, LlmModel llmModel) {
@@ -165,9 +165,10 @@ public class AgentService {
             }
 
             String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
+            int maxTokens = stepGenerationTokenConfig.resolveMaxTokens(stepType);
             String aiResponse = modelUri != null && !modelUri.trim().isEmpty()
-                    ? llmProvider.chat(historyForLLM, modelUri)
-                    : llmProvider.chat(historyForLLM);
+                    ? llmProvider.chat(historyForLLM, modelUri, maxTokens)
+                    : llmProvider.chat(historyForLLM, null, maxTokens);
             if (persistHistory) {
                 ChatMessage assistantMessage = ChatMessage.builder()
                         .role("assistant")
