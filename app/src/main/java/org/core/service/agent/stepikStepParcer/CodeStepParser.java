@@ -31,7 +31,8 @@ public class CodeStepParser {
             lenientMapper.setConfig(objectMapper.getDeserializationConfig());
             lenientMapper.setConfig(objectMapper.getSerializationConfig());
 
-            JsonNode node = lenientMapper.readTree(json);
+            String repaired = escapeRawControlCharsInJsonStrings(json);
+            JsonNode node = lenientMapper.readTree(repaired);
             if (node.isObject()) {
                 ObjectNode objectNode = (ObjectNode) node;
                 if (!objectNode.has("name") || objectNode.get("name").isNull()) {
@@ -49,6 +50,47 @@ public class CodeStepParser {
             log.error("Failed to parse code request: {}", e.getMessage(), e);
             throw new RuntimeException("Invalid code request format", e);
         }
+    }
+
+    private static String escapeRawControlCharsInJsonStrings(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+        StringBuilder sb = new StringBuilder(json.length() + 32);
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (!inString) {
+                if (c == '"') {
+                    inString = true;
+                }
+                sb.append(c);
+                continue;
+            }
+            if (escaped) {
+                sb.append(c);
+                escaped = false;
+                continue;
+            }
+            if (c == '\\') {
+                sb.append(c);
+                escaped = true;
+                continue;
+            }
+            if (c == '"') {
+                inString = false;
+                sb.append(c);
+                continue;
+            }
+            switch (c) {
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private void fixCodeRequestIfNeeded(StepikBlockCodeRequest request) {

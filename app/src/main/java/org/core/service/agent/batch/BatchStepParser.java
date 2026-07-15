@@ -296,20 +296,30 @@ public class BatchStepParser {
         }
 
         String trimmed = response.trim();
-        Pattern jsonPattern = Pattern.compile("```json\\s*(.*?)\\s*```", Pattern.DOTALL);
-        Matcher matcher = jsonPattern.matcher(trimmed);
+        trimmed = trimmed.replaceAll("(?is)<think>.*?</think>", "").trim();
+        trimmed = trimmed.replaceAll("(?is)<thinking>.*?</thinking>", "").trim();
+
+        Pattern fencedJson = Pattern.compile("```(?:json)?\\s*(\\{[\\s\\S]*?}|\\[[\\s\\S]*?])\\s*```", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = fencedJson.matcher(trimmed);
         if (matcher.find()) {
             return matcher.group(1).trim();
         }
 
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        if ((trimmed.startsWith("{") && trimmed.endsWith("}"))
+                || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
             return trimmed;
         }
 
-        int start = trimmed.indexOf('{');
-        int end = trimmed.lastIndexOf('}');
-        if (start != -1 && end != -1 && end > start) {
-            return trimmed.substring(start, end + 1);
+        int startObj = trimmed.indexOf('{');
+        int endObj = trimmed.lastIndexOf('}');
+        if (startObj != -1 && endObj != -1 && endObj > startObj) {
+            return trimmed.substring(startObj, endObj + 1);
+        }
+
+        int startArr = trimmed.indexOf('[');
+        int endArr = trimmed.lastIndexOf(']');
+        if (startArr != -1 && endArr != -1 && endArr > startArr) {
+            return trimmed.substring(startArr, endArr + 1);
         }
 
         throw new IllegalArgumentException("No JSON found in response");

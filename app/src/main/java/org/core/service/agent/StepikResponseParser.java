@@ -127,15 +127,64 @@ public class StepikResponseParser {
         if (json == null || json.isEmpty()) {
             return json;
         }
-        
+
         String cleaned = json.trim();
-        if (cleaned.startsWith("\"") && cleaned.endsWith("\"")) {
-            cleaned = cleaned.substring(1, cleaned.length() - 1);
-            cleaned = cleaned.replace("\\\"", "\"");
+        // Only unwrap a JSON-encoded string when it wraps an object/array — never unwrap a plain string fragment.
+        if (cleaned.startsWith("\"") && cleaned.endsWith("\"") && cleaned.length() > 1) {
+            String unwrapped = cleaned.substring(1, cleaned.length() - 1).replace("\\\"", "\"");
+            String unwrappedTrim = unwrapped.trim();
+            if (unwrappedTrim.startsWith("{") || unwrappedTrim.startsWith("[")) {
+                cleaned = unwrappedTrim;
+            }
         }
-        
-        cleaned = cleaned.trim();
+
+        cleaned = escapeRawControlCharsInJsonStrings(cleaned);
         return normalizeJson(cleaned);
+    }
+
+    /**
+     * LLMs often emit raw newlines/tabs inside JSON string literals, which breaks parsers.
+     * Escape those control characters while leaving structural whitespace outside strings intact.
+     */
+    private String escapeRawControlCharsInJsonStrings(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+        StringBuilder sb = new StringBuilder(json.length() + 32);
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (!inString) {
+                if (c == '"') {
+                    inString = true;
+                }
+                sb.append(c);
+                continue;
+            }
+            if (escaped) {
+                sb.append(c);
+                escaped = false;
+                continue;
+            }
+            if (c == '\\') {
+                sb.append(c);
+                escaped = true;
+                continue;
+            }
+            if (c == '"') {
+                inString = false;
+                sb.append(c);
+                continue;
+            }
+            switch (c) {
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private String normalizeJson(String json) {
