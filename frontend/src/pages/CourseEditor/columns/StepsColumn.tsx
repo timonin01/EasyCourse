@@ -1,4 +1,4 @@
-import { Plus, Trash2, Upload, Loader2, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
+import { Plus, Trash2, Upload, Loader2, AlertTriangle, CheckCircle, RefreshCw, FileText, Sparkles } from 'lucide-react';
 import { Button, Card, SortableList, Badge, Tooltip, EmptyState } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { getStepDisplayType } from '../../../types';
@@ -11,6 +11,7 @@ interface StepsColumnProps {
   selectedLesson: Lesson | null;
   onStepClick: (step: Step) => void;
   onAddClick: () => void;
+  onGenerateClick?: () => void;
   onReorder: (items: Step[]) => void;
   isUnsynced: (s: Step) => boolean;
   stepsDiffersFromStepik: Set<number>;
@@ -30,6 +31,7 @@ export function StepsColumn({
   selectedLesson,
   onStepClick,
   onAddClick,
+  onGenerateClick,
   onReorder,
   isUnsynced,
   stepsDiffersFromStepik,
@@ -47,7 +49,29 @@ export function StepsColumn({
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-dark-200">Шаги</h2>
-        <Button size="sm" disabled={!selectedLesson} onClick={onAddClick}><Plus className="w-4 h-4" /></Button>
+        <div className="flex items-center gap-1">
+          {onGenerateClick && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!selectedLesson}
+              onClick={onGenerateClick}
+              title="Сгенерировать в AI Generator"
+              aria-label="Сгенерировать в AI Generator"
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          )}
+          <Button
+            size="sm"
+            disabled={!selectedLesson}
+            onClick={onAddClick}
+            title="Создать шаг вручную"
+            aria-label="Создать шаг вручную"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
       {selectedLesson && steps.length > 0 ? (
         <SortableList
@@ -162,12 +186,20 @@ export function StepsColumn({
           compact
           icon={Plus}
           title="Нет шагов"
-          description="Добавьте первый шаг в урок"
+          description="Создайте шаг вручную или сгенерируйте через AI"
           action={
-            <Button size="sm" onClick={onAddClick}>
-              <Plus className="w-4 h-4 mr-1" />
-              Добавить шаг
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button size="sm" onClick={onAddClick}>
+                <Plus className="w-4 h-4 mr-1" />
+                Создать шаг
+              </Button>
+              {onGenerateClick && (
+                <Button size="sm" variant="secondary" onClick={onGenerateClick}>
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  В AI Generator
+                </Button>
+              )}
+            </div>
           }
         />
       ) : (

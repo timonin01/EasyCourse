@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
 import { StepView } from '../../../components/StepView';
@@ -13,6 +13,8 @@ interface StepPreviewModalProps {
   sectionTitle?: string;
   onClose: () => void;
   onAddToChat?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function StepPreviewModal({
@@ -23,6 +25,8 @@ export function StepPreviewModal({
   sectionTitle,
   onClose,
   onAddToChat,
+  onEdit,
+  onDelete,
 }: StepPreviewModalProps) {
   const breadcrumb = [sectionTitle, lessonTitle].filter(Boolean).join(' · ');
   const title = step
@@ -37,11 +41,23 @@ export function StepPreviewModal({
       subtitle={!isLoading && breadcrumb ? breadcrumb : undefined}
       size="lg"
       footer={
-        onAddToChat && step && !isLoading ? (
-          <div className="flex justify-end">
-            <Button variant="secondary" onClick={onAddToChat}>
-              Добавить в контекст чата
-            </Button>
+        step && !isLoading ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {onDelete && (
+              <Button variant="ghost" onClick={onDelete} className="text-red-400 hover:text-red-300" icon={<Trash2 className="h-4 w-4" />}>
+                Удалить
+              </Button>
+            )}
+            {onAddToChat && (
+              <Button variant="secondary" onClick={onAddToChat}>
+                Добавить в контекст чата
+              </Button>
+            )}
+            {onEdit && (
+              <Button variant="primary" onClick={onEdit} icon={<Pencil className="h-4 w-4" />}>
+                Редактировать
+              </Button>
+            )}
           </div>
         ) : undefined
       }

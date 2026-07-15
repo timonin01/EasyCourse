@@ -3,16 +3,28 @@ import { Bot } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { CSSProperties } from 'react';
 import toast from 'react-hot-toast';
-import { stepsApi } from '../../api';
-import type { Step } from '../../types';
+import { lessonsApi, sectionsApi, stepsApi } from '../../api';
+import type { Step, StepType } from '../../types';
 import { MainLayout } from '../../components/Layout';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
+import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
 import { useResizableWidth } from '../../hooks/useResizableWidth';
+import { extractApiErrorMessage } from '../../utils/apiError';
+import { validateTitle } from '../../utils/validation';
+import { CreateLessonModal } from '../CourseEditor/modals/CreateLessonModal';
+import { CreateModelModal } from '../CourseEditor/modals/CreateModelModal';
+import { CreateStepModal } from '../CourseEditor/modals/CreateStepModal';
+import { EditTitleModal } from '../CourseEditor/modals/EditTitleModal';
+import { StepViewModal } from '../CourseEditor/modals/StepViewModal';
+import { StepContentAiEditModal } from '../CourseEditor/components/StepContentAiEditModal';
 import { CourseAgentChatPanel } from './components/CourseAgentChatPanel';
 import { CourseTreePanel } from './components/CourseTreePanel';
 import { StepPreviewModal } from './components/StepPreviewModal';
+import { StructureDeleteModal } from './components/StructureDeleteModal';
 import type { CourseTreeSelection } from './types';
+import { useAgentStepEdit } from './useAgentStepEdit';
+import { useAgentStructureActions } from './useAgentStructureActions';
 import { useCourseAgent } from './useCourseAgent';
 import { useCourseStructure } from './useCourseStructure';
 import { buildContextPrompt } from './utils/contextPrompt';
@@ -27,12 +39,54 @@ export function CourseAgent() {
   const [previewStep, setPreviewStep] = useState<Step | null>(null);
   const [previewStepLoading, setPreviewStepLoading] = useState(false);
   const [stepModalOpen, setStepModalOpen] = useState(false);
+  const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
+  const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
+  const [isStepCreateModalOpen, setIsStepCreateModalOpen] = useState(false);
+  const [createSectionId, setCreateSectionId] = useState<number | null>(null);
+  const [createLessonId, setCreateLessonId] = useState<number | null>(null);
+  const [createForm, setCreateForm] = useState({ title: '', description: '' });
+  const [createStepType, setCreateStepType] = useState<StepType>('TEXT');
+  const [isCreating, setIsCreating] = useState(false);
 
   const { width: treeWidth, isResizing, startResize } = useResizableWidth({
     storageKey: 'course-agent-tree-width',
     defaultWidth: 320,
     minWidth: 260,
     maxWidth: 480,
+  });
+
+  const handleStepUpdated = useCallback((updated: Step) => {
+    structure.patchStep(updated.id, updated);
+    setPreviewStep((prev) => (prev?.id === updated.id ? updated : prev));
+  }, [structure.patchStep]);
+
+  const handleStepCreated = useCallback((created: Step) => {
+    structure.addStep(created);
+  }, [structure.addStep]);
+
+  const stepEdit = useAgentStepEdit({
+    onStepUpdated: handleStepUpdated,
+    onStepCreated: handleStepCreated,
+  });
+
+  const structureActions = useAgentStructureActions({
+    sections: structure.sections,
+    selection: treeSelection,
+    setSelection: setTreeSelection,
+    patchSection: structure.patchSection,
+    patchLesson: structure.patchLesson,
+    removeSection: structure.removeSection,
+    removeLesson: structure.removeLesson,
+    removeStep: structure.removeStep,
+    onStepRemoved: (stepId) => {
+      if (previewStep?.id === stepId) {
+        setStepModalOpen(false);
+        setPreviewStep(null);
+      }
+      if (stepEdit.editingStep?.id === stepId) {
+        stepEdit.closeView();
+      }
+    },
   });
 
   useEffect(() => {
@@ -145,6 +199,17 @@ export function CourseAgent() {
     handleClosePreview();
   }, [agent.appendInputContext, handleClosePreview, structure.sections, treeSelection]);
 
+  const handleEditStep = useCallback(() => {
+    if (!previewStep) return;
+    setStepModalOpen(false);
+    stepEdit.openEdit(previewStep);
+  }, [previewStep, stepEdit]);
+
+  const handleDeletePreviewStep = useCallback(() => {
+    if (!previewStep) return;
+    structureActions.openDeleteStep(previewStep.id);
+  }, [previewStep, structureActions]);
+
   const previewMeta = useMemo(() => {
     if (!treeSelection || treeSelection.type !== 'step') {
       return {};
@@ -155,6 +220,96 @@ export function CourseAgent() {
   const handleRefreshStructure = useCallback(() => {
     void structure.loadStructure();
   }, [structure.loadStructure]);
+
+  const openCreateSection = useCallback(() => {
+    setCreateForm({ title: '', description: '' });
+    setIsSectionModalOpen(true);
+  }, []);
+
+  const openCreateLesson = useCallback((sectionId: number) => {
+    setCreateSectionId(sectionId);
+    setCreateForm({ title: '', description: '' });
+    setIsLessonModalOpen(true);
+    structure.expandToNode('section', sectionId);
+  }, [structure.expandToNode]);
+
+  const openCreateStep = useCallback((lessonId: number) => {
+    setCreateLessonId(lessonId);
+    setCreateStepType('TEXT');
+    setIsStepCreateModalOpen(true);
+    structure.expandToNode('lesson', lessonId);
+  }, [structure.expandToNode]);
+
+  const handleCreateSection = useCallback(async () => {
+    if (!agent.selectedCourseId) {
+      toast.error('Сначала выберите курс');
+      return;
+    }
+    const titleError = validateTitle(createForm.title, 'Название модуля');
+    if (titleError) {
+      toast.error(titleError);
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const created = await sectionsApi.createSection({
+        courseId: agent.selectedCourseId,
+        title: createForm.title.trim(),
+        description: createForm.description.trim(),
+      });
+      structure.addSection(created);
+      setIsSectionModalOpen(false);
+      setCreateForm({ title: '', description: '' });
+      toast.success('Модуль создан');
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось создать модуль'));
+    } finally {
+      setIsCreating(false);
+    }
+  }, [agent.selectedCourseId, createForm.description, createForm.title, structure.addSection]);
+
+  const handleCreateLesson = useCallback(async () => {
+    if (!createSectionId) {
+      toast.error('Не выбран модуль для урока');
+      return;
+    }
+    const titleError = validateTitle(createForm.title, 'Название урока');
+    if (titleError) {
+      toast.error(titleError);
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const created = await lessonsApi.createLesson({
+        sectionId: createSectionId,
+        title: createForm.title.trim(),
+      });
+      structure.addLesson(created);
+      setIsLessonModalOpen(false);
+      setCreateSectionId(null);
+      setCreateForm({ title: '', description: '' });
+      toast.success('Урок создан');
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось создать урок'));
+    } finally {
+      setIsCreating(false);
+    }
+  }, [createForm.title, createSectionId, structure.addLesson]);
+
+  const handleContinueCreateStep = useCallback(() => {
+    if (!createLessonId) {
+      toast.error('Не выбран урок для шага');
+      return;
+    }
+    const lessonId = createLessonId;
+    const type = createStepType;
+    setIsStepCreateModalOpen(false);
+    setCreateLessonId(null);
+    setCreateStepType('TEXT');
+    stepEdit.blockEdit.openCreateStepBlockEdit(lessonId, type);
+  }, [createLessonId, createStepType, stepEdit.blockEdit]);
 
   const treePanelStyle = useMemo(
     () => ({ '--tree-width': `${treeWidth}px` } as CSSProperties),
@@ -243,9 +398,19 @@ export function CourseAgent() {
               expandedLessons={structure.expandedLessons}
               highlight={agent.treeHighlight}
               selection={treeSelection}
+              busyIds={structureActions.busyIds}
+              canCreate={!!agent.selectedCourseId}
               onToggleSection={structure.toggleSection}
               onToggleLesson={structure.toggleLesson}
               onSelectNode={handleSelectNode}
+              onCreateSection={openCreateSection}
+              onCreateLesson={openCreateLesson}
+              onCreateStep={openCreateStep}
+              onRenameSection={structureActions.openRenameSection}
+              onRenameLesson={structureActions.openRenameLesson}
+              onDeleteSection={structureActions.openDeleteSection}
+              onDeleteLesson={structureActions.openDeleteLesson}
+              onDeleteStep={structureActions.openDeleteStep}
               onRefresh={handleRefreshStructure}
             />
           </div>
@@ -260,6 +425,98 @@ export function CourseAgent() {
         lessonTitle={previewMeta.lessonTitle}
         onClose={handleClosePreview}
         onAddToChat={handleAddStepToChat}
+        onEdit={handleEditStep}
+        onDelete={handleDeletePreviewStep}
+      />
+
+      <CreateModelModal
+        isOpen={isSectionModalOpen}
+        onClose={() => {
+          setIsSectionModalOpen(false);
+          setCreateForm({ title: '', description: '' });
+        }}
+        title={createForm.title}
+        description={createForm.description}
+        onTitleChange={(value) => setCreateForm((prev) => ({ ...prev, title: value }))}
+        onDescriptionChange={(value) => setCreateForm((prev) => ({ ...prev, description: value }))}
+        onSubmit={() => void handleCreateSection()}
+        isSaving={isCreating}
+      />
+
+      <CreateLessonModal
+        isOpen={isLessonModalOpen}
+        onClose={() => {
+          setIsLessonModalOpen(false);
+          setCreateSectionId(null);
+          setCreateForm({ title: '', description: '' });
+        }}
+        title={createForm.title}
+        onTitleChange={(value) => setCreateForm((prev) => ({ ...prev, title: value }))}
+        onSubmit={() => void handleCreateLesson()}
+        isSaving={isCreating}
+      />
+
+      <CreateStepModal
+        isOpen={isStepCreateModalOpen}
+        onClose={() => {
+          setIsStepCreateModalOpen(false);
+          setCreateLessonId(null);
+          setCreateStepType('TEXT');
+        }}
+        type={createStepType}
+        onTypeChange={setCreateStepType}
+        onContinue={handleContinueCreateStep}
+      />
+
+      <EditTitleModal
+        isOpen={!!structureActions.renameTarget}
+        onClose={() => structureActions.setRenameTarget(null)}
+        currentTitle={structureActions.renameTarget?.title ?? ''}
+        label={structureActions.renameTarget?.type === 'lesson' ? 'урока' : 'модуля'}
+        onSave={structureActions.saveRename}
+      />
+
+      <StructureDeleteModal
+        target={structureActions.deleteTarget}
+        isDeleting={structureActions.isDeleting}
+        onClose={() => structureActions.setDeleteTarget(null)}
+        onConfirm={() => void structureActions.confirmDelete()}
+      />
+
+      <StepViewModal
+        isOpen={stepEdit.isViewOpen}
+        onClose={stepEdit.closeView}
+        selectedStep={stepEdit.editingStep}
+        canChangeType={false}
+        canChangeStepType={false}
+        canEditTask={stepEdit.canEditTask}
+        isCodeBlock={stepEdit.isCodeBlock}
+        onOpenStepTypeChange={() => undefined}
+        onEditTask={stepEdit.openBlockEdit}
+        onOpenContentEdit={stepEdit.openAiEdit}
+      />
+
+      <StepContentAiEditModal
+        isOpen={stepEdit.isAiEditOpen}
+        onClose={() => stepEdit.setIsAiEditOpen(false)}
+        selectedStep={stepEdit.editingStep}
+        contentEditData={stepEdit.contentEditData}
+        onContentEditDataChange={stepEdit.setContentEditData}
+        selectedLlmModel={stepEdit.selectedLlmModel}
+        onLlmModelChange={stepEdit.setSelectedLlmModel}
+        canSelectModel={stepEdit.canSelectModel}
+        isGeneratingContent={stepEdit.isGeneratingContent}
+        isSaving={stepEdit.isSavingContent}
+        onGenerate={() => void stepEdit.handleGenerateNewContent()}
+        onSave={() => void stepEdit.handleSaveContentChanges()}
+      />
+
+      <StepikBlockEditModal
+        isOpen={stepEdit.blockEdit.isBlockEditOpen}
+        onClose={stepEdit.blockEdit.closeBlockEdit}
+        block={stepEdit.blockEdit.editingBlock}
+        title={stepEdit.blockEdit.blockEditTitle}
+        onSave={stepEdit.blockEdit.handleSaveBlockEdit}
       />
     </MainLayout>
   );

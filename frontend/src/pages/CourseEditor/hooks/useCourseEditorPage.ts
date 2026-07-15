@@ -124,18 +124,26 @@ export function useCourseEditorPage() {
     }
   };
 
-  const closeStepViewOnBlockSave = () => {
-    setIsStepViewModalOpen(false);
-    setSelectedStep(null);
+  const closeStepViewOnBlockSave = (_step: Step, mode: 'create' | 'update') => {
+    if (mode === 'update') {
+      setIsStepViewModalOpen(false);
+      setSelectedStep(null);
+    }
   };
 
   const {
     isBlockEditOpen,
     editingBlock,
+    blockEditTitle,
     openStepBlockEdit,
+    openCreateStepBlockEdit,
     closeBlockEdit,
     handleSaveBlockEdit,
-  } = useStepBlockEdit({ applyStepUpdate, onSaved: closeStepViewOnBlockSave });
+  } = useStepBlockEdit({
+    applyStepUpdate,
+    applyStepCreate: addStep,
+    onSaved: closeStepViewOnBlockSave,
+  });
 
   useEffect(() => {
     if (!courseId) return;
@@ -314,50 +322,15 @@ export function useCourseEditorPage() {
     }
   };
 
-  const createCodeStepikBlock = (text: string): StepikBlockRequest => ({
-    name: 'code',
-    text: text || 'Условие задачи',
-    video: null,
-    options: null,
-    source: {
-      code: '',
-      templates_data: '::java21',
-      test_cases: [['', '']],
-      execution_time_limit: 5,
-      execution_memory_limit: 256,
-      samples_count: 1,
-      are_all_tests_run: true,
-      is_run_user_code_allowed: true,
-      is_time_limit_scaled: true,
-      is_memory_limit_scaled: true,
-      manual_time_limits: [],
-      manual_memory_limits: [],
-      test_archive: [],
-    },
-  });
-
-  const handleCreateStep = async () => {
-    if (!selectedLesson) return;
-    setIsSaving(true);
-    try {
-      const payload: Parameters<typeof stepsApi.createStep>[0] = {
-        lessonId: selectedLesson.id,
-        type: formData.type,
-        content: formData.description || '',
-      };
-      if (formData.type === 'CODE') {
-        payload.stepikBlock = createCodeStepikBlock(formData.description || '');
-      }
-      const newStep = await stepsApi.createStep(payload);
-      addStep(newStep);
-      toast.success('Шаг создан!');
-      setIsStepModalOpen(false);
-      setFormData({ title: '', description: '', type: 'TEXT' });
-    } catch (error) {
-      toast.error('Не удалось создать шаг');
-    } finally {
-      setIsSaving(false);
+  const handleContinueCreateStep = () => {
+    if (!selectedLesson) {
+      toast.error('Сначала выберите урок');
+      return;
     }
+    const type = formData.type;
+    setIsStepModalOpen(false);
+    setFormData({ title: '', description: '', type: 'TEXT' });
+    openCreateStepBlockEdit(selectedLesson.id, type);
   };
 
   // Подсчет дочерних сущностей для предупреждения
@@ -1137,12 +1110,14 @@ export function useCourseEditorPage() {
     setMode,
     isBlockEditOpen,
     editingBlock,
+    blockEditTitle,
     openStepBlockEdit,
+    openCreateStepBlockEdit,
     closeBlockEdit,
     handleSaveBlockEdit,
     handleCreateModel,
     handleCreateLesson,
-    handleCreateStep,
+    handleContinueCreateStep,
     handleDeleteModelLocal,
     handleDeleteLessonLocal,
     handleDeleteStepLocal,

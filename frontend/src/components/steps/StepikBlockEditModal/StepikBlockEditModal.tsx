@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { CheckCircle, FileText } from 'lucide-react';
 import { Modal, Button } from '../../ui';
 import { BLOCK_META } from './blockMeta';
 import type { StepikBlockEditModalProps } from './types';
 import { useStepikBlockForm } from './useStepikBlockForm';
 import { BlockEditorBody } from './editors/BlockEditorBody';
+import { validateStepikBlock } from '../../../utils/validateStepikBlock';
 
 export function StepikBlockEditModal({
   isOpen,
@@ -27,6 +29,13 @@ export function StepikBlockEditModal({
   const handleSave = async () => {
     const updated = form.buildUpdatedBlock();
     if (!updated || isSaving) return;
+
+    const validationError = validateStepikBlock(updated);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setIsSaving(true);
     try {
       await onSave(updated);
