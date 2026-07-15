@@ -72,6 +72,14 @@ function expandAction(action: PlanActionDTO): PlannedStepItem[] {
     return expandSteps(action.steps, action.targetLessonTitle || 'Урок');
   }
 
+  if (action.type === 'COPY_STEP') {
+    return [{
+      lessonTitle: action.targetLessonTitle || 'Урок',
+      type: 'copy',
+      estimatedSec: 2,
+    }];
+  }
+
   return [];
 }
 

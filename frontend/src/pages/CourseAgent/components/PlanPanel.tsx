@@ -10,14 +10,14 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import type { CountStepDTO, CoursePlanDTO, PlanActionDTO } from '../../../types';
 import { LessonPlanEditor, StepPlanEditor } from './PlanEditor';
 import { ExecuteProgress } from './ExecuteProgress';
-import { isCreateAction, isDeleteAction, isDeletePlan, planSummaryLabel } from '../utils/planIntent';
+import { isCreateAction, isCopyAction, isDeleteAction, isDeletePlan, planSummaryLabel } from '../utils/planIntent';
 
 const STEP_TYPE_LABELS: Record<string, string> = {
   text: 'Теория',
@@ -40,7 +40,7 @@ function stepLabel(step: CountStepDTO): string {
   return `${label}${count}`;
 }
 
-function StepChips({ steps }: { steps?: CountStepDTO[] }) {
+function StepChips({ steps, accent = 'neutral' }: { steps?: CountStepDTO[]; accent?: 'neutral' | 'create' }) {
   if (!steps || steps.length === 0) {
     return <span className="text-xs text-dark-500">без шагов</span>;
   }
@@ -49,7 +49,12 @@ function StepChips({ steps }: { steps?: CountStepDTO[] }) {
       {steps.map((step, index) => (
         <span
           key={index}
-          className="rounded-md border border-dark-600 bg-dark-800 px-1.5 py-0.5 text-[11px] text-dark-400"
+          className={clsx(
+            'rounded-md border px-1.5 py-0.5 text-[11px]',
+            accent === 'create'
+              ? 'border-primary-500/30 bg-primary-500/10 text-primary-300'
+              : 'border-dark-600 bg-dark-800 text-dark-400',
+          )}
         >
           {stepLabel(step)}
         </span>
@@ -69,6 +74,14 @@ function actionBlockTitle(action: PlanActionDTO): string {
     const lesson = action.targetLessonTitle ?? '—';
     const section = action.targetSectionTitle;
     return section ? `Шаги: ${section} → ${lesson}` : `Шаги в уроке «${lesson}»`;
+  }
+  if (action.type === 'COPY_STEP') {
+    const lesson = action.targetLessonTitle ?? '—';
+    const section = action.targetSectionTitle;
+    const step = action.targetStepTitle ?? 'шаг';
+    return section
+      ? `Копия: ${step} → ${section} / ${lesson}`
+      : `Копия: ${step} → «${lesson}»`;
   }
   return 'Действие';
 }
@@ -145,6 +158,14 @@ function DeletePlanWarning({ actions }: { actions: PlanActionDTO[] }) {
   );
 }
 
+function CreateEntityCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-primary-500/30 bg-primary-500/5 px-2.5 py-2 text-xs text-dark-300">
+      {children}
+    </div>
+  );
+}
+
 function ActionPreview({ action }: { action: PlanActionDTO }) {
   if (isDeleteAction(action)) {
     return <DeleteActionPreview action={action} />;
@@ -152,20 +173,20 @@ function ActionPreview({ action }: { action: PlanActionDTO }) {
 
   if (action.type === 'CREATE_SECTION' && action.section) {
     return (
-      <div className="space-y-2">
-        <div className="text-sm font-medium text-dark-100">{action.section.title}</div>
+      <CreateEntityCard>
+        <div className="text-sm font-medium text-primary-200">{action.section.title}</div>
         {action.section.description && (
-          <div className="text-xs text-dark-500">{action.section.description}</div>
+          <div className="mt-1 text-xs text-dark-500">{action.section.description}</div>
         )}
-        <div className="space-y-1.5">
+        <div className="mt-2 space-y-1.5">
           {action.section.lessons?.map((lesson, index) => (
-            <div key={index} className="rounded-lg border border-dark-700/60 bg-dark-850 px-2.5 py-2">
-              <div className="mb-1 text-xs text-dark-300">Урок {index + 1}: {lesson.title}</div>
-              <StepChips steps={lesson.steps} />
+            <div key={index} className="rounded-lg border border-primary-500/20 bg-primary-500/5 px-2.5 py-2">
+              <div className="mb-1 text-xs text-primary-300">Урок {index + 1}: {lesson.title}</div>
+              <StepChips steps={lesson.steps} accent="create" />
             </div>
           ))}
         </div>
-      </div>
+      </CreateEntityCard>
     );
   }
 
@@ -176,10 +197,10 @@ function ActionPreview({ action }: { action: PlanActionDTO }) {
           Модуль: {action.targetSectionTitle ?? '—'}
         </div>
         {action.lessons?.map((lesson, index) => (
-          <div key={index} className="rounded-lg border border-dark-700/60 bg-dark-850 px-2.5 py-2">
-            <div className="mb-1 text-xs text-dark-300">{lesson.title}</div>
-            <StepChips steps={lesson.steps} />
-          </div>
+          <CreateEntityCard key={index}>
+            <div className="mb-1 text-xs text-primary-300">{lesson.title}</div>
+            <StepChips steps={lesson.steps} accent="create" />
+          </CreateEntityCard>
         ))}
       </div>
     );
@@ -192,10 +213,27 @@ function ActionPreview({ action }: { action: PlanActionDTO }) {
           {action.targetSectionTitle ? `${action.targetSectionTitle} → ` : ''}
           {action.targetLessonTitle ?? '—'}
         </div>
-        <div className="rounded-lg border border-dark-700/60 bg-dark-850 px-2.5 py-2">
-          <StepChips steps={action.steps} />
-        </div>
+        <CreateEntityCard>
+          <StepChips steps={action.steps} accent="create" />
+        </CreateEntityCard>
       </div>
+    );
+  }
+
+  if (action.type === 'COPY_STEP') {
+    return (
+      <CreateEntityCard>
+        <div className="text-sm font-medium text-primary-200">
+          {action.targetStepTitle ?? 'Шаг'}
+        </div>
+        <div className="mt-1 text-xs text-dark-400">
+          → {action.targetSectionTitle ? `${action.targetSectionTitle} / ` : ''}
+          {action.targetLessonTitle ?? '—'}
+        </div>
+        <div className="mt-1 text-xs text-dark-500">
+          Точная копия содержимого. Исходный шаг останется на месте. На Stepik не публикуется автоматически.
+        </div>
+      </CreateEntityCard>
     );
   }
 
@@ -315,7 +353,14 @@ function PlanManualEditor({
       {actions.map((action, index) => (
         <div
           key={`${action.type}-${index}`}
-          className="rounded-lg border border-dark-700/60 bg-dark-900/50 p-3"
+          className={clsx(
+            'rounded-lg border p-3',
+            isCreateAction(action) || isCopyAction(action)
+              ? 'border-primary-500/30 bg-primary-500/5'
+              : isDeleteAction(action)
+                ? 'border-red-500/30 bg-red-500/5'
+                : 'border-dark-700/60 bg-dark-900/50',
+          )}
         >
           <div className="mb-3 flex items-start justify-between gap-2">
             <div className="text-xs font-medium uppercase tracking-wide text-dark-500">

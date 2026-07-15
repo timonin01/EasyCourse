@@ -330,7 +330,8 @@ export type PlanActionType =
   | 'CREATE_STEPS'
   | 'DELETE_SECTION'
   | 'DELETE_LESSON'
-  | 'DELETE_STEP';
+  | 'DELETE_STEP'
+  | 'COPY_STEP';
 
 export type CourseAgentAction =
   | 'NEED_CLARIFICATION'

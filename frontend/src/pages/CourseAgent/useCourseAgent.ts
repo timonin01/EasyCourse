@@ -50,6 +50,7 @@ function courseSessionStorageKey(courseId: number): string {
 }
 
 const AGENT_MODE_STORAGE_KEY = 'course-agent-mode';
+const LAST_COURSE_STORAGE_KEY = 'course-agent-last-course';
 
 function readStoredAgentMode(): CourseAgentMode {
   try {
@@ -66,6 +67,29 @@ function readStoredAgentMode(): CourseAgentMode {
 function writeStoredAgentMode(mode: CourseAgentMode): void {
   try {
     localStorage.setItem(AGENT_MODE_STORAGE_KEY, mode);
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function lastCourseStorageKey(userId: number): string {
+  return `${LAST_COURSE_STORAGE_KEY}-${userId}`;
+}
+
+function readStoredLastCourseId(userId: number): number | null {
+  try {
+    const raw = localStorage.getItem(lastCourseStorageKey(userId));
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredLastCourseId(userId: number, courseId: number): void {
+  try {
+    localStorage.setItem(lastCourseStorageKey(userId), String(courseId));
   } catch {
     // ignore quota / private mode
   }
@@ -262,8 +286,14 @@ export function useCourseAgent() {
   const appendInputContext = useCallback((text: string) => {
     if (!text) return;
     setInput((prev) => {
-      const trimmed = prev.trim();
-      return trimmed ? `${trimmed}\n${text}` : text;
+      const lines = prev
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      if (lines.includes(text)) {
+        return prev;
+      }
+      return lines.length ? `${lines.join('\n')}\n${text}` : text;
     });
   }, []);
 
@@ -280,7 +310,14 @@ export function useCourseAgent() {
           if (handoffCourseId && list.some((course) => course.id === handoffCourseId)) {
             return handoffCourseId;
           }
-          return prev ?? (list[0]?.id ?? null);
+          if (prev != null && list.some((course) => course.id === prev)) {
+            return prev;
+          }
+          const storedCourseId = readStoredLastCourseId(user.id);
+          if (storedCourseId != null && list.some((course) => course.id === storedCourseId)) {
+            return storedCourseId;
+          }
+          return list[0]?.id ?? null;
         });
       } catch {
         toast.error('Не удалось загрузить список курсов');
@@ -290,6 +327,13 @@ export function useCourseAgent() {
       cancelled = true;
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || selectedCourseId == null) {
+      return;
+    }
+    writeStoredLastCourseId(user.id, selectedCourseId);
+  }, [selectedCourseId, user?.id]);
 
   useEffect(() => {
     if (!selectedCourseId || !user?.id) {

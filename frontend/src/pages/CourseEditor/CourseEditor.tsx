@@ -80,6 +80,10 @@ export function CourseEditor() {
               page.setIsStepViewModalOpen(true);
             }}
             onAddClick={() => {
+              page.setFormData({ title: '', description: '', type: 'TEXT' });
+              page.setIsStepModalOpen(true);
+            }}
+            onGenerateClick={() => {
               if (page.selectedLesson) {
                 page.setSelectedLessonId(page.selectedLesson.id);
                 page.setMode('generate');
@@ -124,11 +128,8 @@ export function CourseEditor() {
         isOpen={page.isStepModalOpen}
         onClose={() => page.setIsStepModalOpen(false)}
         type={page.formData.type}
-        description={page.formData.description}
         onTypeChange={(v) => page.setFormData((f) => ({ ...f, type: v }))}
-        onDescriptionChange={(v) => page.setFormData((f) => ({ ...f, description: v }))}
-        onSubmit={page.handleCreateStep}
-        isSaving={page.isSaving}
+        onContinue={page.handleContinueCreateStep}
       />
       <StepViewModal
         isOpen={page.isStepViewModalOpen}
@@ -201,6 +202,7 @@ export function CourseEditor() {
         isOpen={page.isBlockEditOpen}
         onClose={page.closeBlockEdit}
         block={page.editingBlock}
+        title={page.blockEditTitle}
         onSave={page.handleSaveBlockEdit}
       />
 
