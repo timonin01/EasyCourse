@@ -6,7 +6,9 @@ import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
+import org.core.enums.LlmModel;
 import org.core.exception.exceptions.YandexGptException;
+import org.core.config.LlmModelConfig;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.llmProvider.LlmProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,18 +26,21 @@ public class BatchAnalyzerService {
     private final ExecutorService executorService;
     private final SystemPromptService systemPromptService;
     private final LlmProvider llmProvider;
+    private final LlmModelConfig llmModelConfig;
     private final BatchStepParser batchStepParser;
 
     private final ObjectMapper objectMapper;
 
-    public BatchAnalyzerService(@Qualifier("yandexProvider") LlmProvider llmProvider,
+    public BatchAnalyzerService(LlmProvider llmProvider,
                                 @Qualifier("virtualExecutor") ExecutorService executorService,
                                  SystemPromptService systemPromptService,
+                                 LlmModelConfig llmModelConfig,
                                  ObjectMapper objectMapper,
                                  BatchStepParser batchStepParser){
         this.llmProvider = llmProvider;
         this.executorService = executorService;
         this.systemPromptService = systemPromptService;
+        this.llmModelConfig = llmModelConfig;
         this.objectMapper = objectMapper;
         this.batchStepParser = batchStepParser;
     }
@@ -66,10 +71,15 @@ public class BatchAnalyzerService {
     }
 
     public String summariesTextSteps(List<StepikBlockRequest> requests) {
+        return summariesTextSteps(requests, null);
+    }
+
+    public String summariesTextSteps(List<StepikBlockRequest> requests, LlmModel llmModel) {
         if(requests == null){
             throw new RuntimeException("List<StepikBlockRequest> requests is null");
         }
         String systemPrompt = systemPromptService.getPromptForQuery("text-summary");
+        String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
 
         List<CompletableFuture<String>> textSummaryFuture = new ArrayList<>();
         for (StepikBlockRequest request : requests) {
@@ -96,7 +106,9 @@ public class BatchAnalyzerService {
                                 .content(content)
                                 .build()
                 );
-                return llmProvider.chat(messages);
+                return modelUri != null
+                        ? llmProvider.chat(messages, modelUri)
+                        : llmProvider.chat(messages);
             }, executorService));
         }
 
