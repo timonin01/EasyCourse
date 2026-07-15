@@ -12,6 +12,7 @@ import org.core.enums.LlmModel;
 import org.core.exception.exceptions.YandexGptException;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.batch.BatchStepParser;
+import org.core.service.agent.course.CourseSnapshotBuilder;
 import org.core.service.agent.course.DeleteActionMetadataService;
 import org.core.service.agent.course.tools.handler.AnswerQuestionHandler;
 import org.core.service.agent.course.tools.handler.CourseToolExecutor;
@@ -19,7 +20,6 @@ import org.core.service.agent.course.tools.util.AgentStepResponseParser;
 import org.core.service.agent.course.tools.util.CoursePlanMessageBuilder;
 import org.core.service.agent.course.tools.util.ToolArgsHelper;
 import org.core.service.agent.llmProvider.LlmProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -53,6 +53,7 @@ public class CourseAgentLoop {
     private final ObjectMapper objectMapper;
     private final LlmProvider llmProvider;
     private final DeleteActionMetadataService deleteMetadataService;
+    private final CourseSnapshotBuilder courseSnapshotBuilder;
 
     public CourseAgentLoop(CourseToolExecutor toolExecutor,
                            AnswerQuestionHandler answerQuestionHandler,
@@ -63,7 +64,8 @@ public class CourseAgentLoop {
                            BatchStepParser batchStepParser,
                            ObjectMapper objectMapper,
                            DeleteActionMetadataService deleteMetadataService,
-                           @Qualifier("yandexProvider") LlmProvider llmProvider) {
+                           CourseSnapshotBuilder courseSnapshotBuilder,
+                           LlmProvider llmProvider) {
         this.toolExecutor = toolExecutor;
         this.answerQuestionHandler = answerQuestionHandler;
         this.agentStepResponseParser = agentStepResponseParser;
@@ -73,6 +75,7 @@ public class CourseAgentLoop {
         this.batchStepParser = batchStepParser;
         this.objectMapper = objectMapper;
         this.deleteMetadataService = deleteMetadataService;
+        this.courseSnapshotBuilder = courseSnapshotBuilder;
         this.llmProvider = llmProvider;
     }
 
@@ -216,19 +219,66 @@ public class CourseAgentLoop {
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(ChatMessage.builder().role("system").content(systemPrompt).build());
         messages.addAll(courseAgentContext.getHistory());
-        messages.add(ChatMessage.builder().role("user").content("ЗАПРОС ПОЛЬЗОВАТЕЛЯ:\n" + courseAgentContext.getUserInput()).build());
+        messages.add(ChatMessage.builder()
+                .role("user")
+                .content(buildUserMessageWithStructure(courseAgentContext))
+                .build());
         for (ChatMessage loopMessage : loopMessages) {
             messages.add(loopMessage);
         }
 
-        String modelUri = courseAgentContext.getLlmModel() != null ? llmModelConfig.getModelUri(courseAgentContext.getLlmModel()) : null;
+        String modelUri = courseAgentContext.getLlmModel() != null
+                ? llmModelConfig.getModelUri(courseAgentContext.getLlmModel())
+                : llmModelConfig.getDefaultModelUri();
         String aiResponse = llmProvider.chat(messages, modelUri, agentMaxTokens);
         try {
             return agentStepResponseParser.parse(aiResponse);
         } catch (Exception ex) {
-            log.error("Failed to parse agent step response: {}", ex.getMessage());
-            throw new YandexGptException("Не удалось разобрать ответ агента: " + ex.getMessage());
+            log.error("Failed to parse agent step response: {}. Raw (truncated): {}",
+                    ex.getMessage(), truncateForLog(aiResponse, 800));
+            String retryResponse = retryStrictJson(messages, aiResponse, modelUri);
+            try {
+                return agentStepResponseParser.parse(retryResponse);
+            } catch (Exception retryEx) {
+                log.error("Retry parse also failed: {}. Raw (truncated): {}",
+                        retryEx.getMessage(), truncateForLog(retryResponse, 800));
+                throw new YandexGptException("Не удалось разобрать ответ агента: " + retryEx.getMessage());
+            }
         }
+    }
+
+    private String buildUserMessageWithStructure(CourseAgentContext courseAgentContext) {
+        String structureIndex = courseSnapshotBuilder.buildStructureIndex(courseAgentContext.getCourse());
+        return "ЗАПРОС ПОЛЬЗОВАТЕЛЯ:\n"
+                + courseAgentContext.getUserInput()
+                + "\n\n"
+                + structureIndex
+                + "\nКомпактная структура уже выше. GET_COURSE_STRUCTURE вызывай только если нужны типы/тексты шагов.";
+    }
+
+    private String retryStrictJson(List<ChatMessage> messages, String previousResponse, String modelUri) {
+        List<ChatMessage> retryMessages = new ArrayList<>(messages);
+        retryMessages.add(ChatMessage.builder().role("assistant").content(previousResponse).build());
+        retryMessages.add(ChatMessage.builder()
+                .role("user")
+                .content("""
+                        Ответ обязан быть ТОЛЬКО валидным JSON-объектом без markdown и без текста вокруг:
+                        {"thought":"...","toolCalls":[{"name":"ИМЯ_ИНСТРУМЕНТА","args":{}}],"message":null}
+                        Повтори тот же следующий шаг строго в этом формате.
+                        """)
+                .build());
+        return llmProvider.chat(retryMessages, modelUri, agentMaxTokens);
+    }
+
+    private String truncateForLog(String value, int maxLen) {
+        if (value == null) {
+            return "null";
+        }
+        String normalized = value.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= maxLen) {
+            return normalized;
+        }
+        return normalized.substring(0, maxLen) + "...";
     }
 
     private CourseAgentResponse showPlan(CourseAgentContext courseAgentContext, String message) {
@@ -249,7 +299,8 @@ public class CourseAgentLoop {
     private ChatMessage toolMessage(String toolName, String payload) {
         return ChatMessage.builder()
                 .role("user")
-                .content("РЕЗУЛЬТАТ ИНСТРУМЕНТА " + toolName + ":\n" + payload)
+                .content("РЕЗУЛЬТАТ ИНСТРУМЕНТА " + toolName + ":\n" + payload
+                        + "\n\nОтветь следующим шагом СТРОГО JSON: {\"thought\",\"toolCalls\",\"message\"}.")
                 .build();
     }
 

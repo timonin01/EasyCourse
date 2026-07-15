@@ -12,7 +12,6 @@ import org.core.exception.exceptions.YandexGptException;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.batch.BatchStepParser;
 import org.core.service.agent.llmProvider.LlmProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +41,7 @@ public class CoursePlannerService {
     private final BatchStepParser batchStepParser;
     private final ObjectMapper objectMapper;
 
-    public CoursePlannerService(@Qualifier("yandexProvider") LlmProvider llmProvider,
+    public CoursePlannerService(LlmProvider llmProvider,
                                 SystemPromptService systemPromptService,
                                 LlmModelConfig llmModelConfig,
                                 BatchStepParser batchStepParser,
@@ -110,7 +109,7 @@ public class CoursePlannerService {
             messages.addAll(history);
         }
         messages.add(ChatMessage.builder().role("user").content(userContent).build());
-        String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
+        String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : llmModelConfig.getDefaultModelUri();
         String aiResponse = llmProvider.chat(messages, modelUri, plannerMaxTokens);
         log.info("Planner LLM response (length={})", aiResponse != null ? aiResponse.length() : 0);
         return batchStepParser.extractJsonFromResponse(aiResponse);

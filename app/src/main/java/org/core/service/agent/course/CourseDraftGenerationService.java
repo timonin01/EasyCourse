@@ -9,7 +9,6 @@ import org.core.dto.agent.batchAnalyzer.CountStepDTO;
 import org.core.dto.agent.course.CoursePlanDTO;
 import org.core.dto.agent.course.LessonPlanDTO;
 import org.core.dto.agent.course.PlanActionDTO;
-import org.core.dto.agent.course.PlanActionType;
 import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.section.CreateSectionDTO;
@@ -18,7 +17,9 @@ import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
+import org.core.enums.LlmModel;
 import org.core.service.agent.batch.BatchGeneratorService;
+import org.core.service.agent.batch.TheorySummaryCache;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.SectionService;
 import org.core.service.crud.StepService;
@@ -46,7 +47,8 @@ public class CourseDraftGenerationService {
     private final UserAccessService userAccessService;
     private final LessonTheoryContextService lessonTheoryContextService;
 
-    public ExecutionDraftResult executePlan(Long courseId, Long userId, String sessionId, CoursePlanDTO coursePlan) {
+    public ExecutionDraftResult executePlan(Long courseId, Long userId, String sessionId,
+                                            CoursePlanDTO coursePlan, LlmModel llmModel) {
         Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         CourseGenerationContext generationContext = CourseGenerationContext.from(course);
         List<Long> sectionIds = new ArrayList<>();
@@ -58,20 +60,23 @@ public class CourseDraftGenerationService {
                 continue;
             }
             switch (action.getType()) {
-                case CREATE_SECTION -> executeCreateSection(courseId, userId, sessionId, action, generationContext, sectionIds, lessonIds, stepIds);
-                case CREATE_LESSONS -> executeCreateLessons(userId, sessionId, action, generationContext, lessonIds, stepIds);
-                case CREATE_STEPS -> executeCreateSteps(userId, sessionId, action, generationContext, stepIds);
+                case CREATE_SECTION -> executeCreateSection(
+                        courseId, userId, sessionId, action, generationContext, llmModel, sectionIds, lessonIds, stepIds);
+                case CREATE_LESSONS -> executeCreateLessons(
+                        userId, sessionId, action, generationContext, llmModel, lessonIds, stepIds);
+                case CREATE_STEPS -> executeCreateSteps(
+                        userId, sessionId, action, generationContext, llmModel, stepIds);
                 default -> throw new IllegalArgumentException("План не поддерживает выполнение: " + action.getType());
             }
         }
 
-        log.info("Executed course plan for course {}: {} sections, {} lessons, {} steps",
-                courseId, sectionIds.size(), lessonIds.size(), stepIds.size());
+        log.info("Executed course plan for course {}: {} sections, {} lessons, {} steps (model: {})",
+                courseId, sectionIds.size(), lessonIds.size(), stepIds.size(), llmModel);
         return new ExecutionDraftResult(sectionIds, lessonIds, stepIds);
     }
 
     private void executeCreateSection(Long courseId, Long userId, String sessionId, PlanActionDTO action,
-                                      CourseGenerationContext generationContext,
+                                      CourseGenerationContext generationContext, LlmModel llmModel,
                                       List<Long> sectionIds, List<Long> lessonIds, List<Long> stepIds) {
         if (action.getSection() == null) {
             throw new IllegalArgumentException("В плане отсутствует модуль для создания");
@@ -88,12 +93,12 @@ public class CourseDraftGenerationService {
                 : action.getSection().getLessons();
         for (LessonPlanDTO lessonPlan : lessons) {
             createLessonWithSteps(section.getId(), action.getSection().getTitle(), lessonPlan, userId, sessionId,
-                    generationContext, lessonIds, stepIds);
+                    generationContext, llmModel, lessonIds, stepIds);
         }
     }
 
     private void executeCreateLessons(Long userId, String sessionId, PlanActionDTO action,
-                                      CourseGenerationContext generationContext,
+                                      CourseGenerationContext generationContext, LlmModel llmModel,
                                       List<Long> lessonIds, List<Long> stepIds) {
         if (action.getTargetSectionId() == null) {
             throw new IllegalArgumentException("Не указан модуль (targetSectionId) для добавления уроков");
@@ -101,12 +106,13 @@ public class CourseDraftGenerationService {
         List<LessonPlanDTO> lessons = action.getLessons() == null ? Collections.emptyList() : action.getLessons();
         for (LessonPlanDTO lessonPlan : lessons) {
             createLessonWithSteps(action.getTargetSectionId(), action.getTargetSectionTitle(), lessonPlan,
-                    userId, sessionId, generationContext, lessonIds, stepIds);
+                    userId, sessionId, generationContext, llmModel, lessonIds, stepIds);
         }
     }
 
     private void executeCreateSteps(Long userId, String sessionId, PlanActionDTO action,
-                                    CourseGenerationContext generationContext, List<Long> stepIds) {
+                                    CourseGenerationContext generationContext, LlmModel llmModel,
+                                    List<Long> stepIds) {
         if (action.getTargetLessonId() == null) {
             throw new IllegalArgumentException("Не указан урок (targetLessonId) для добавления шагов");
         }
@@ -118,25 +124,27 @@ public class CourseDraftGenerationService {
                 userId,
                 sessionId,
                 generationContext,
+                llmModel,
                 stepIds);
     }
 
     private void createLessonWithSteps(Long sectionId, String moduleTitle, LessonPlanDTO lessonPlan, Long userId,
-                                       String sessionId, CourseGenerationContext generationContext,
+                                       String sessionId, CourseGenerationContext generationContext, LlmModel llmModel,
                                        List<Long> lessonIds, List<Long> stepIds) {
         LessonResponseDTO lesson = lessonService.createLesson(new CreateLessonDTO(sectionId, truncateTitle(lessonPlan.getTitle())));
         lessonIds.add(lesson.getId());
         generateAndCreateSteps(lesson.getId(), moduleTitle, lesson.getTitle(), lessonPlan.getSteps(),
-                userId, sessionId, generationContext, stepIds);
+                userId, sessionId, generationContext, llmModel, stepIds);
     }
 
     private void generateAndCreateSteps(Long lessonId, String moduleTitle, String lessonTitle, List<CountStepDTO> steps,
                                         Long userId, String sessionId, CourseGenerationContext generationContext,
-                                        List<Long> stepIds) {
+                                        LlmModel llmModel, List<Long> stepIds) {
         if (steps == null || steps.isEmpty()) {
             return;
         }
         List<StepikBlockRequest> theoryContext = new ArrayList<>(lessonTheoryContextService.loadTextBlocksFromLesson(lessonId));
+        TheorySummaryCache theorySummaryCache = new TheorySummaryCache();
         for (CountStepDTO countStep : steps) {
             String normalizedType = stepTypeMapper.normalize(countStep.getType());
             if (!stepTypeMapper.isSupported(normalizedType)) {
@@ -158,7 +166,8 @@ public class CourseDraftGenerationService {
 
             List<StepikBlockRequest> requests;
             try {
-                requests = batchGeneratorService.generateBatchRequests(userId, sessionId, singleTypePlan, theoryContext);
+                requests = batchGeneratorService.generateBatchRequests(
+                        userId, sessionId, singleTypePlan, theoryContext, llmModel, theorySummaryCache);
             } catch (Exception e) {
                 log.error("Failed to generate steps of type {} for lesson {}: {}", normalizedType, lessonId, e.getMessage());
                 continue;
