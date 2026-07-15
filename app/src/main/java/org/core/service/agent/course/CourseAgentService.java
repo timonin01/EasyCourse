@@ -81,7 +81,7 @@ public class CourseAgentService {
         return response;
     }
 
-    public CourseAgentResponse executePlan(Long courseId, Long userId, String sessionId, CoursePlanDTO plan) {
+    public CourseAgentResponse executePlan(Long courseId, Long userId, String sessionId, CoursePlanDTO plan, LlmModel llmModel) {
         userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
         if (plan == null || plan.getActions() == null || plan.getActions().isEmpty()) {
             return CourseAgentResponse.error("Пустой или некорректный план");
@@ -101,7 +101,8 @@ public class CourseAgentService {
 
         CourseAgentResponse agentResponse = null;
         if (!createActions.isEmpty()) {
-            ExecutionDraftResult result = planExecutionService.executeCreateActions(courseId, userId, sessionId, createActions);
+            ExecutionDraftResult result = planExecutionService.executeCreateActions(
+                    courseId, userId, sessionId, createActions, llmModel);
             agentResponse = CourseAgentResponse.builder()
                     .action(CourseAgentAction.DRAFT_READY)
                     .message(String.format(

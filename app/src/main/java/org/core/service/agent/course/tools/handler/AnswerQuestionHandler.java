@@ -19,7 +19,6 @@ import org.core.service.agent.course.CourseResolution;
 import org.core.service.agent.course.CourseSnapshotBuilder;
 import org.core.service.agent.course.tools.util.ContextHintParser;
 import org.core.service.agent.llmProvider.LlmProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -50,7 +49,7 @@ public class AnswerQuestionHandler {
     public AnswerQuestionHandler(
             SystemPromptService systemPromptService,
             LlmModelConfig llmModelConfig,
-            @Qualifier("yandexProvider") LlmProvider llmProvider,
+            LlmProvider llmProvider,
             CourseEntityResolver entityResolver,
             SectionAnalyzerService sectionAnalyzerService,
             StepRepository stepRepository,
@@ -84,7 +83,9 @@ public class AnswerQuestionHandler {
         messages.add(ChatMessage.builder().role("user").content(
                 "КОНТЕКСТ:\n" + context + "\n\nВОПРОС ПОЛЬЗОВАТЕЛЯ:\n" + courseAgentContext.getUserInput()).build());
 
-        String modelUri = courseAgentContext.getLlmModel() != null ? llmModelConfig.getModelUri(courseAgentContext.getLlmModel()) : null;
+        String modelUri = courseAgentContext.getLlmModel() != null
+                ? llmModelConfig.getModelUri(courseAgentContext.getLlmModel())
+                : llmModelConfig.getDefaultModelUri();
         String answer = llmProvider.chat(messages, modelUri, maxTokens);
 
         return CourseToolResult.immediate(CourseAgentResponse.builder()

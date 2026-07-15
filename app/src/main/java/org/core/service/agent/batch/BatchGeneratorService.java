@@ -2,14 +2,16 @@ package org.core.service.agent.batch;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.config.LlmModelConfig;
+import org.core.config.StepGenerationTokenConfig;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.agent.batchAnalyzer.CountStepDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
+import org.core.enums.LlmModel;
 import org.core.service.agent.AgentService;
 import org.core.service.agent.SystemPromptService;
-import org.core.service.ai.yandex.YandexGptService;
-import org.springframework.beans.factory.annotation.Value;
+import org.core.service.ai.ProvodAiService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,10 +22,9 @@ import java.util.List;
 @Slf4j
 public class BatchGeneratorService {
 
-    @Value("${yandex.gpt.api.model-uri.batch}")
-    private String batchModelUri;
-
-    private final YandexGptService yandexGptService;
+    private final LlmModelConfig llmModelConfig;
+    private final StepGenerationTokenConfig stepGenerationTokenConfig;
+    private final ProvodAiService provodAiService;
     private final SystemPromptService systemPromptService;
     private final AgentService agenService;
     private final BatchStepParser batchStepParser;
@@ -31,15 +32,18 @@ public class BatchGeneratorService {
     private final BatchAnalyzerService batchAnalyzerService;
 
     public List<StepikBlockRequest> generateBatchRequests(Long userId, String sessionId, BatchStepDTO batchStepDTO) {
-        return generateBatchRequests(userId, sessionId, batchStepDTO, List.of());
+        return generateBatchRequests(userId, sessionId, batchStepDTO, List.of(), null, null);
     }
 
     public List<StepikBlockRequest> generateBatchRequests(Long userId, String sessionId, BatchStepDTO batchStepDTO,
-                                                        List<StepikBlockRequest> externalTextContext) {
+                                                          List<StepikBlockRequest> externalTextContext,
+                                                          LlmModel llmModel,
+                                                          TheorySummaryCache theorySummaryCache) {
         if (batchStepDTO == null || batchStepDTO.getSteps() == null || batchStepDTO.getSteps().isEmpty()) {
             throw new RuntimeException("BatchStepDTO is null or empty");
         }
 
+        TheorySummaryCache summaryCache = theorySummaryCache != null ? theorySummaryCache : new TheorySummaryCache();
         List<StepikBlockRequest> stepikBlockRequests = new ArrayList<>();
         List<StepikBlockRequest> priorTheory = externalTextContext == null
                 ? new ArrayList<>()
@@ -53,9 +57,10 @@ public class BatchGeneratorService {
             if (countStepDTO.getCount() == 1) {
                 String userInput = countStepDTO.getSpecificInput();
                 if (!"text".equals(type) && stepUseTextContext) {
-                    userInput = appendTheoryContext(userInput, priorTheory, generatedTextInBatch);
+                    userInput = appendTheoryContext(userInput, priorTheory, generatedTextInBatch, llmModel, summaryCache);
                 }
-                StepikBlockRequest request = agenService.generateStep(userId, sessionId, userInput, type, null, false);
+                StepikBlockRequest request = agenService.generateStep(
+                        userId, sessionId, userInput, type, llmModel, false);
                 stepikBlockRequests.add(request);
                 if ("text".equals(type)) {
                     generatedTextInBatch.clear();
@@ -67,12 +72,14 @@ public class BatchGeneratorService {
                     if (!"text".equals(type) && stepUseTextContext) {
                         List<StepikBlockRequest> allText = mergeTextBlocks(priorTheory, generatedTextInBatch);
                         if (!allText.isEmpty()) {
-                            summariesContentFromTextBlock = batchAnalyzerService.summariesTextSteps(allText);
+                            summariesContentFromTextBlock = summarizeTheory(allText, llmModel, summaryCache);
                         }
                     }
-                    systemPrompt = promptModifierService.modifyPromptForBatch(systemPrompt, countStepDTO.getCount(), summariesContentFromTextBlock, type);
+                    systemPrompt = promptModifierService.modifyPromptForBatch(
+                            systemPrompt, countStepDTO.getCount(), summariesContentFromTextBlock, type);
                     String userInputForBatch = countStepDTO.getSpecificInput();
-                    List<StepikBlockRequest> batchBlockRequests = generateBatchSteps(userInputForBatch, systemPrompt, type, countStepDTO.getCount());
+                    List<StepikBlockRequest> batchBlockRequests = generateBatchSteps(
+                            userInputForBatch, systemPrompt, type, countStepDTO.getCount(), llmModel);
                     stepikBlockRequests.addAll(batchBlockRequests);
                     if ("text".equals(type)) {
                         generatedTextInBatch.clear();
@@ -102,19 +109,28 @@ public class BatchGeneratorService {
     }
 
     private String appendTheoryContext(String userInput, List<StepikBlockRequest> priorTheory,
-                                       List<StepikBlockRequest> generatedTextInBatch) {
+                                       List<StepikBlockRequest> generatedTextInBatch, LlmModel llmModel,
+                                       TheorySummaryCache summaryCache) {
         List<StepikBlockRequest> allText = mergeTextBlocks(priorTheory, generatedTextInBatch);
         if (allText.isEmpty()) {
             return userInput;
         }
-        String summary = batchAnalyzerService.summariesTextSteps(allText);
+        String summary = summarizeTheory(allText, llmModel, summaryCache);
         if (summary == null || summary.isBlank()) {
             return userInput;
         }
         return userInput + "\n\nКонтекст из теории урока:\n" + summary;
     }
 
-    private List<StepikBlockRequest> generateBatchSteps(String userInput, String systemPrompt, String stepType, int count) {
+    private String summarizeTheory(List<StepikBlockRequest> textBlocks, LlmModel llmModel, TheorySummaryCache summaryCache) {
+        return summaryCache.getOrCompute(textBlocks, blocks -> {
+            log.info("Computing theory summary for {} text block(s)", blocks.size());
+            return batchAnalyzerService.summariesTextSteps(blocks, llmModel);
+        });
+    }
+
+    private List<StepikBlockRequest> generateBatchSteps(String userInput, String systemPrompt, String stepType,
+                                                        int count, LlmModel llmModel) {
         try {
             List<ChatMessage> messages = List.of(
                     ChatMessage.builder()
@@ -126,8 +142,11 @@ public class BatchGeneratorService {
                             .content(userInput)
                             .build()
             );
-            int maxTokens = "text".equals(stepType) ? 12000 : 10000;
-            String aiResponse = yandexGptService.generateResponse(messages, true, maxTokens, batchModelUri, false);
+            int maxTokens = stepGenerationTokenConfig.getBatchMaxTokens();
+            String batchModel = llmModel != null
+                    ? llmModelConfig.getModelUri(llmModel)
+                    : llmModelConfig.getDefaultModelUri();
+            String aiResponse = provodAiService.generateResponse(messages, true, maxTokens, batchModel, false);
             log.info("Get response from llm for list StepikBlockRequest: {}", aiResponse);
 
             return batchStepParser.parseAiResponseToRequestsList(aiResponse, stepType, count);

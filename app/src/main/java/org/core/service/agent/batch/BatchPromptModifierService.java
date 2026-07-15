@@ -19,16 +19,22 @@ public class BatchPromptModifierService {
     }
 
     public String modifyPromptForBatch(String systemPrompt, int count, String contextBlock, String stepType) {
-        StringBuilder sb = new StringBuilder();        
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== BATCH: СТРОГО ").append(count).append(" ЗАДАНИЙ ===\n");
+        sb.append("Верни JSON-массив РОВНО с ").append(count).append(" объектами — ни больше, ни меньше.\n");
+        sb.append("НЕ трать весь бюджет ответа на одно задание: распределяй объём равномерно между всеми ")
+          .append(count).append(" заданиями.\n");
+        sb.append("Каждое задание должно быть компактным и самодостаточным, чтобы все ")
+          .append(count).append(" уместились в один ответ.\n");
+        sb.append("ТОЛЬКО JSON без markdown ```, без дополнительного текста.\n\n");
+
         String batchPrompt = systemPromptService.getBatchPromptByQuery(stepType);
 
         if (batchPrompt != null) {
             sb.append(batchPrompt);
         } else {
             sb.append(systemPrompt).append("\n\n");
-            sb.append("=== BATCH: СОЗДАЙ ").append(count).append(" ЗАДАНИЙ ===\n");
             sb.append("Верни JSON МАССИВ с ").append(count).append(" объектами: [{...}, {...}]\n");
-            sb.append("ТОЛЬКО JSON без markdown ```, без дополнительного текста\n");
         }
 
         if (contextBlock != null && !contextBlock.isBlank()) {
@@ -40,11 +46,7 @@ public class BatchPromptModifierService {
         String result = sb.toString();
         result = result.replaceAll("указанным количеством", count + " объектами");
         result = result.replaceAll("количество объектов", count + " объектов");
-        
-        if (!result.contains("" + count) && batchPrompt != null) {
-            result = "Создай " + count + " заданий следующего типа.\n\n" + result;
-        }
-        
+
         return result;
     }
 }

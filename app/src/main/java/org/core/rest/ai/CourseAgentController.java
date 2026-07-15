@@ -215,7 +215,7 @@ public class CourseAgentController {
                 subscriptionService.validateAiGenerationAllowed(userId, plannedSteps);
             }
 
-            CourseAgentResponse response = courseAgentService.executePlan(courseId, userId, sessionId, coursePlan);
+            CourseAgentResponse response = courseAgentService.executePlan(courseId, userId, sessionId, coursePlan, model);
 
             int createdSteps = response.getCreatedStepIds() == null ? 0 : response.getCreatedStepIds().size();
             if (createdSteps > 0) {
