@@ -4,10 +4,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.core.domain.StepType;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.test.choise.request.StepikBlockChoiceRequest;
@@ -27,6 +24,7 @@ import org.core.dto.stepik.step.code.request.StepikBlockCodeRequest;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class CreateStepDTO {
 
     @NotNull(message = "LessonId is required")

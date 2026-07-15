@@ -25,6 +25,7 @@ public final class CoursePlanHelper {
     public boolean isCreateAction(PlanActionType type) {
         return type == PlanActionType.CREATE_SECTION
                 || type == PlanActionType.CREATE_LESSONS
-                || type == PlanActionType.CREATE_STEPS;
+                || type == PlanActionType.CREATE_STEPS
+                || type == PlanActionType.COPY_STEP;
     }
 }

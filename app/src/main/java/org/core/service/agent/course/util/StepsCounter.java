@@ -32,6 +32,7 @@ public final class StepsCounter {
             case CREATE_SECTION -> countSectionSteps(action.getSection());
             case CREATE_LESSONS -> countLessonSteps(action.getLessons());
             case CREATE_STEPS -> countSteps(action.getSteps());
+            case COPY_STEP -> 1;
             default -> 0;
         };
     }

@@ -83,6 +83,21 @@ public class CoursePlanValidator {
                 Step step = userAccessService.findStepAndVerifyOwner(userId, action.getTargetStepId());
                 verifyCourse(courseId, step.getLesson().getSection().getCourse().getId());
             }
+            case COPY_STEP -> {
+                if (action.getTargetStepId() == null) {
+                    throw new IllegalArgumentException("Не указан исходный шаг для копирования");
+                }
+                if (action.getTargetLessonId() == null) {
+                    throw new IllegalArgumentException("Не указан урок назначения для копирования");
+                }
+                Step sourceStep = userAccessService.findStepAndVerifyOwner(userId, action.getTargetStepId());
+                verifyCourse(courseId, sourceStep.getLesson().getSection().getCourse().getId());
+                Lesson targetLesson = userAccessService.findLessonAndVerifyOwner(userId, action.getTargetLessonId());
+                verifyCourse(courseId, targetLesson.getSection().getCourse().getId());
+                if (sourceStep.getStepikBlockData() == null || sourceStep.getStepikBlockData().isBlank()) {
+                    throw new IllegalArgumentException("У исходного шага нет содержимого для копирования");
+                }
+            }
             default -> throw new IllegalArgumentException("Неподдерживаемое действие: " + action.getType());
         }
     }
