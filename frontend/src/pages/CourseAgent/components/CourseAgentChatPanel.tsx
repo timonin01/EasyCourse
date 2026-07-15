@@ -1,9 +1,11 @@
 import { Bot, Loader2, MessageCircleQuestion, Pencil, RotateCcw, Send, Sparkles, User } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { KeyboardEvent, RefObject } from 'react';
+import toast from 'react-hot-toast';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { Textarea } from '../../../components/ui/Textarea';
+import { LlmModelSelect } from '../../../components/ui/LlmModelSelect';
+import { MODEL_PRO_MESSAGE } from '../../../constants/subscription';
 import type { EntityCandidate, CoursePlanDTO } from '../../../types';
 import type { CourseAgentChatMessage } from '../useCourseAgent';
 import type { CourseAgentMode } from '../types';
@@ -15,6 +17,9 @@ interface CourseAgentChatPanelProps {
   pendingPlan: CoursePlanDTO | null;
   agentMode: CourseAgentMode;
   onAgentModeChange: (mode: CourseAgentMode) => void;
+  selectedLlmModel: string;
+  onLlmModelChange: (model: string) => void;
+  canSelectModel: boolean;
   isLoading: boolean;
   isExecuting: boolean;
   loadingStatus: string | null;
@@ -36,6 +41,9 @@ export function CourseAgentChatPanel({
   pendingPlan,
   agentMode,
   onAgentModeChange,
+  selectedLlmModel,
+  onLlmModelChange,
+  canSelectModel,
   isLoading,
   isExecuting,
   loadingStatus,
@@ -194,33 +202,43 @@ export function CourseAgentChatPanel({
       )}
 
       <div className="shrink-0 border-t border-dark-700/60 p-4">
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <Textarea
-              value={input}
-              onChange={(event) => onInputChange(event.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={
-                pendingPlan && !isAskMode
-                  ? 'Напишите, что скорректировать в плане…'
-                  : isAskMode
-                    ? 'Спросите о курсе, модуле или уроке…'
-                    : 'Опишите, что создать или изменить…'
-              }
-              rows={3}
-              disabled={isLoading || isExecuting}
-              className="min-h-[4.5rem] resize-none"
-            />
+        <div className="flex min-h-[7rem] flex-col rounded-xl border border-dark-600 bg-dark-800/80 transition-all duration-200 hover:border-dark-500 focus-within:border-primary-500/50 focus-within:ring-2 focus-within:ring-primary-500/50">
+          <textarea
+            value={input}
+            onChange={(event) => onInputChange(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={
+              pendingPlan && !isAskMode
+                ? 'Напишите, что скорректировать в плане…'
+                : isAskMode
+                  ? 'Спросите о курсе, модуле или уроке…'
+                  : 'Опишите, что создать или изменить…'
+            }
+            rows={3}
+            disabled={isLoading || isExecuting}
+            className="block min-h-[4.5rem] max-h-40 w-full flex-1 resize-none overflow-y-auto bg-transparent px-4 pt-3 pb-2 text-dark-100 placeholder-dark-500 focus:outline-none disabled:opacity-60 scrollbar-thin scrollbar-thumb-dark-700 scrollbar-track-transparent"
+          />
+          <div className="flex flex-shrink-0 items-center justify-between gap-2 px-2 pb-2 pt-2">
+            <div className="w-44 min-w-0 sm:w-52">
+              <LlmModelSelect
+                value={selectedLlmModel}
+                onChange={onLlmModelChange}
+                menuPlacement="top"
+                className="h-9 border-dark-600/80 bg-dark-700/60 py-1.5"
+                canSelectModel={canSelectModel}
+                onProModelAttempt={() => toast.error(MODEL_PRO_MESSAGE)}
+              />
+            </div>
+            <Button
+              variant="primary"
+              onClick={onSend}
+              disabled={isLoading || isExecuting || !input.trim()}
+              className="ml-auto h-10 w-10 shrink-0 p-0"
+              aria-label="Отправить"
+            >
+              <Send className="h-5 w-5" />
+            </Button>
           </div>
-          <Button
-            variant="primary"
-            onClick={onSend}
-            disabled={isLoading || isExecuting || !input.trim()}
-            className="h-10 w-10 shrink-0 p-0"
-            aria-label="Отправить"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
         </div>
       </div>
     </Card>

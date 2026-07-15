@@ -15,7 +15,8 @@ const REVISE_LOADING_PHASES = [
 const EXECUTE_LOADING_PHASES = [
   'Создаю черновик в базе…',
   'Генерирую шаги уроков…',
-  'Это может занять несколько минут…',
+  'Code-задания могут занимать 20–50 с каждое…',
+  'Ещё генерирую — обычно несколько минут…',
 ];
 
 export function pickLoadingPhase(

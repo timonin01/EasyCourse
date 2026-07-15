@@ -152,7 +152,7 @@ export const agentApi = {
   analyzeCourse: async (courseId: number): Promise<CourseAnalyzerResponse> => {
     const params = new URLSearchParams({
       courseId: courseId.toString(),
-      llmModel: 'YANDEX_GPT_PRO',
+      llmModel: 'Z_AI_GLM_5_2',
     });
     const response = await api.post<CourseAnalyzerResponse>(
       `/agent/analyzer/course?${params}`,
@@ -191,7 +191,7 @@ export const agentApi = {
   },
 
   // Direct AI chat (without agent)
-  directChat: async (message: string, aiName: 'DeepSeek' | 'YandexGPT' = 'YandexGPT'): Promise<string> => {
+  directChat: async (message: string, aiName: 'DeepSeek' = 'DeepSeek'): Promise<string> => {
     const response = await api.post<string>('/v1/ai/chat', { message, aiName }, aiRequestConfig);
     return response.data;
   },
