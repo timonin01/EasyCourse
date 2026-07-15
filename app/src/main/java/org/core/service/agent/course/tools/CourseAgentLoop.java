@@ -1,6 +1,5 @@
 package org.core.service.agent.course.tools;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.core.config.LlmModelConfig;
 import org.core.domain.Course;
@@ -11,7 +10,6 @@ import org.core.enums.CourseAgentMode;
 import org.core.enums.LlmModel;
 import org.core.exception.exceptions.YandexGptException;
 import org.core.service.agent.SystemPromptService;
-import org.core.service.agent.batch.BatchStepParser;
 import org.core.service.agent.course.CourseSnapshotBuilder;
 import org.core.service.agent.course.DeleteActionMetadataService;
 import org.core.service.agent.course.tools.handler.AnswerQuestionHandler;
@@ -49,8 +47,6 @@ public class CourseAgentLoop {
     private final CoursePlanMessageBuilder coursePlanMessageBuilder;
     private final SystemPromptService systemPromptService;
     private final LlmModelConfig llmModelConfig;
-    private final BatchStepParser batchStepParser;
-    private final ObjectMapper objectMapper;
     private final LlmProvider llmProvider;
     private final DeleteActionMetadataService deleteMetadataService;
     private final CourseSnapshotBuilder courseSnapshotBuilder;
@@ -61,8 +57,6 @@ public class CourseAgentLoop {
                            CoursePlanMessageBuilder coursePlanMessageBuilder,
                            SystemPromptService systemPromptService,
                            LlmModelConfig llmModelConfig,
-                           BatchStepParser batchStepParser,
-                           ObjectMapper objectMapper,
                            DeleteActionMetadataService deleteMetadataService,
                            CourseSnapshotBuilder courseSnapshotBuilder,
                            LlmProvider llmProvider) {
@@ -72,8 +66,6 @@ public class CourseAgentLoop {
         this.coursePlanMessageBuilder = coursePlanMessageBuilder;
         this.systemPromptService = systemPromptService;
         this.llmModelConfig = llmModelConfig;
-        this.batchStepParser = batchStepParser;
-        this.objectMapper = objectMapper;
         this.deleteMetadataService = deleteMetadataService;
         this.courseSnapshotBuilder = courseSnapshotBuilder;
         this.llmProvider = llmProvider;

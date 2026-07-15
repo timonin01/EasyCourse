@@ -6,5 +6,6 @@ public enum PlanActionType {
     CREATE_STEPS,
     DELETE_SECTION,
     DELETE_LESSON,
-    DELETE_STEP
+    DELETE_STEP,
+    COPY_STEP
 }

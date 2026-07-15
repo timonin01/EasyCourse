@@ -14,9 +14,11 @@
 - CREATE_SECTION — поле section с title, description, lessons[]
 - CREATE_LESSONS — targetSectionId, targetSectionTitle, lessons[]
 - CREATE_STEPS — targetLessonId, targetLessonTitle, steps[]
+- COPY_STEP — targetStepId (исходный шаг), targetLessonId (урок назначения), titles
 - DELETE_* — только target* поля, без section/lessons/steps
 
 Сохрани всё, что пользователь не просил менять. Не меняй targetSectionId, targetLessonId, targetStepId.
+Для COPY_STEP не превращай копию в CREATE_STEPS и не удаляй исходный шаг.
 
 Допустимые типы шагов:
 text, choice, matching, sorting, table, fill-blanks, string, number,

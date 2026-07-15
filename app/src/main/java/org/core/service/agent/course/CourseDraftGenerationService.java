@@ -13,6 +13,7 @@ import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.section.CreateSectionDTO;
 import org.core.dto.section.SectionResponseDTO;
+import org.core.dto.step.CopyStepDTO;
 import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
@@ -20,6 +21,7 @@ import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.enums.LlmModel;
 import org.core.service.agent.batch.BatchGeneratorService;
 import org.core.service.agent.batch.TheorySummaryCache;
+import org.core.service.crud.CourseStepCopyService;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.SectionService;
 import org.core.service.crud.StepService;
@@ -42,6 +44,7 @@ public class CourseDraftGenerationService {
     private final SectionService sectionService;
     private final LessonService lessonService;
     private final StepService stepService;
+    private final CourseStepCopyService courseStepCopyService;
     private final BatchGeneratorService batchGeneratorService;
     private final CourseStepTypeMapper stepTypeMapper;
     private final UserAccessService userAccessService;
@@ -66,6 +69,7 @@ public class CourseDraftGenerationService {
                         userId, sessionId, action, generationContext, llmModel, lessonIds, stepIds);
                 case CREATE_STEPS -> executeCreateSteps(
                         userId, sessionId, action, generationContext, llmModel, stepIds);
+                case COPY_STEP -> executeCopyStep(action, stepIds);
                 default -> throw new IllegalArgumentException("План не поддерживает выполнение: " + action.getType());
             }
         }
@@ -126,6 +130,18 @@ public class CourseDraftGenerationService {
                 generationContext,
                 llmModel,
                 stepIds);
+    }
+
+    private void executeCopyStep(PlanActionDTO action, List<Long> stepIds) {
+        if (action.getTargetStepId() == null) {
+            throw new IllegalArgumentException("Не указан исходный шаг (targetStepId) для копирования");
+        }
+        if (action.getTargetLessonId() == null) {
+            throw new IllegalArgumentException("Не указан урок назначения (targetLessonId) для копирования");
+        }
+        CopyStepDTO copyStepDTO = new CopyStepDTO(action.getTargetStepId(), action.getTargetLessonId());
+        StepResponseDTO created = courseStepCopyService.createStepCopy(copyStepDTO);
+        stepIds.add(created.getId());
     }
 
     private void createLessonWithSteps(Long sectionId, String moduleTitle, LessonPlanDTO lessonPlan, Long userId,
