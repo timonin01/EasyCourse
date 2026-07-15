@@ -1,32 +1,13 @@
 package org.core.service.agent.course.tools.handler;
 
 import lombok.RequiredArgsConstructor;
-import org.core.config.LlmModelConfig;
-import org.core.domain.Course;
-import org.core.domain.Lesson;
-import org.core.domain.Section;
-import org.core.domain.Step;
-import org.core.dto.agent.ChatMessage;
-import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
-import org.core.dto.agent.course.*;
-import org.core.dto.agent.tools.*;
-import org.core.repository.StepRepository;
-import org.core.service.agent.SystemPromptService;
-import org.core.service.agent.analyzer.SectionAnalyzerService;
-import org.core.service.agent.batch.BatchAnalyzerService;
-import org.core.service.agent.course.*;
-import org.core.service.agent.course.tools.util.ToolArgsHelper;
-import org.core.service.agent.llmProvider.LlmProvider;
-import org.core.dto.agent.tools.resolution.ResolvedLesson;
-import org.core.dto.agent.tools.resolution.ResolvedSection;
-import org.core.dto.agent.tools.resolution.ResolvedStep;
-import org.core.util.UserAccessService;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
+import org.core.dto.agent.tools.CourseAgentContext;
+import org.core.dto.agent.tools.CourseToolCall;
+import org.core.dto.agent.tools.CourseToolName;
+import org.core.dto.agent.tools.CourseToolResult;
+import org.core.service.agent.course.CourseSnapshotBuilder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -43,7 +24,6 @@ public class CourseToolExecutor {
     private final ModifyStepHandler modifyStepHandler;
     private final AnswerQuestionHandler answerQuestionHandler;
 
-
     public CourseToolResult execute(CourseAgentContext courseAgentContext, CourseToolCall toolCall) {
         CourseToolName toolName = CourseToolName.parse(toolCall.getName());
         Map<String, Object> args = toolCall.getArgs() == null ? Map.of() : toolCall.getArgs();
@@ -58,11 +38,15 @@ public class CourseToolExecutor {
             }
         }
 
-        checkCourseSnapshot(courseAgentContext);
-
         return switch (toolName) {
-            case GET_COURSE_STRUCTURE -> CourseToolResult.ok(courseAgentContext.getCourseSnapshot());
-            case PROPOSE_CREATE_SECTION -> proposeCreateSectionHandler.handleProposeCreateSection(courseAgentContext, args);
+            case GET_COURSE_STRUCTURE -> {
+                ensureFullCourseSnapshot(courseAgentContext);
+                yield CourseToolResult.ok(courseAgentContext.getCourseSnapshot());
+            }
+            case PROPOSE_CREATE_SECTION -> {
+                ensureFullCourseSnapshot(courseAgentContext);
+                yield proposeCreateSectionHandler.handleProposeCreateSection(courseAgentContext, args);
+            }
             case PROPOSE_CREATE_LESSONS -> proposeCreateLessonsHandler.handleProposeCreateLessons(courseAgentContext, args);
             case PROPOSE_CREATE_STEPS -> proposeCreateStepsHandler.handleProposeCreateSteps(courseAgentContext, args);
             case PROPOSE_DELETE_SECTION -> proposeDeleteSectionHandler.handleProposeDeleteSection(courseAgentContext, args);
@@ -74,8 +58,7 @@ public class CourseToolExecutor {
         };
     }
 
-
-    private void checkCourseSnapshot(CourseAgentContext courseAgentContext) {
+    private void ensureFullCourseSnapshot(CourseAgentContext courseAgentContext) {
         if (courseAgentContext.getCourseSnapshot() == null) {
             courseAgentContext.setCourseSnapshot(courseSnapshotBuilder.buildCourseSnapshot(courseAgentContext.getCourse()));
         }
