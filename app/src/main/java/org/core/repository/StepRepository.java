@@ -14,7 +14,9 @@ import java.util.Optional;
 public interface StepRepository extends JpaRepository<Step, Long> {
 
     List<Step> findByLessonIdOrderByPositionAsc(Long lessonId);
-    
+
+    long countByLessonId(Long lessonId);
+
     Step findByStepikStepId(Long stepikStepId);
 
     @Query("SELECT s FROM Step s JOIN FETCH s.lesson WHERE s.stepikStepId = :stepikStepId")

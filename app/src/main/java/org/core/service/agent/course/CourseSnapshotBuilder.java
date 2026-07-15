@@ -6,12 +6,12 @@ import org.core.domain.Lesson;
 import org.core.domain.Section;
 import org.core.repository.LessonRepository;
 import org.core.repository.SectionRepository;
+import org.core.repository.StepRepository;
 import org.core.service.agent.analyzer.SectionAnalyzerService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,12 +20,19 @@ public class CourseSnapshotBuilder {
 
     private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
+    private final StepRepository stepRepository;
     private final SectionAnalyzerService sectionAnalyzerService;
 
     public String buildStructureIndex(Course course) {
         StringBuilder index = new StringBuilder();
-        index.append("СПРАВОЧНИК — УЖЕ СУЩЕСТВУЮЩАЯ СТРУКТУРА КУРСА ");
-        index.append("(не предлагай эти названия как новые модули или уроки):\n");
+        index.append("КОМПАКТНАЯ СТРУКТУРА КУРСА");
+        if (course.getTitle() != null && !course.getTitle().isBlank()) {
+            index.append(" «").append(course.getTitle().trim()).append('»');
+        }
+        index.append(" (названия уже существуют — не предлагай их как новые):\n");
+        if (course.getDescription() != null && !course.getDescription().isBlank()) {
+            index.append("Описание: ").append(course.getDescription().trim()).append('\n');
+        }
 
         List<Section> sections = sectionRepository.findByCourseIdOrderByPositionAsc(course.getId());
         if (sections.isEmpty()) {
@@ -34,15 +41,29 @@ public class CourseSnapshotBuilder {
         }
 
         for (Section section : sections) {
-            index.append("- Модуль «").append(section.getTitle()).append("»");
+            index.append(section.getPosition())
+                    .append(". Модуль «")
+                    .append(section.getTitle())
+                    .append("» (sectionHint: ")
+                    .append(section.getPosition())
+                    .append(")\n");
+
             List<Lesson> lessons = lessonRepository.findByModelIdOrderByPositionAsc(section.getId());
             if (lessons.isEmpty()) {
-                index.append(" — уроков нет\n");
-            } else {
-                String lessonTitles = lessons.stream()
-                        .map(lesson -> "«" + lesson.getTitle() + "»")
-                        .collect(Collectors.joining(", "));
-                index.append(" — уроки: ").append(lessonTitles).append('\n');
+                index.append("   — уроков нет\n");
+                continue;
+            }
+            for (Lesson lesson : lessons) {
+                long stepCount = stepRepository.countByLessonId(lesson.getId());
+                index.append("   ")
+                        .append(lesson.getPosition())
+                        .append(". Урок «")
+                        .append(lesson.getTitle())
+                        .append("» (lessonHint: ")
+                        .append(lesson.getPosition())
+                        .append(") — ")
+                        .append(stepCount)
+                        .append(" шаг.\n");
             }
         }
         return index.toString();

@@ -1,21 +1,16 @@
 package org.core.service.agent;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
 import org.core.service.agent.llmProvider.LlmProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -31,12 +26,9 @@ public class StepTypeClassifier {
         "text", "free-answer", "string", "number", "math", "random-tasks"
     );
 
-    public StepTypeClassifier(ResourceLoader resourceLoader,
-            @Value("${default.llm.provider}") String defaultProvider,
-            @Qualifier("yandexProvider") LlmProvider yandexProvider,
-            @Qualifier("deepseekProvider") LlmProvider deepseekProvider){
+    public StepTypeClassifier(ResourceLoader resourceLoader, LlmProvider llmProvider){
         this.resourceLoader = resourceLoader;
-        this.llmProvider = "yandex".equalsIgnoreCase(defaultProvider) ? yandexProvider : deepseekProvider;
+        this.llmProvider = llmProvider;
     }
 
     public String detectStepType(String userInput) {

@@ -5,7 +5,6 @@ import {
   FolderPlus,
   FileText,
   ListPlus,
-  Loader2,
   Pencil,
   Save,
   Trash2,
@@ -17,6 +16,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import type { CountStepDTO, CoursePlanDTO, PlanActionDTO } from '../../../types';
 import { LessonPlanEditor, StepPlanEditor } from './PlanEditor';
+import { ExecuteProgress } from './ExecuteProgress';
 import { isCreateAction, isDeleteAction, isDeletePlan, planSummaryLabel } from '../utils/planIntent';
 
 const STEP_TYPE_LABELS: Record<string, string> = {
@@ -418,17 +418,7 @@ export function PlanPanel({
             </p>
 
             {isExecuting && (
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-dark-700 bg-dark-900 px-3 py-2.5">
-                <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary-400" />
-                <div>
-                  <div className="text-sm text-dark-200">
-                    {isDelete ? 'Удаляю…' : 'Создаю черновик…'}
-                  </div>
-                  <div className="text-xs text-dark-500">
-                    {isDelete ? 'Это займёт несколько секунд' : 'Это может занять несколько минут'}
-                  </div>
-                </div>
-              </div>
+              <ExecuteProgress plan={plan} isDelete={isDelete} />
             )}
           </div>
 

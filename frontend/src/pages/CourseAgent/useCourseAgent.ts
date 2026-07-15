@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { agentApi, coursesApi } from '../../api';
 import { useAuthStore } from '../../store';
+import { useSubscription } from '../../hooks/useSubscription';
 import type {
   Course,
   CoursePlanDTO,
@@ -21,6 +22,11 @@ import {
   getExecuteLoadingPhases,
   pickLoadingPhase,
 } from './utils/loadingStatus';
+import {
+  estimatePlanExecution,
+  simulateCompletedSteps,
+  waitingHonestyHint,
+} from './utils/planExecutionProgress';
 
 export type CourseAgentChatMessage = {
   id: string;
@@ -161,11 +167,19 @@ export function useCourseAgent() {
   const [createdHighlight, setCreatedHighlight] = useState<CourseTreeHighlight | null>(null);
   const [pendingHandoff, setPendingHandoff] = useState<CourseAgentPendingRequest | null>(null);
   const [agentMode, setAgentModeState] = useState<CourseAgentMode>(readStoredAgentMode);
+  const [selectedLlmModel, setSelectedLlmModel] = useState('');
+  const { canSelectModel } = useSubscription();
 
   const setAgentMode = useCallback((mode: CourseAgentMode) => {
     setAgentModeState(mode);
     writeStoredAgentMode(mode);
   }, []);
+
+  useEffect(() => {
+    if (!canSelectModel && selectedLlmModel) {
+      setSelectedLlmModel('');
+    }
+  }, [canSelectModel, selectedLlmModel]);
 
   const sessionIdRef = useRef<string>(newSessionId());
   const lastUserInputRef = useRef<string>('');
@@ -193,7 +207,21 @@ export function useCourseAgent() {
 
     const tick = () => {
       const startedAt = loadingStartedAtRef.current ?? Date.now();
-      setLoadingStatus(pickLoadingPhase(phases, Date.now() - startedAt));
+      const elapsed = Date.now() - startedAt;
+      if (isExecuting && pendingPlan && !isDeletePlan(pendingPlan)) {
+        const estimate = estimatePlanExecution(pendingPlan);
+        if (estimate.totalSteps > 0) {
+          const done = simulateCompletedSteps(estimate, elapsed, true);
+          const honesty = waitingHonestyHint(estimate);
+          setLoadingStatus(
+            honesty
+              ? `Генерирую шаги… ${done} / ${estimate.totalSteps}. ${honesty}`
+              : `Генерирую шаги… ${done} / ${estimate.totalSteps}`,
+          );
+          return;
+        }
+      }
+      setLoadingStatus(pickLoadingPhase(phases, elapsed));
     };
 
     tick();
@@ -403,18 +431,20 @@ export function useCourseAgent() {
     setCandidates([]);
     setIsLoading(true);
     try {
+      const llmModel = selectedLlmModel || undefined;
       const res = planToRevise
         ? await agentApi.courseAgentEditPlan(
             selectedCourseId,
             sessionIdRef.current,
             planToRevise,
-            trimmed
+            trimmed,
+            llmModel,
           )
         : await agentApi.courseAgentChat(
             selectedCourseId,
             sessionIdRef.current,
             trimmed,
-            undefined,
+            llmModel,
             agentMode,
           );
       applyResponse(res);
@@ -425,7 +455,7 @@ export function useCourseAgent() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCourseId, pendingPlan, pushMessage, applyResponse, adoptSessionId, agentMode]);
+  }, [selectedCourseId, pendingPlan, pushMessage, applyResponse, adoptSessionId, agentMode, selectedLlmModel]);
 
   const handleSend = useCallback(() => {
     void sendChat(input);
@@ -435,7 +465,12 @@ export function useCourseAgent() {
     if (!selectedCourseId || !pendingPlan) return;
     setIsExecuting(true);
     try {
-      const res = await agentApi.courseAgentExecutePlan(selectedCourseId, sessionIdRef.current, pendingPlan);
+      const res = await agentApi.courseAgentExecutePlan(
+        selectedCourseId,
+        sessionIdRef.current,
+        pendingPlan,
+        selectedLlmModel || undefined,
+      );
       applyResponse(res);
     } catch (error) {
       console.error('Course agent execute error:', error);
@@ -444,7 +479,7 @@ export function useCourseAgent() {
     } finally {
       setIsExecuting(false);
     }
-  }, [selectedCourseId, pendingPlan, applyResponse, pushMessage]);
+  }, [selectedCourseId, pendingPlan, applyResponse, pushMessage, selectedLlmModel]);
 
   const cancelPlan = useCallback(async () => {
     if (!selectedCourseId) return;
@@ -475,7 +510,7 @@ export function useCourseAgent() {
         resumeContext,
         candidate,
         lastUserInputRef.current,
-        undefined,
+        selectedLlmModel || undefined,
         agentMode,
       );
       applyResponse(res);
@@ -485,7 +520,7 @@ export function useCourseAgent() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCourseId, resumeContext, pushMessage, applyResponse, agentMode]);
+  }, [selectedCourseId, resumeContext, pushMessage, applyResponse, agentMode, selectedLlmModel]);
 
   const updatePlan = useCallback((plan: CoursePlanDTO) => {
     setPendingPlan(plan);
@@ -564,6 +599,9 @@ export function useCourseAgent() {
     resetSession,
     agentMode,
     setAgentMode,
+    selectedLlmModel,
+    setSelectedLlmModel,
+    canSelectModel,
     appendInputContext,
     registerStructureRefresh,
     treeHighlight,

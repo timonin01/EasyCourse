@@ -196,6 +196,9 @@ export function CourseAgent() {
               pendingPlan={agent.pendingPlan}
               agentMode={agent.agentMode}
               onAgentModeChange={agent.setAgentMode}
+              selectedLlmModel={agent.selectedLlmModel}
+              onLlmModelChange={agent.setSelectedLlmModel}
+              canSelectModel={agent.canSelectModel}
               isLoading={agent.isLoading}
               isExecuting={agent.isExecuting}
               loadingStatus={agent.loadingStatus}
