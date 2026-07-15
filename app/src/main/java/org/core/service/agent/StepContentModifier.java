@@ -3,11 +3,11 @@ package org.core.service.agent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.core.config.LlmModelConfig;
+import org.core.config.StepGenerationTokenConfig;
 import org.core.dto.agent.ChatMessage;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.enums.LlmModel;
 import org.core.service.agent.llmProvider.LlmProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -24,19 +24,22 @@ public class StepContentModifier {
     private final StepikResponseParser responseParser;
     private final LlmProvider llmProvider;
     private final LlmModelConfig llmModelConfig;
+    private final StepGenerationTokenConfig stepGenerationTokenConfig;
 
     public StepContentModifier(ObjectMapper objectMapper,
                                ContextStore contextStore,
                                SystemPromptService systemPromptService,
                                StepikResponseParser responseParser,
-                               @Qualifier("yandexProvider") LlmProvider yandexProvider,
-                               LlmModelConfig llmModelConfig){
+                               LlmProvider llmProvider,
+                               LlmModelConfig llmModelConfig,
+                               StepGenerationTokenConfig stepGenerationTokenConfig){
         this.objectMapper = objectMapper;
         this.contextStore = contextStore;
         this.systemPromptService = systemPromptService;
         this.responseParser = responseParser;
-        this.llmProvider = yandexProvider;
+        this.llmProvider = llmProvider;
         this.llmModelConfig = llmModelConfig;
+        this.stepGenerationTokenConfig = stepGenerationTokenConfig;
     }
 
     public StepikBlockRequest modifyStepContent(String sessionId, String userInput, String stepType, StepikBlockRequest stepikBlockRequest, LlmModel llmModel) {
@@ -89,9 +92,10 @@ public class StepContentModifier {
             historyForLLM.addAll(processHistoryMessage(sessionId));
 
             String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
+            int maxTokens = stepGenerationTokenConfig.resolveMaxTokens(stepType);
             String aiResponse = modelUri != null && !modelUri.trim().isEmpty()
-                    ? llmProvider.chat(historyForLLM, modelUri)
-                    : llmProvider.chat(historyForLLM);
+                    ? llmProvider.chat(historyForLLM, modelUri, maxTokens)
+                    : llmProvider.chat(historyForLLM, null, maxTokens);
             ChatMessage assistantMessage = ChatMessage.builder()
                     .role("assistant")
                     .content(aiResponse)
@@ -128,9 +132,10 @@ public class StepContentModifier {
                     .build());
 
             String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
+            int maxTokens = stepGenerationTokenConfig.resolveMaxTokens(stepType);
             String aiResponse = modelUri != null && !modelUri.trim().isEmpty()
-                    ? llmProvider.chat(messages, modelUri)
-                    : llmProvider.chat(messages);
+                    ? llmProvider.chat(messages, modelUri, maxTokens)
+                    : llmProvider.chat(messages, null, maxTokens);
             return responseParser.parseResponse(aiResponse, stepType);
         } catch (RuntimeException e) {
             throw e;
