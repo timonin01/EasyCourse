@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
 COPY app/build/libs/easy-course-app-1.0.0.jar easy-course-app.jar

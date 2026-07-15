@@ -110,6 +110,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
     }
 
+    @ExceptionHandler(ProvodAiException.class)
+    public ResponseEntity<ErrorResponse> handleProvodAiException(ProvodAiException ex) {
+        log.error("Provod AI API error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "Provod AI API Error",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
     @ExceptionHandler(YandexGptException.class)
     public ResponseEntity<ErrorResponse> handleYandexGptException(YandexGptException ex) {
         log.error("Yandex GPT API error: {}", ex.getMessage());

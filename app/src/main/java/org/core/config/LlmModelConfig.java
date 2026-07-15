@@ -10,36 +10,91 @@ import java.util.Map;
 @Component
 public class LlmModelConfig {
 
-    @Value("${yandex.gpt.api.model-uri}")
-    private String yandexGptLiteUri;
+    @Value("${provod.api.model-name.default}")
+    private String defaultModel;
 
-    @Value("${yandex.gpt.api.model-uri.qwen}")
-    private String qwenUri;
+    @Value("${provod.api.model-name.claude-sonnet-4.6}")
+    private String agentModel;
 
-    @Value("${yandex.gpt.api.model-uri.gpt-oss-20b}")
-    private String gptOss20bUri;
+    @Value("${provod.api.model-name.default}")
+    private String askModel;
 
-    @Value("${yandex.gpt.api.model-uri.deepseek-v4-flash}")
-    private String deepseekV4FlashUri;
+    @Value("${provod.api.model-name.z-ai}")
+    private String batchModel;
 
-    @Value("${yandex.gpt.api.model-uri.batch}")
-    private String yandexGptProUri;
+    @Value("${provod.api.model-name.deepseek-v4-flash}")
+    private String deepseekV4FlashModel;
+
+    @Value("${provod.api.model-name.deepseek-v4-pro}")
+    private String deepseekV4ProModel;
+
+    @Value("${provod.api.model-name.claude-sonnet-4.6}")
+    private String claudeSonnetModel;
+
+    @Value("${provod.api.model-name.z-ai}")
+    private String zAiModel;
+
+    @Value("${provod.api.model-name.qwen3.7-max}")
+    private String qwen37MaxModel;
+
+    @Value("${provod.api.model-name.gemini-3-1-flash}")
+    private String gemini31FlashModel;
+
+    @Value("${provod.api.model-name.gemini-3.5-flash}")
+    private String gemini35FlashModel;
+
+    @Value("${provod.api.model-name.grok-4.1-fast}")
+    private String grok41FastModel;
+
+    @Value("${provod.api.model-name.grok-4.5}")
+    private String grok45Model;
+
+    @Value("${provod.api.model-name.mimo-v2.5-pro}")
+    private String mimo25ProModel;
 
     private Map<LlmModel, String> modelUriMap;
 
     public String getModelUri(LlmModel model) {
+        if (model == null) {
+            return defaultModel;
+        }
         if (modelUriMap == null) {
             initializeModelUriMap();
         }
-        return modelUriMap.get(model);
+        return modelUriMap.getOrDefault(model, defaultModel);
+    }
+
+    public String getDefaultModelUri() {
+        return defaultModel;
+    }
+
+    public String getAgentModelUri() {
+        return agentModel;
+    }
+
+    public String getAskModelUri() {
+        return askModel;
+    }
+
+    public String getBatchModelUri() {
+        return batchModel;
     }
 
     private void initializeModelUriMap() {
         modelUriMap = new HashMap<>();
-        modelUriMap.put(LlmModel.YANDEX_GPT_LITE, yandexGptLiteUri);
-        modelUriMap.put(LlmModel.YANDEX_GPT_PRO, yandexGptProUri);
-        modelUriMap.put(LlmModel.QWEN, qwenUri);
-        modelUriMap.put(LlmModel.GPT_OSS_20B, gptOss20bUri);
-        modelUriMap.put(LlmModel.DEEPSEEK_V4_FLASH, deepseekV4FlashUri);
+        modelUriMap.put(LlmModel.YANDEX_GPT_LITE, defaultModel);
+        modelUriMap.put(LlmModel.YANDEX_GPT_PRO, claudeSonnetModel);
+        modelUriMap.put(LlmModel.QWEN, qwen37MaxModel);
+        modelUriMap.put(LlmModel.GPT_OSS_20B, zAiModel);
+        modelUriMap.put(LlmModel.DEEPSEEK_V4_FLASH, deepseekV4FlashModel);
+        modelUriMap.put(LlmModel.DEEPSEEK_V4_PRO, deepseekV4ProModel);
+        modelUriMap.put(LlmModel.SONNET_4_6, claudeSonnetModel);
+        modelUriMap.put(LlmModel.Z_AI_GLM_5_2, zAiModel);
+        modelUriMap.put(LlmModel.QWEN_3_7_MAX, qwen37MaxModel);
+        modelUriMap.put(LlmModel.GEMINI_3_1_FLASH, gemini31FlashModel);
+        modelUriMap.put(LlmModel.GEMINI_3_5_FLASH, gemini35FlashModel);
+        modelUriMap.put(LlmModel.GROK_4_1_FAST, grok41FastModel);
+        modelUriMap.put(LlmModel.GROK_4_5, grok45Model);
+        modelUriMap.put(LlmModel.MIMO_2_5_PRO, mimo25ProModel);
     }
 }
