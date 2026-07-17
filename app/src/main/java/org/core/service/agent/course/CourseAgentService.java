@@ -6,10 +6,13 @@ import org.core.dto.agent.ChatMessage;
 import org.core.dto.agent.course.*;
 import org.core.enums.CourseAgentMode;
 import org.core.enums.LlmModel;
+import org.core.service.agent.course.sse.PlanExecutionProgress;
 import org.core.service.agent.course.tools.CourseAgentLoop;
 import org.core.service.agent.course.tools.util.CoursePlanHelper;
 import org.core.service.agent.course.tools.util.CoursePlanMessageBuilder;
+import org.core.service.agent.course.util.StepsCounter;
 import org.core.util.UserAccessService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,6 +30,8 @@ public class CourseAgentService {
     private final UserAccessService userAccessService;
     private final CoursePlanExecutionService planExecutionService;
     private final CourseStepModificationService stepModificationService;
+    private final StepsCounter stepsCounter;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CourseAgentResponse handleChat(Long courseId, Long userId, String sessionId, String userInput, LlmModel llmModel, CourseAgentMode agentMode) {
         Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
@@ -70,6 +75,8 @@ public class CourseAgentService {
         planValidator.validate(courseId, userId, editedPlan);
         if (editedPlan.getMessage() == null || editedPlan.getMessage().isBlank()) {
             editedPlan.setMessage(coursePlanMessageBuilder.buildSummary(editedPlan.getActions()));
+        } else {
+            editedPlan.setMessage(coursePlanMessageBuilder.sanitizeUserFacingMessage(editedPlan.getMessage()));
         }
 
         CourseAgentResponse response = CourseAgentResponse.builder()
@@ -95,39 +102,53 @@ public class CourseAgentService {
                 .filter(action -> action != null && coursePlanHelper.isCreateAction(action.getType()))
                 .toList();
 
-        if (!deleteActions.isEmpty()) {
-            planExecutionService.executeDeleteActions(courseId, userId, deleteActions);
-        }
+        int plannedSteps = stepsCounter.countPlannedSteps(plan);
+        PlanExecutionProgress planExecutionProgress = new PlanExecutionProgress(courseId, userId, sessionId, plannedSteps, eventPublisher);
+        try {
+            if (!createActions.isEmpty()) {
+                planExecutionProgress.publishStarted();
+            }
+            if (!deleteActions.isEmpty()) {
+                planExecutionService.executeDeleteActions(courseId, userId, deleteActions);
+            }
 
-        CourseAgentResponse agentResponse = null;
-        if (!createActions.isEmpty()) {
-            ExecutionDraftResult result = planExecutionService.executeCreateActions(
-                    courseId, userId, sessionId, createActions, llmModel);
-            agentResponse = CourseAgentResponse.builder()
-                    .action(CourseAgentAction.DRAFT_READY)
-                    .message(String.format(
-                            "Готово: создано модулей %d, уроков %d, шагов %d. "
-                                    + "Проверьте черновик и синхронизируйте со Stepik вручную.",
-                            result.sectionIds().size(),
-                            result.lessonIds().size(),
-                            result.stepIds().size()))
-                    .createdSectionIds(result.sectionIds())
-                    .createdLessonIds(result.lessonIds())
-                    .createdStepIds(result.stepIds())
-                    .build();
-        } else if (!deleteActions.isEmpty()) {
-            agentResponse = CourseAgentResponse.builder()
-                    .action(CourseAgentAction.ENTITY_DELETED)
-                    .message(String.format(
-                            "Удалено %d элемент(ов) из черновика курса. Синхронизация со Stepik не выполнялась.",
-                            deleteActions.size()))
-                    .build();
-        } else {
-            return CourseAgentResponse.error("В плане нет действий для выполнения");
-        }
+            CourseAgentResponse agentResponse;
+            if (!createActions.isEmpty()) {
+                ExecutionDraftResult result = planExecutionService.executeCreateActions(
+                        courseId, userId, sessionId, createActions, llmModel, planExecutionProgress);
+                String message = String.format(
+                        "Готово: создано модулей %d, уроков %d, шагов %d. "
+                                + "Проверьте черновик и синхронизируйте со Stepik вручную.",
+                        result.sectionIds().size(),
+                        result.lessonIds().size(),
+                        result.stepIds().size());
+                agentResponse = CourseAgentResponse.builder()
+                        .action(CourseAgentAction.DRAFT_READY)
+                        .message(message)
+                        .createdSectionIds(result.sectionIds())
+                        .createdLessonIds(result.lessonIds())
+                        .createdStepIds(result.stepIds())
+                        .build();
+                planExecutionProgress.publishDone(result.sectionIds(), result.lessonIds(), result.stepIds(), message);
+            } else if (!deleteActions.isEmpty()) {
+                agentResponse = CourseAgentResponse.builder()
+                        .action(CourseAgentAction.ENTITY_DELETED)
+                        .message(String.format(
+                                "Удалено %d элемент(ов) из черновика курса. Синхронизация со Stepik не выполнялась.",
+                                deleteActions.size()))
+                        .build();
+            } else {
+                return CourseAgentResponse.error("В плане нет действий для выполнения");
+            }
 
-        memoryService.saveAssistantResponse(userId, courseId, sessionId, agentResponse);
-        return agentResponse;
+            memoryService.saveAssistantResponse(userId, courseId, sessionId, agentResponse);
+            return agentResponse;
+        } catch (RuntimeException e) {
+            if (!createActions.isEmpty()) {
+                planExecutionProgress.publishError(e.getMessage());
+            }
+            throw e;
+        }
     }
 
     public CourseAgentResponse cancelPlan(Long courseId, Long userId, String sessionId) {
