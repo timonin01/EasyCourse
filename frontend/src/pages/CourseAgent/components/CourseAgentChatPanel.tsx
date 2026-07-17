@@ -6,7 +6,7 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { LlmModelSelect } from '../../../components/ui/LlmModelSelect';
 import { MODEL_PRO_MESSAGE } from '../../../constants/subscription';
-import type { EntityCandidate, CoursePlanDTO } from '../../../types';
+import type { EntityCandidate, CoursePlanDTO, PlanExecutionLiveProgress } from '../../../types';
 import type { CourseAgentChatMessage } from '../useCourseAgent';
 import type { CourseAgentMode } from '../types';
 import { PlanPanel } from './PlanPanel';
@@ -22,6 +22,7 @@ interface CourseAgentChatPanelProps {
   canSelectModel: boolean;
   isLoading: boolean;
   isExecuting: boolean;
+  executionLive?: PlanExecutionLiveProgress | null;
   loadingStatus: string | null;
   input: string;
   messagesEndRef: RefObject<HTMLDivElement>;
@@ -46,6 +47,7 @@ export function CourseAgentChatPanel({
   canSelectModel,
   isLoading,
   isExecuting,
+  executionLive,
   loadingStatus,
   input,
   messagesEndRef,
@@ -194,6 +196,7 @@ export function CourseAgentChatPanel({
           <PlanPanel
             plan={pendingPlan}
             isExecuting={isExecuting}
+            executionLive={executionLive}
             onConfirm={onConfirmPlan}
             onCancel={onCancelPlan}
             onChange={onChangePlan}

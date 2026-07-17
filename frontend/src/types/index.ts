@@ -343,6 +343,49 @@ export type CourseAgentAction =
   | 'ENTITY_DELETED'
   | 'ERROR';
 
+export type PlanExecutionEventType =
+  | 'STARTED'
+  | 'SECTION_CREATED'
+  | 'LESSON_CREATED'
+  | 'STEP_STARTED'
+  | 'STEP_CREATED'
+  | 'STEP_FAILED'
+  | 'DONE'
+  | 'ERROR';
+
+export interface PlanExecutionEvent {
+  planExecutionEventType: PlanExecutionEventType;
+  currentCreatedSteps?: number;
+  totalSteps?: number;
+  courseId?: number;
+  userId?: number;
+  sessionId?: string;
+  sectionTitle?: string;
+  lessonTitle?: string;
+  stepType?: StepType;
+  sectionPosition?: number;
+  lessonPosition?: number;
+  stepPosition?: number;
+  message?: string;
+  createdSectionId?: number;
+  createdLessonId?: number;
+  createdStepId?: number;
+  createdSectionIds?: number[];
+  createdLessonIds?: number[];
+  createdStepIds?: number[];
+  planActionType?: PlanActionType;
+}
+
+export interface PlanExecutionLiveProgress {
+  current: number;
+  total: number;
+  phase: PlanExecutionEventType | 'idle';
+  lessonTitle?: string;
+  stepType?: StepType;
+  message?: string;
+  log: Array<{ id: string; text: string; kind: PlanExecutionEventType }>;
+}
+
 export interface CourseAgentLessonPlan {
   title: string;
   steps: CountStepDTO[];
