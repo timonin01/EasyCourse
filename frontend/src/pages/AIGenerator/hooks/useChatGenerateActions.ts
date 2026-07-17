@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { agentApi, stepsApi } from '../../../api';
-import { useCourseStore, useAIGeneratorStore } from '../../../store';
+import { useCourseStore, useAIGeneratorStore, useAIGeneratorExecutionStore } from '../../../store';
 import type { GeneratedStepHistory, StepikBlockRequest } from '../../../types';
 import { stepikBlockToPreviewStep } from '../../../utils/stepPreview';
 import { AI_PROMPT_LIMITS, getPromptLimitMessage } from '../../../constants/aiPromptLimits';
-import { extractApiErrorMessage } from '../../../utils/apiError';
+import { readStoredLlmModel, writeStoredLlmModel } from '../../../utils/llmModelStorage';
 import { STEP_TYPE_MAP } from '../constants';
 import type { AIGeneratorMode } from '../types';
 
@@ -35,20 +35,47 @@ export function useChatGenerateActions({
     setMode,
     setGenerateSession,
     setMessages,
-    addMessage,
   } = useAIGeneratorStore();
 
+  const isLoading = useAIGeneratorExecutionStore((state) => state.isLoading);
+  const lastGeneratePrompt = useAIGeneratorExecutionStore((state) => state.lastGeneratePrompt);
+  const generatedStepHistoryRefreshKey = useAIGeneratorExecutionStore(
+    (state) => state.generatedStepHistoryRefreshKey,
+  );
+  const startGenerate = useAIGeneratorExecutionStore((state) => state.startGenerate);
+  const startChat = useAIGeneratorExecutionStore((state) => state.startChat);
+  const setLastGeneratePrompt = useAIGeneratorExecutionStore((state) => state.setLastGeneratePrompt);
+
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedLlmModelState, setSelectedLlmModel] = useState('');
-  const [lastGeneratePrompt, setLastGeneratePrompt] = useState('');
-  const [generatedStepHistoryRefreshKey, setGeneratedStepHistoryRefreshKey] = useState(0);
+  const [selectedLlmModelState, setSelectedLlmModelState] = useState(readStoredLlmModel);
+
+  const setSelectedLlmModel = useCallback((model: string) => {
+    setSelectedLlmModelState(model);
+    writeStoredLlmModel(model);
+  }, []);
 
   useEffect(() => {
     if (!canSelectModel && selectedLlmModelState) {
-      setSelectedLlmModel('');
+      setSelectedLlmModelState('');
+    } else if (canSelectModel && !selectedLlmModelState) {
+      const stored = readStoredLlmModel();
+      if (stored) {
+        setSelectedLlmModelState(stored);
+      }
     }
   }, [canSelectModel, selectedLlmModelState]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isLoading]);
 
   const previewStep = useMemo(
     () => (generatedStep ? stepikBlockToPreviewStep(generatedStep, stepType) : null),
@@ -63,40 +90,14 @@ export function useChatGenerateActions({
     }
 
     const sessionId = getOrCreateGenerateSession(stepType);
-    if (options?.addUserMessage !== false) {
-      addMessage(sessionId, { role: 'user', content: prompt });
-    }
-    setLastGeneratePrompt(prompt);
-    setIsLoading(true);
-
-    try {
-      const response = await agentApi.generateStep(
-        sessionId,
-        prompt,
-        stepType,
-        selectedLlmModelState || undefined
-      );
-      setGeneratedStep(response);
-
-      addMessage(sessionId, {
-        role: 'assistant',
-        content: `Готово! Сгенерирован шаг типа "${stepType}".\n\nПредпросмотр контента:\n${response.text?.substring(0, 200) || 'Контент сгенерирован'}...`,
-        stepType,
-        generatedStep: response,
-      });
-      setGeneratedStepHistoryRefreshKey((key) => key + 1);
-      void refreshSubscription();
-    } catch (error) {
-      addMessage(sessionId, {
-        role: 'assistant',
-        content: extractApiErrorMessage(error, 'Произошла ошибка при генерации. Попробуйте ещё раз.'),
-      });
-      toast.error(extractApiErrorMessage(error, 'Ошибка генерации'));
-      void refreshSubscription();
-      console.error('AI generation error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await startGenerate({
+      sessionId,
+      prompt,
+      stepType,
+      llmModel: selectedLlmModelState || undefined,
+      addUserMessage: options?.addUserMessage !== false,
+      refreshSubscription,
+    });
   };
 
   const handleSendMessage = async () => {
@@ -150,21 +151,14 @@ export function useChatGenerateActions({
     }
 
     const sessionId = getOrCreateChatSession();
-    addMessage(sessionId, { role: 'user', content: input });
+    const prompt = input.trim();
     setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await agentApi.chat(sessionId, input, selectedLlmModelState || undefined);
-      addMessage(sessionId, { role: 'assistant', content: response });
-    } catch (error) {
-      const message = extractApiErrorMessage(error, 'Произошла ошибка. Попробуйте ещё раз.');
-      addMessage(sessionId, { role: 'assistant', content: message });
-      toast.error(message);
-      void refreshSubscription();
-    } finally {
-      setIsLoading(false);
-    }
+    await startChat({
+      sessionId,
+      prompt,
+      llmModel: selectedLlmModelState || undefined,
+      refreshSubscription,
+    });
   };
 
   const handleSaveStep = async () => {

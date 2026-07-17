@@ -14,10 +14,11 @@ import { useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
-import type { CountStepDTO, CoursePlanDTO, PlanActionDTO } from '../../../types';
+import type { CountStepDTO, CoursePlanDTO, PlanActionDTO, PlanExecutionLiveProgress } from '../../../types';
 import { LessonPlanEditor, StepPlanEditor } from './PlanEditor';
 import { ExecuteProgress } from './ExecuteProgress';
 import { isCreateAction, isCopyAction, isDeleteAction, isDeletePlan, planSummaryLabel } from '../utils/planIntent';
+import { sanitizePlanMessage } from '../utils/sanitizePlanMessage';
 
 const STEP_TYPE_LABELS: Record<string, string> = {
   text: 'Теория',
@@ -306,9 +307,10 @@ function ActionPlanEditor({
 }
 
 function PlanTreePreview({ plan }: { plan: CoursePlanDTO }) {
+  const message = sanitizePlanMessage(plan.message);
   return (
     <div className="space-y-3">
-      {plan.message && <p className="text-sm text-dark-200">{plan.message}</p>}
+      {message && <p className="text-sm text-dark-200">{message}</p>}
       {plan.actions?.map((action, index) => (
         <div key={index}>
           <ActionPreview action={action} />
@@ -396,6 +398,7 @@ function PlanManualEditor({
 interface PlanPanelProps {
   plan: CoursePlanDTO;
   isExecuting: boolean;
+  executionLive?: PlanExecutionLiveProgress | null;
   onConfirm: () => void;
   onCancel: () => void;
   onChange: (plan: CoursePlanDTO) => void;
@@ -404,6 +407,7 @@ interface PlanPanelProps {
 export function PlanPanel({
   plan,
   isExecuting,
+  executionLive,
   onConfirm,
   onCancel,
   onChange,
@@ -463,7 +467,7 @@ export function PlanPanel({
             </p>
 
             {isExecuting && (
-              <ExecuteProgress plan={plan} isDelete={isDelete} />
+              <ExecuteProgress plan={plan} isDelete={isDelete} live={executionLive} />
             )}
           </div>
 

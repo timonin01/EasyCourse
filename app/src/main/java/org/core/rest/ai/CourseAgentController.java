@@ -15,13 +15,15 @@ import org.core.exception.exceptions.PromptLengthExceededException;
 import org.core.exception.exceptions.SubscriptionLimitExceededException;
 import org.core.service.agent.course.CourseAgentService;
 import org.core.service.agent.course.util.StepsCounter;
+import org.core.service.agent.course.sse.SseNotificationService;
 import org.core.service.ai.AiPromptLimitService;
 import org.core.service.subscription.SubscriptionService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Collections;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/agent/course")
@@ -33,6 +35,7 @@ public class CourseAgentController {
     private final SubscriptionService subscriptionService;
     private final AiPromptLimitService aiPromptLimitService;
     private final StepsCounter stepsCounter;
+    private final SseNotificationService sseNotificationService;
     private final UserContextBean userContextBean;
 
     @GetMapping("/{courseId}/sessions/latest")
@@ -231,6 +234,14 @@ public class CourseAgentController {
             log.error("Error executing course agent plan: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body("Ошибка при выполнении плана");
         }
+    }
+
+    @PostMapping(value = "/{courseId}/execute-plan/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter executePlanStream(
+            @PathVariable Long courseId,
+            @RequestParam String sessionId) {
+        Long userId = userContextBean.getUserId();
+        return sseNotificationService.subscribe(courseId, userId, sessionId);
     }
 
     @PostMapping("/{courseId}/steps/{stepId}/modify")

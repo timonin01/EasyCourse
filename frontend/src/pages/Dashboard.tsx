@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  BookOpen, 
-  FileText, 
-  TrendingUp,
-  Plus,
-  ArrowRight,
-  Sparkles
-} from 'lucide-react';
+import { BookOpen, Plus, ArrowRight, RefreshCw } from 'lucide-react';
 import { MainLayout } from '../components/Layout';
 import { OnboardingBanner } from '../components/auth/OnboardingBanner';
-import { VideoStepsWarningBanner } from '../components/VideoStepsWarningBanner';
 import { CourseAgentPromoCard } from '../components/dashboard/CourseAgentPromoCard';
 import { DashboardSubscriptionWidget } from '../components/subscription/DashboardSubscriptionWidget';
-import { Card, Button, StatCard, EmptyState, DashboardSkeleton, StaggerList, StaggerItem, ContentReveal, PageHeader, Badge } from '../components/ui';
+import {
+  Button,
+  EmptyState,
+  DashboardSkeleton,
+  StaggerList,
+  StaggerItem,
+  ContentReveal,
+  PageHeader,
+} from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
 import { coursesApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
-import { formatCourseCount, getDashboardSubtitle, getTimeGreeting } from '../utils/pageCopy';
+import { getTimeGreeting, pluralRu } from '../utils/pageCopy';
 
 export function Dashboard() {
   const { user } = useAuthStore();
@@ -36,14 +36,8 @@ export function Dashboard() {
         setIsLoading(false);
       }
     };
-    loadCourses();
+    void loadCourses();
   }, [user?.id, setCourses]);
-
-  const stats = [
-    { label: 'Всего курсов', value: courses.length, icon: BookOpen, accent: 'primary' as const },
-    { label: 'Синхронизировано', value: courses.filter(c => c.fullySynced).length, icon: TrendingUp, accent: 'blue' as const },
-    { label: 'Не синхронизировано', value: courses.filter(c => !c.fullySynced).length, icon: FileText, accent: 'amber' as const },
-  ];
 
   const recentCourses = [...courses]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -51,7 +45,6 @@ export function Dashboard() {
 
   const isNewUser = courses.length === 0;
   const unsyncedCount = courses.filter((c) => !c.fullySynced).length;
-  const syncedCount = courses.length - unsyncedCount;
   const firstName = user?.name?.split(/\s+/)[0];
 
   return (
@@ -61,101 +54,55 @@ export function Dashboard() {
         skeleton={<DashboardSkeleton />}
       >
         <PageHeader
-          size="hero"
           eyebrow={getTimeGreeting()}
-          title={
-            firstName ? (
-              <>
-                <span className="text-dark-100">{firstName}</span>
-                <span className="text-dark-500">, рад вас видеть</span>
-              </>
-            ) : (
-              'Дашборд'
-            )
-          }
-          description={getDashboardSubtitle(courses.length, unsyncedCount)}
-          meta={
-            !isNewUser ? (
-              <>
-                <Badge variant="default">{formatCourseCount(courses.length)}</Badge>
-                {syncedCount > 0 && (
-                  <Badge variant="success">{syncedCount} на Stepik</Badge>
-                )}
-                {unsyncedCount > 0 && (
-                  <Badge variant="warning">{unsyncedCount} не синхр.</Badge>
-                )}
-              </>
-            ) : undefined
-          }
+          title={firstName ? `${firstName}, рад вас видеть` : 'Дашборд'}
+          className="mb-6"
         />
-
-        <VideoStepsWarningBanner className="mb-8" />
 
         {isNewUser && <OnboardingBanner />}
 
         <DashboardSubscriptionWidget />
 
-        <CourseAgentPromoCard className="mb-8" hasCourses={!isNewUser} />
+        <CourseAgentPromoCard className="mb-6" hasCourses={!isNewUser} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {stats.map((stat) => (
-            <StatCard
-              key={stat.label}
-              label={stat.label}
-              value={stat.value}
-              icon={stat.icon}
-              accent={stat.accent}
-            />
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Link to="/courses">
-            <Card hover className="h-full">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-xl bg-primary-600/20 p-4">
-                    <Plus className="h-8 w-8 text-primary-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-dark-100">Создать курс</h3>
-                    <p className="text-dark-400">Новый курс с нуля</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-dark-500" />
-              </div>
-            </Card>
+        {!isNewUser && unsyncedCount > 0 && (
+          <Link
+            to="/stepik-sync"
+            className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-amber-500/25 bg-amber-500/5 px-4 py-3 transition-colors hover:border-amber-500/40 hover:bg-amber-500/10"
+          >
+            <div className="flex min-w-0 items-center gap-2.5 text-sm text-amber-100/90">
+              <RefreshCw className="h-4 w-4 shrink-0 text-amber-400" />
+              <span>
+                {unsyncedCount}{' '}
+                {pluralRu(unsyncedCount, 'курс ждёт', 'курса ждут', 'курсов ждут')} синхронизации
+                со Stepik
+              </span>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-amber-300">
+              Stepik Sync
+              <ArrowRight className="h-4 w-4" />
+            </span>
           </Link>
-
-          <Link to="/ai-generator">
-            <Card hover className="h-full">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-xl bg-purple-600/20 p-4">
-                    <Sparkles className="h-8 w-8 text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-dark-100">AI Генератор</h3>
-                    <p className="text-dark-400">Генерация шагов и заданий</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-dark-500" />
-              </div>
-            </Card>
-          </Link>
-        </div>
+        )}
 
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="section-heading">Последние курсы</h2>
-            {!isNewUser && (
+            <div className="flex items-center gap-2">
+              {!isNewUser && (
+                <Link to="/courses">
+                  <Button variant="ghost" size="sm">
+                    Все курсы
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
               <Link to="/courses">
-                <Button variant="ghost" size="sm">
-                  Все курсы
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                <Button size="sm" icon={<Plus className="h-4 w-4" />}>
+                  {isNewUser ? 'Создать курс' : 'Создать'}
                 </Button>
               </Link>
-            )}
+            </div>
           </div>
 
           {isNewUser ? (
@@ -163,15 +110,15 @@ export function Dashboard() {
               variant="dashed"
               icon={BookOpen}
               title="Пока нет курсов"
-              description="Здесь появятся ваши курсы после создания"
+              description="Создайте курс или откройте AI-агента — он поможет собрать структуру"
               action={
                 <Link to="/courses">
-                  <Button icon={<Plus className="w-4 h-4" />}>Создать первый курс</Button>
+                  <Button icon={<Plus className="h-4 w-4" />}>Создать первый курс</Button>
                 </Link>
               }
             />
           ) : (
-            <StaggerList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StaggerList className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {recentCourses.map((course) => (
                 <StaggerItem key={course.id}>
                   <CourseCard course={course} variant="compact" />

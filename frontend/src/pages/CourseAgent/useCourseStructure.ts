@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { lessonsApi, sectionsApi, stepsApi } from '../../api';
 import type { Lesson, Model, Step } from '../../types';
-import type { CourseTreeSectionNode } from './types';
+import type { CourseTreeLessonNode, CourseTreeSectionNode } from './types';
 
 export function useCourseStructure(courseId: number | null) {
   const [sections, setSections] = useState<CourseTreeSectionNode[]>([]);
@@ -217,18 +217,26 @@ export function useCourseStructure(courseId: number | null) {
   }, []);
 
   const addStep = useCallback((step: Step) => {
-    setSections((prev) => prev.map((sectionNode) => ({
-      ...sectionNode,
-      lessons: sectionNode.lessons.map((lessonNode) => {
-        if (lessonNode.lesson.id !== step.lessonId) {
-          return lessonNode;
-        }
-        const current = lessonNode.steps ?? [];
-        const steps = [...current.filter((item) => item.id !== step.id), step]
-          .sort((a, b) => a.position - b.position);
-        return { ...lessonNode, steps, stepsLoading: false };
-      }),
-    })));
+    setSections((prev) => {
+      let parentSectionId: number | null = null;
+      const next = prev.map((sectionNode) => ({
+        ...sectionNode,
+        lessons: sectionNode.lessons.map((lessonNode) => {
+          if (lessonNode.lesson.id !== step.lessonId) {
+            return lessonNode;
+          }
+          parentSectionId = sectionNode.section.id;
+          const current = lessonNode.steps ?? [];
+          const steps = [...current.filter((item) => item.id !== step.id), step]
+            .sort((a, b) => a.position - b.position);
+          return { ...lessonNode, steps, stepsLoading: false };
+        }),
+      }));
+      if (parentSectionId != null) {
+        setExpandedSections((expanded) => new Set(expanded).add(parentSectionId!));
+      }
+      return next;
+    });
     setExpandedLessons((prev) => new Set(prev).add(step.lessonId));
   }, []);
 
@@ -264,6 +272,59 @@ export function useCourseStructure(courseId: number | null) {
     }
   }, [loadLessonSteps, sections]);
 
+  const reorderSections = useCallback((ordered: Model[]) => {
+    setSections((prev) => {
+      const byId = new Map(prev.map((node) => [node.section.id, node]));
+      return ordered
+        .map((section, index) => {
+          const node = byId.get(section.id);
+          if (!node) return null;
+          return {
+            ...node,
+            section: { ...node.section, position: index + 1 },
+          };
+        })
+        .filter((node): node is CourseTreeSectionNode => node != null);
+    });
+  }, []);
+
+  const reorderLessons = useCallback((sectionId: number, ordered: Lesson[]) => {
+    setSections((prev) => prev.map((sectionNode) => {
+      if (sectionNode.section.id !== sectionId) {
+        return sectionNode;
+      }
+      const byId = new Map(sectionNode.lessons.map((node) => [node.lesson.id, node]));
+      return {
+        ...sectionNode,
+        lessons: ordered
+          .map((lesson, index) => {
+            const node = byId.get(lesson.id);
+            if (!node) return null;
+            return {
+              ...node,
+              lesson: { ...node.lesson, position: index + 1 },
+            };
+          })
+          .filter((node): node is CourseTreeLessonNode => node != null),
+      };
+    }));
+  }, []);
+
+  const reorderSteps = useCallback((lessonId: number, ordered: Step[]) => {
+    setSections((prev) => prev.map((sectionNode) => ({
+      ...sectionNode,
+      lessons: sectionNode.lessons.map((lessonNode) => {
+        if (lessonNode.lesson.id !== lessonId) {
+          return lessonNode;
+        }
+        return {
+          ...lessonNode,
+          steps: ordered.map((step, index) => ({ ...step, position: index + 1 })),
+        };
+      }),
+    })));
+  }, []);
+
   return {
     sections,
     isLoading,
@@ -282,5 +343,8 @@ export function useCourseStructure(courseId: number | null) {
     removeSection,
     removeLesson,
     removeStep,
+    reorderSections,
+    reorderLessons,
+    reorderSteps,
   };
 }

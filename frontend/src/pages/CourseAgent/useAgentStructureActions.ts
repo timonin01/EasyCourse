@@ -15,6 +15,10 @@ interface UseAgentStructureActionsParams {
   removeSection: (sectionId: number) => void;
   removeLesson: (lessonId: number) => void;
   removeStep: (stepId: number) => void;
+  reorderSections: (ordered: CourseTreeSectionNode['section'][]) => void;
+  reorderLessons: (sectionId: number, ordered: CourseTreeSectionNode['lessons'][number]['lesson'][]) => void;
+  reorderSteps: (lessonId: number, ordered: NonNullable<CourseTreeSectionNode['lessons'][number]['steps']>) => void;
+  reloadStructure: () => Promise<void>;
   onStepRemoved?: (stepId: number) => void;
 }
 
@@ -45,6 +49,10 @@ export function useAgentStructureActions({
   removeSection,
   removeLesson,
   removeStep,
+  reorderSections,
+  reorderLessons,
+  reorderSteps,
+  reloadStructure,
   onStepRemoved,
 }: UseAgentStructureActionsParams) {
   const [renameTarget, setRenameTarget] = useState<
@@ -215,6 +223,74 @@ export function useAgentStructureActions({
     removeStep,
   ]);
 
+  const persistSectionOrder = useCallback(async (ordered: CourseTreeSectionNode['section'][]) => {
+    const previous = sections.map((node) => node.section);
+    const changed = ordered.some((section, index) => section.id !== previous[index]?.id);
+    if (!changed) return;
+
+    reorderSections(ordered);
+    try {
+      await Promise.all(
+        ordered.map((section, position) =>
+          sectionsApi.updateSection({ sectionId: section.id, position: position + 1 }),
+        ),
+      );
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось изменить порядок модулей'));
+      await reloadStructure();
+    }
+  }, [reloadStructure, reorderSections, sections]);
+
+  const persistLessonOrder = useCallback(async (
+    sectionId: number,
+    ordered: CourseTreeSectionNode['lessons'][number]['lesson'][],
+  ) => {
+    const sectionNode = sections.find((node) => node.section.id === sectionId);
+    const previous = sectionNode?.lessons.map((node) => node.lesson) ?? [];
+    const changed = ordered.some((lesson, index) => lesson.id !== previous[index]?.id);
+    if (!changed) return;
+
+    reorderLessons(sectionId, ordered);
+    try {
+      await Promise.all(
+        ordered.map((lesson, position) =>
+          lessonsApi.updateLesson({ lessonId: lesson.id, position: position + 1 }),
+        ),
+      );
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось изменить порядок уроков'));
+      await reloadStructure();
+    }
+  }, [reloadStructure, reorderLessons, sections]);
+
+  const persistStepOrder = useCallback(async (
+    lessonId: number,
+    ordered: NonNullable<CourseTreeSectionNode['lessons'][number]['steps']>,
+  ) => {
+    let previous: NonNullable<CourseTreeSectionNode['lessons'][number]['steps']> = [];
+    for (const sectionNode of sections) {
+      const lessonNode = sectionNode.lessons.find((node) => node.lesson.id === lessonId);
+      if (lessonNode?.steps) {
+        previous = lessonNode.steps;
+        break;
+      }
+    }
+    const changed = ordered.some((step, index) => step.id !== previous[index]?.id);
+    if (!changed) return;
+
+    reorderSteps(lessonId, ordered);
+    try {
+      await Promise.all(
+        ordered.map((step, position) =>
+          stepsApi.updateStep({ stepId: step.id, position: position + 1 }),
+        ),
+      );
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось изменить порядок шагов'));
+      await reloadStructure();
+    }
+  }, [reloadStructure, reorderSteps, sections]);
+
   return {
     renameTarget,
     setRenameTarget,
@@ -229,5 +305,8 @@ export function useAgentStructureActions({
     openDeleteLesson,
     openDeleteStep,
     confirmDelete,
+    persistSectionOrder,
+    persistLessonOrder,
+    persistStepOrder,
   };
 }

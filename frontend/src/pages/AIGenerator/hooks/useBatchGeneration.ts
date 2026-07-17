@@ -1,16 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 import toast from 'react-hot-toast';
 import { agentApi, stepsApi } from '../../../api';
-import { useCourseStore, useAIGeneratorStore } from '../../../store';
-import type { BatchStepDTO, CountStepDTO, StepikBlockRequest, BatchGenerationHistory } from '../../../types';
-import { countTotalBatchSteps, expandBatchPlanToItems, type BatchPlanItem } from '../../../utils/batchSteps';
+import { useCourseStore, useAIGeneratorStore, useAIGeneratorExecutionStore } from '../../../store';
+import type { BatchStepDTO, CountStepDTO, BatchGenerationHistory } from '../../../types';
+import { countTotalBatchSteps } from '../../../utils/batchSteps';
 import { getBatchStepLimitMessage } from '../../../constants/batchLimits';
 import { AI_PROMPT_LIMITS, getPromptLimitMessage, clampPromptLength } from '../../../constants/aiPromptLimits';
 import type { BatchStepStatus } from '../components/BatchProgressStepper';
 import { STEP_TYPE_MAP } from '../constants';
 import type { AIGeneratorMode, BatchResultItem } from '../types';
 import { buildBatchUserInput } from '../utils/buildBatchUserInput';
-import { parseBatchGenerationError } from '../utils/parseBatchError';
 
 interface UseBatchGenerationParams {
   mode: AIGeneratorMode;
@@ -32,24 +31,46 @@ export function useBatchGeneration({
   const { addStep } = useCourseStore();
   const { setMode, consumePendingBatchUserInput } = useAIGeneratorStore();
 
+  const isGeneratingBatch = useAIGeneratorExecutionStore((state) => state.isGeneratingBatch);
+  const batchResults = useAIGeneratorExecutionStore((state) => state.batchResults);
+  const batchPlanItems = useAIGeneratorExecutionStore((state) => state.batchPlanItems);
+  const batchActiveIndex = useAIGeneratorExecutionStore((state) => state.batchActiveIndex);
+  const batchHistoryRefreshKey = useAIGeneratorExecutionStore((state) => state.batchHistoryRefreshKey);
+  const storeBatchPlan = useAIGeneratorExecutionStore((state) => state.batchPlan);
+  const startBatchAnalyze = useAIGeneratorExecutionStore((state) => state.startBatchAnalyze);
+  const startBatchGenerate = useAIGeneratorExecutionStore((state) => state.startBatchGenerate);
+  const clearBatchResults = useAIGeneratorExecutionStore((state) => state.clearBatchResults);
+  const storeSetBatchResults = useAIGeneratorExecutionStore((state) => state.setBatchResults);
+
+  const setBatchResults: Dispatch<SetStateAction<BatchResultItem[]>> = useCallback((value) => {
+    const current = useAIGeneratorExecutionStore.getState().batchResults;
+    const next = typeof value === 'function' ? value(current) : value;
+    storeSetBatchResults(next);
+  }, [storeSetBatchResults]);
+
   const [batchUserInput, setBatchUserInput] = useState('');
   const [batchExplicitSteps, setBatchExplicitSteps] = useState<CountStepDTO[]>([]);
   const [batchPlan, setBatchPlan] = useState<BatchStepDTO | null>(null);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
-  const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
-  const [batchResults, setBatchResults] = useState<BatchResultItem[]>([]);
   const [isSavingBatch, setIsSavingBatch] = useState(false);
-  const [batchPlanItems, setBatchPlanItems] = useState<BatchPlanItem[]>([]);
-  const [batchActiveIndex, setBatchActiveIndex] = useState(0);
-  const [batchHistoryRefreshKey, setBatchHistoryRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (!isGeneratingBatch || batchPlanItems.length === 0) return;
-    const interval = setInterval(() => {
-      setBatchActiveIndex((prev) => (prev >= batchPlanItems.length - 1 ? prev : prev + 1));
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [isGeneratingBatch, batchPlanItems.length]);
+    if (storeBatchPlan && !batchPlan) {
+      setBatchPlan(storeBatchPlan);
+    }
+  }, [storeBatchPlan, batchPlan]);
+
+  useEffect(() => {
+    if (!isGeneratingBatch) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isGeneratingBatch]);
 
   const batchStepStatuses: BatchStepStatus[] = batchPlanItems.map((item, i) => {
     const result = batchResults.find((r) => r.index === item.index);
@@ -78,10 +99,8 @@ export function useBatchGeneration({
     setBatchUserInput(pendingBatchPrompt);
     setBatchExplicitSteps([]);
     setBatchPlan(null);
-    setBatchResults([]);
-    setBatchPlanItems([]);
-    setBatchActiveIndex(0);
-  }, [consumePendingBatchUserInput, setMode]);
+    clearBatchResults();
+  }, [consumePendingBatchUserInput, setMode, clearBatchResults]);
 
   useEffect(() => {
     if (mode !== 'batch') return;
@@ -90,6 +109,10 @@ export function useBatchGeneration({
 
     const hydrateBatchResults = async () => {
       try {
+        // If generation finished while away, store already has results
+        if (useAIGeneratorExecutionStore.getState().batchResults.length > 0) {
+          return;
+        }
         const history = await agentApi.getBatchHistory();
         if (cancelled) return;
 
@@ -108,10 +131,10 @@ export function useBatchGeneration({
     return () => {
       cancelled = true;
     };
-  }, [mode, batchResults.length, isGeneratingBatch]);
+  }, [mode, batchResults.length, isGeneratingBatch, setBatchResults]);
 
   const resetBatchPreview = () => {
-    setBatchResults([]);
+    clearBatchResults();
     setBatchPlan(null);
   };
 
@@ -121,11 +144,8 @@ export function useBatchGeneration({
       setBatchUserInput('');
       setBatchExplicitSteps([]);
       setBatchPlan(null);
-      setBatchResults([]);
-      setBatchPlanItems([]);
-      setBatchActiveIndex(0);
+      clearBatchResults();
       setIsPlanModalOpen(false);
-      setBatchHistoryRefreshKey((key) => key + 1);
       toast.success('История batch-генераций очищена');
     } catch {
       toast.error('Не удалось очистить batch-историю');
@@ -187,7 +207,7 @@ export function useBatchGeneration({
 
     if (savedCount > 0) {
       toast.success(`Сохранено ${savedCount} шагов`);
-      setBatchResults([]);
+      clearBatchResults();
     }
 
     setIsSavingBatch(false);
@@ -213,46 +233,13 @@ export function useBatchGeneration({
     setIsPlanModalOpen(false);
     setBatchPlan(plan);
 
-    const planItems = expandBatchPlanToItems(plan);
-    setBatchPlanItems(planItems);
-    setBatchActiveIndex(0);
-
     const userInputString = buildBatchUserInput(batchUserInput, batchExplicitSteps);
-    setIsGeneratingBatch(true);
-    setBatchResults([]);
-
-    try {
-      const sessionId = getOrCreateChatSession();
-      const results = await agentApi.generateBatchSteps(sessionId, userInputString, plan);
-
-      setBatchResults(results.map((step, index) => ({ step, index })));
-      setBatchActiveIndex(planItems.length - 1);
-      toast.success(`Сгенерировано ${results.length} шагов`);
-      void refreshSubscription();
-    } catch (error) {
-      console.error('Batch generation error:', error);
-      const fullErrorMessage = parseBatchGenerationError(error);
-
-      toast.error(fullErrorMessage, {
-        duration: 10000,
-        style: {
-          maxWidth: '600px',
-          whiteSpace: 'pre-wrap',
-          fontSize: '13px',
-          maxHeight: '400px',
-          overflowY: 'auto',
-        },
-      });
-
-      setBatchResults([{
-        step: {} as StepikBlockRequest,
-        index: 0,
-        error: fullErrorMessage,
-      }]);
-    } finally {
-      setIsGeneratingBatch(false);
-      setBatchHistoryRefreshKey((key) => key + 1);
-    }
+    await startBatchGenerate({
+      sessionId: getOrCreateChatSession(),
+      userInput: userInputString,
+      plan,
+      refreshSubscription,
+    });
   };
 
   const handleBatchAnalyze = async () => {
@@ -270,22 +257,18 @@ export function useBatchGeneration({
       return;
     }
 
-    try {
-      setIsGeneratingBatch(true);
-      const plan = await agentApi.analyzeBatchRequest(userInputString);
-      const totalSteps = countTotalBatchSteps(plan.steps);
-      const limitMessage = getBatchStepLimitMessage(isPro, totalSteps, maxBatchSteps);
-      if (totalSteps > maxBatchSteps) {
-        toast.error(limitMessage);
-      }
-      setBatchPlan(plan);
-      setIsPlanModalOpen(true);
-    } catch (error) {
-      console.error('Error analyzing batch request:', error);
-      toast.error('Ошибка при анализе запроса');
-    } finally {
-      setIsGeneratingBatch(false);
+    const plan = await startBatchAnalyze({ userInput: userInputString });
+    if (!plan) {
+      return;
     }
+
+    const totalSteps = countTotalBatchSteps(plan.steps);
+    const limitMessage = getBatchStepLimitMessage(isPro, totalSteps, maxBatchSteps);
+    if (totalSteps > maxBatchSteps) {
+      toast.error(limitMessage);
+    }
+    setBatchPlan(plan);
+    setIsPlanModalOpen(true);
   };
 
   return {

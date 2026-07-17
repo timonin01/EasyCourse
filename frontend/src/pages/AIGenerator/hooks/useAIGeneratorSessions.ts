@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { agentApi } from '../../../api';
-import { useAIGeneratorStore } from '../../../store';
+import { useAIGeneratorStore, useAIGeneratorExecutionStore } from '../../../store';
 import { AI_PROMPT_LIMITS } from '../../../constants/aiPromptLimits';
 import type { AIGeneratorMode } from '../types';
 
@@ -16,6 +16,7 @@ export function useAIGeneratorSessions(mode: AIGeneratorMode, stepType: string) 
     clearSession,
     setGeneratedStep,
   } = useAIGeneratorStore();
+  const isLoading = useAIGeneratorExecutionStore((state) => state.isLoading);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +64,8 @@ export function useAIGeneratorSessions(mode: AIGeneratorMode, stepType: string) 
 
   useEffect(() => {
     if (mode === 'batch') return;
+    // Don't overwrite in-memory chat / preview while generation is running in background
+    if (isLoading) return;
     let cancelled = false;
 
     const loadHistory = async () => {
@@ -89,9 +92,13 @@ export function useAIGeneratorSessions(mode: AIGeneratorMode, stepType: string) 
     return () => {
       cancelled = true;
     };
-  }, [currentSessionId, mode, setMessages, setGeneratedStep]);
+  }, [currentSessionId, mode, isLoading, setMessages, setGeneratedStep]);
 
   const handleClearSession = async () => {
+    if (useAIGeneratorExecutionStore.getState().isBusy()) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     try {
       await agentApi.clearSession(currentSessionId);
       clearSession(currentSessionId);

@@ -5,9 +5,23 @@ import org.core.dto.agent.course.SectionPlanDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Component
 public final class CoursePlanMessageBuilder {
+
+    private static final Pattern INTERNAL_HINT_PATTERN = Pattern.compile(
+            "\\s*\\((?:section|lesson|step)(?:Hint)?\\s*:?\\s*[^)]*\\)",
+            Pattern.CASE_INSENSITIVE);
+
+    public String sanitizeUserFacingMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return message;
+        }
+        String cleaned = INTERNAL_HINT_PATTERN.matcher(message).replaceAll("");
+        cleaned = cleaned.replaceAll("[ \\t]{2,}", " ").trim();
+        return cleaned.isEmpty() ? message.trim() : cleaned;
+    }
 
     public String buildSummary(List<PlanActionDTO> actions) {
         if (actions == null || actions.isEmpty()) {

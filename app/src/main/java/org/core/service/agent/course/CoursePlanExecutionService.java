@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.core.dto.agent.course.CoursePlanDTO;
 import org.core.dto.agent.course.PlanActionDTO;
 import org.core.enums.LlmModel;
+import org.core.service.agent.course.sse.PlanExecutionProgress;
 import org.core.service.agent.course.tools.util.CoursePlanHelper;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,8 @@ public class CoursePlanExecutionService {
     private final DeleteActionMetadataService deleteMetadataService;
 
     public ExecutionDraftResult executeCreateActions(Long courseId, Long userId, String sessionId,
-                                                     List<PlanActionDTO> actions, LlmModel llmModel) {
+                                                     List<PlanActionDTO> actions, LlmModel llmModel,
+                                                     PlanExecutionProgress planExecutionProgress) {
         List<Long> sectionIds = new ArrayList<>();
         List<Long> lessonIds = new ArrayList<>();
         List<Long> stepIds = new ArrayList<>();
@@ -34,7 +36,7 @@ public class CoursePlanExecutionService {
                     .actions(List.of(action))
                     .build();
             ExecutionDraftResult result = draftGenerationService.executePlan(
-                    courseId, userId, sessionId, singlePlan, llmModel);
+                    courseId, userId, sessionId, singlePlan, llmModel, planExecutionProgress);
             sectionIds.addAll(result.sectionIds());
             lessonIds.addAll(result.lessonIds());
             stepIds.addAll(result.stepIds());

@@ -78,6 +78,10 @@ export function CourseAgent() {
     removeSection: structure.removeSection,
     removeLesson: structure.removeLesson,
     removeStep: structure.removeStep,
+    reorderSections: structure.reorderSections,
+    reorderLessons: structure.reorderLessons,
+    reorderSteps: structure.reorderSteps,
+    reloadStructure: structure.loadStructure,
     onStepRemoved: (stepId) => {
       if (previewStep?.id === stepId) {
         setStepModalOpen(false);
@@ -90,10 +94,23 @@ export function CourseAgent() {
   });
 
   useEffect(() => {
-    agent.registerStructureRefresh(() => {
-      void structure.loadStructure();
+    agent.registerStructureHandlers({
+      refresh: () => {
+        void structure.loadStructure();
+      },
+      addSection: structure.addSection,
+      addLesson: structure.addLesson,
+      addStep: structure.addStep,
+      expandToNode: structure.expandToNode,
     });
-  }, [agent.registerStructureRefresh, structure.loadStructure]);
+  }, [
+    agent.registerStructureHandlers,
+    structure.loadStructure,
+    structure.addSection,
+    structure.addLesson,
+    structure.addStep,
+    structure.expandToNode,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -199,16 +216,26 @@ export function CourseAgent() {
     handleClosePreview();
   }, [agent.appendInputContext, handleClosePreview, structure.sections, treeSelection]);
 
+  const structureLocked = agent.isLoading || agent.isExecuting;
+
   const handleEditStep = useCallback(() => {
     if (!previewStep) return;
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     setStepModalOpen(false);
     stepEdit.openEdit(previewStep);
-  }, [previewStep, stepEdit]);
+  }, [structureLocked, previewStep, stepEdit]);
 
   const handleDeletePreviewStep = useCallback(() => {
     if (!previewStep) return;
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     structureActions.openDeleteStep(previewStep.id);
-  }, [previewStep, structureActions]);
+  }, [structureLocked, previewStep, structureActions]);
 
   const previewMeta = useMemo(() => {
     if (!treeSelection || treeSelection.type !== 'step') {
@@ -222,25 +249,49 @@ export function CourseAgent() {
   }, [structure.loadStructure]);
 
   const openCreateSection = useCallback(() => {
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     setCreateForm({ title: '', description: '' });
     setIsSectionModalOpen(true);
-  }, []);
+  }, [structureLocked]);
 
   const openCreateLesson = useCallback((sectionId: number) => {
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     setCreateSectionId(sectionId);
     setCreateForm({ title: '', description: '' });
     setIsLessonModalOpen(true);
     structure.expandToNode('section', sectionId);
-  }, [structure.expandToNode]);
+  }, [structureLocked, structure.expandToNode]);
 
   const openCreateStep = useCallback((lessonId: number) => {
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     setCreateLessonId(lessonId);
     setCreateStepType('TEXT');
     setIsStepCreateModalOpen(true);
     structure.expandToNode('lesson', lessonId);
-  }, [structure.expandToNode]);
+  }, [structureLocked, structure.expandToNode]);
+
+  const guardStructureMutation = useCallback((action: () => void) => {
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
+    action();
+  }, [structureLocked]);
 
   const handleCreateSection = useCallback(async () => {
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     if (!agent.selectedCourseId) {
       toast.error('Сначала выберите курс');
       return;
@@ -267,9 +318,13 @@ export function CourseAgent() {
     } finally {
       setIsCreating(false);
     }
-  }, [agent.selectedCourseId, createForm.description, createForm.title, structure.addSection]);
+  }, [structureLocked, agent.selectedCourseId, createForm.description, createForm.title, structure.addSection]);
 
   const handleCreateLesson = useCallback(async () => {
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     if (!createSectionId) {
       toast.error('Не выбран модуль для урока');
       return;
@@ -296,9 +351,13 @@ export function CourseAgent() {
     } finally {
       setIsCreating(false);
     }
-  }, [createForm.title, createSectionId, structure.addLesson]);
+  }, [structureLocked, createForm.title, createSectionId, structure.addLesson]);
 
   const handleContinueCreateStep = useCallback(() => {
+    if (structureLocked) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     if (!createLessonId) {
       toast.error('Не выбран урок для шага');
       return;
@@ -309,7 +368,7 @@ export function CourseAgent() {
     setCreateLessonId(null);
     setCreateStepType('TEXT');
     stepEdit.blockEdit.openCreateStepBlockEdit(lessonId, type);
-  }, [createLessonId, createStepType, stepEdit.blockEdit]);
+  }, [structureLocked, createLessonId, createStepType, stepEdit.blockEdit]);
 
   const treePanelStyle = useMemo(
     () => ({ '--tree-width': `${treeWidth}px` } as CSSProperties),
@@ -356,6 +415,7 @@ export function CourseAgent() {
               canSelectModel={agent.canSelectModel}
               isLoading={agent.isLoading}
               isExecuting={agent.isExecuting}
+              executionLive={agent.executionLive}
               loadingStatus={agent.loadingStatus}
               input={agent.input}
               messagesEndRef={messagesEndRef}
@@ -400,17 +460,27 @@ export function CourseAgent() {
               selection={treeSelection}
               busyIds={structureActions.busyIds}
               canCreate={!!agent.selectedCourseId}
+              structureLocked={structureLocked}
               onToggleSection={structure.toggleSection}
               onToggleLesson={structure.toggleLesson}
               onSelectNode={handleSelectNode}
               onCreateSection={openCreateSection}
               onCreateLesson={openCreateLesson}
               onCreateStep={openCreateStep}
-              onRenameSection={structureActions.openRenameSection}
-              onRenameLesson={structureActions.openRenameLesson}
-              onDeleteSection={structureActions.openDeleteSection}
-              onDeleteLesson={structureActions.openDeleteLesson}
-              onDeleteStep={structureActions.openDeleteStep}
+              onRenameSection={(sectionId) => guardStructureMutation(() => structureActions.openRenameSection(sectionId))}
+              onRenameLesson={(lessonId) => guardStructureMutation(() => structureActions.openRenameLesson(lessonId))}
+              onDeleteSection={(sectionId) => guardStructureMutation(() => structureActions.openDeleteSection(sectionId))}
+              onDeleteLesson={(lessonId) => guardStructureMutation(() => structureActions.openDeleteLesson(lessonId))}
+              onDeleteStep={(stepId) => guardStructureMutation(() => structureActions.openDeleteStep(stepId))}
+              onReorderSections={(ordered) => guardStructureMutation(() => {
+                void structureActions.persistSectionOrder(ordered);
+              })}
+              onReorderLessons={(sectionId, ordered) => guardStructureMutation(() => {
+                void structureActions.persistLessonOrder(sectionId, ordered);
+              })}
+              onReorderSteps={(lessonId, ordered) => guardStructureMutation(() => {
+                void structureActions.persistStepOrder(lessonId, ordered);
+              })}
               onRefresh={handleRefreshStructure}
             />
           </div>

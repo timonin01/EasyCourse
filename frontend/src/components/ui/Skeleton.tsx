@@ -50,24 +50,18 @@ export function CourseCardSkeleton() {
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="space-y-2">
-        <Skeleton className="h-9 w-72 max-w-full" />
-        <Skeleton className="h-5 w-96 max-w-full" />
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-8 w-72 max-w-full" />
       </div>
-      <Skeleton className="h-28 w-full rounded-xl" />
+      <Skeleton className="h-24 w-full rounded-xl" />
       <Skeleton className="h-36 w-full rounded-xl" />
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-      </div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
-      </div>
       <div className="space-y-4">
-        <Skeleton className="h-6 w-40" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-9 w-28 rounded-lg" />
+        </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           <CourseCardSkeleton />
           <CourseCardSkeleton />

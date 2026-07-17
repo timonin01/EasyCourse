@@ -1,7 +1,80 @@
 import api from './axios';
 import axios from 'axios';
 import { aiRequestConfig } from '../config/api';
-import type { ChatMessage, StepikBlockRequest, BatchStepDTO, BatchGenerationHistory, GeneratedStepHistory, CourseAnalyzerResponse, CourseAuditPdfExportRequest, CoursePlanDTO, CourseAgentResponse, AgentResumeContext, EntityCandidate } from '../types';
+import type {
+  ChatMessage,
+  StepikBlockRequest,
+  BatchStepDTO,
+  BatchGenerationHistory,
+  GeneratedStepHistory,
+  CourseAnalyzerResponse,
+  CourseAuditPdfExportRequest,
+  CoursePlanDTO,
+  CourseAgentResponse,
+  AgentResumeContext,
+  EntityCandidate,
+  PlanExecutionEvent,
+} from '../types';
+
+async function readSseStream(
+  response: Response,
+  onEvent: (eventName: string, data: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (!response.body) {
+    throw new Error('SSE response has no body');
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let eventName = 'message';
+  let dataLines: string[] = [];
+
+  const flush = () => {
+    if (dataLines.length === 0) {
+      eventName = 'message';
+      return;
+    }
+    onEvent(eventName, dataLines.join('\n'));
+    eventName = 'message';
+    dataLines = [];
+  };
+
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        await reader.cancel();
+        break;
+      }
+      const { done, value } = await reader.read();
+      if (done) {
+        flush();
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? '';
+      for (const line of lines) {
+        if (line === '') {
+          flush();
+          continue;
+        }
+        if (line.startsWith(':')) {
+          continue;
+        }
+        if (line.startsWith('event:')) {
+          eventName = line.slice(6).trim();
+          continue;
+        }
+        if (line.startsWith('data:')) {
+          dataLines.push(line.slice(5).trimStart());
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 export const agentApi = {
   // Chat with AI
@@ -336,6 +409,58 @@ export const agentApi = {
       { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
     );
     return response.data;
+  },
+
+  /**
+   * Подписка на SSE прогресс выполнения плана.
+   * Сначала дожидается INIT, затем вызывает onReady — в этот момент можно стартовать execute-plan.
+   */
+  courseAgentExecutePlanStream: async (
+    courseId: number,
+    sessionId: string,
+    handlers: {
+      onReady: () => void;
+      onProgress: (event: PlanExecutionEvent) => void;
+    },
+    signal?: AbortSignal,
+  ): Promise<void> => {
+    const params = new URLSearchParams({ sessionId });
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/agent/course/${courseId}/execute-plan/stream?${params}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'text/event-stream',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(text || `SSE subscribe failed: ${response.status}`);
+    }
+
+    let ready = false;
+    await readSseStream(
+      response,
+      (eventName, data) => {
+        if (eventName === 'INIT' && !ready) {
+          ready = true;
+          handlers.onReady();
+          return;
+        }
+        if (eventName !== 'progress') {
+          return;
+        }
+        try {
+          const parsed = JSON.parse(data) as PlanExecutionEvent;
+          handlers.onProgress(parsed);
+        } catch (error) {
+          console.warn('Failed to parse plan execution SSE event', error, data);
+        }
+      },
+      signal,
+    );
   },
 };
 

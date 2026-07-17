@@ -9,11 +9,19 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Button } from '../../../components/ui/Button';
+import { SortableList } from '../../../components/ui/SortableList';
 import { getStepTypeLabel } from '../../../constants/stepTypeLabels';
-import type { CourseTreeHighlight, CourseTreeSectionNode, CourseTreeSelection } from '../types';
+import type { Lesson, Model, Step } from '../../../types';
+import type {
+  CourseTreeHighlight,
+  CourseTreeLessonNode,
+  CourseTreeSectionNode,
+  CourseTreeSelection,
+} from '../types';
 
 interface CourseTreePanelProps {
   sections: CourseTreeSectionNode[];
@@ -24,6 +32,8 @@ interface CourseTreePanelProps {
   selection: CourseTreeSelection | null;
   busyIds?: Set<number>;
   canCreate?: boolean;
+  /** Blocks create / rename / delete / reorder while plan generation is running. */
+  structureLocked?: boolean;
   onToggleSection: (sectionId: number) => void;
   onToggleLesson: (lessonId: number, isExpanded: boolean) => void;
   onSelectNode: (selection: CourseTreeSelection) => void;
@@ -35,8 +45,14 @@ interface CourseTreePanelProps {
   onDeleteSection: (sectionId: number) => void;
   onDeleteLesson: (lessonId: number) => void;
   onDeleteStep: (stepId: number) => void;
+  onReorderSections: (ordered: Model[]) => void;
+  onReorderLessons: (sectionId: number, ordered: Lesson[]) => void;
+  onReorderSteps: (lessonId: number, ordered: Step[]) => void;
   onRefresh: () => void;
 }
+
+type SortableSection = CourseTreeSectionNode & { id: number };
+type SortableLesson = CourseTreeLessonNode & { id: number };
 
 function isHighlighted(
   highlight: CourseTreeHighlight,
@@ -123,6 +139,7 @@ export function CourseTreePanel({
   selection,
   busyIds = new Set(),
   canCreate = false,
+  structureLocked = false,
   onToggleSection,
   onToggleLesson,
   onSelectNode,
@@ -134,8 +151,16 @@ export function CourseTreePanel({
   onDeleteSection,
   onDeleteLesson,
   onDeleteStep,
+  onReorderSections,
+  onReorderLessons,
+  onReorderSteps,
   onRefresh,
 }: CourseTreePanelProps) {
+  const sortableSections: SortableSection[] = sections.map((node) => ({
+    ...node,
+    id: node.section.id,
+  }));
+
   return (
     <div className="flex h-full min-h-0 flex-col rounded-xl border border-dark-700/60 bg-dark-900">
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dark-700/60 px-4 py-3">
@@ -149,8 +174,8 @@ export function CourseTreePanel({
               variant="ghost"
               size="sm"
               onClick={onCreateSection}
-              disabled={isLoading}
-              title="Добавить модуль"
+              disabled={isLoading || structureLocked}
+              title={structureLocked ? 'Дождитесь окончания генерации' : 'Добавить модуль'}
               aria-label="Добавить модуль"
             >
               <Plus className="h-4 w-4" />
@@ -168,6 +193,12 @@ export function CourseTreePanel({
           </Button>
         </div>
       </div>
+      {structureLocked && (
+        <div className="flex shrink-0 items-start gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-200/90">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+          <span>Пока агент генерирует план или шаги, не меняйте структуру курса вручную — кнопки временно отключены.</span>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {isLoading && sections.length === 0 ? (
@@ -179,22 +210,36 @@ export function CourseTreePanel({
           <div className="flex flex-col items-center gap-3 px-2 py-8 text-center">
             <p className="text-sm text-dark-500">В курсе пока нет модулей</p>
             {canCreate && (
-              <Button variant="secondary" size="sm" onClick={onCreateSection} icon={<Plus className="h-4 w-4" />}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onCreateSection}
+                disabled={structureLocked}
+                icon={<Plus className="h-4 w-4" />}
+              >
                 Добавить модуль
               </Button>
             )}
           </div>
         ) : (
-          <div className="space-y-1">
-            {sections.map((sectionNode) => {
+          <SortableList
+            compact
+            disabled={structureLocked}
+            items={sortableSections}
+            onReorder={(ordered) => onReorderSections(ordered.map((node) => node.section))}
+            renderItem={(sectionNode) => {
               const sectionId = sectionNode.section.id;
               const sectionExpanded = expandedSections.has(sectionId);
               const sectionActive = selection?.type === 'section' && selection.id === sectionId;
               const sectionMarked = isHighlighted(highlight, 'section', sectionId);
-              const sectionBusy = busyIds.has(sectionId);
+              const sectionBusy = structureLocked || busyIds.has(sectionId);
+              const sortableLessons: SortableLesson[] = sectionNode.lessons.map((node) => ({
+                ...node,
+                id: node.lesson.id,
+              }));
 
               return (
-                <div key={sectionId}>
+                <div>
                   <div
                     className={clsx(
                       'group flex items-center gap-1 rounded-lg pr-1 transition-colors',
@@ -240,7 +285,8 @@ export function CourseTreePanel({
                             <button
                               type="button"
                               onClick={() => onCreateLesson(sectionId)}
-                              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-primary-400 transition-colors hover:bg-primary-500/10"
+                              disabled={structureLocked}
+                              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-primary-400 transition-colors hover:bg-primary-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <Plus className="h-3 w-3" />
                               Урок
@@ -249,132 +295,151 @@ export function CourseTreePanel({
                         </div>
                       ) : (
                         <>
-                          {sectionNode.lessons.map((lessonNode) => {
-                            const lessonId = lessonNode.lesson.id;
-                            const lessonExpanded = expandedLessons.has(lessonId);
-                            const lessonActive = selection?.type === 'lesson' && selection.id === lessonId;
-                            const lessonMarked = isHighlighted(highlight, 'lesson', lessonId);
-                            const lessonBusy = busyIds.has(lessonId);
+                          <SortableList
+                            compact
+                            disabled={structureLocked}
+                            items={sortableLessons}
+                            onReorder={(ordered) => {
+                              onReorderLessons(
+                                sectionId,
+                                ordered.map((node) => node.lesson),
+                              );
+                            }}
+                            renderItem={(lessonNode) => {
+                              const lessonId = lessonNode.lesson.id;
+                              const lessonExpanded = expandedLessons.has(lessonId);
+                              const lessonActive = selection?.type === 'lesson' && selection.id === lessonId;
+                              const lessonMarked = isHighlighted(highlight, 'lesson', lessonId);
+                              const lessonBusy = structureLocked || busyIds.has(lessonId);
 
-                            return (
-                              <div key={lessonId}>
-                                <div
-                                  className={clsx(
-                                    'group flex items-center gap-1 rounded-lg pr-1 transition-colors',
-                                    lessonActive && 'bg-dark-800',
-                                    lessonMarked && !lessonActive && 'bg-primary-500/10 ring-1 ring-primary-500/30',
-                                  )}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => onToggleLesson(lessonId, lessonExpanded)}
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-dark-500 hover:bg-dark-800 hover:text-dark-300"
-                                    aria-label={lessonExpanded ? 'Свернуть урок' : 'Развернуть урок'}
-                                  >
-                                    {lessonExpanded
-                                      ? <ChevronDown className="h-3.5 w-3.5" />
-                                      : <ChevronRight className="h-3.5 w-3.5" />}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => onSelectNode({ type: 'lesson', id: lessonId })}
-                                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-dark-300 hover:bg-dark-800"
-                                  >
-                                    <FileText className="h-3.5 w-3.5 shrink-0 text-dark-500" />
-                                    <span className="truncate">{lessonNode.lesson.title}</span>
-                                  </button>
-                                  <RowActions
-                                    busy={lessonBusy}
-                                    addLabel="Добавить шаг"
-                                    renameLabel="Переименовать урок"
-                                    deleteLabel="Удалить урок"
-                                    onAdd={canCreate ? () => onCreateStep(lessonId) : undefined}
-                                    onRename={() => onRenameLesson(lessonId)}
-                                    onDelete={() => onDeleteLesson(lessonId)}
-                                  />
-                                </div>
-
-                                {lessonExpanded && (
-                                  <div className="ml-4 space-y-0.5 border-l border-dark-700/60 pl-2">
-                                    {lessonNode.stepsLoading ? (
-                                      <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-dark-500">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Загрузка шагов…
-                                      </div>
-                                    ) : lessonNode.steps && lessonNode.steps.length > 0 ? (
-                                      <>
-                                        {lessonNode.steps.map((step) => {
-                                          const stepActive = selection?.type === 'step' && selection.id === step.id;
-                                          const stepMarked = isHighlighted(highlight, 'step', step.id);
-                                          const stepBusy = busyIds.has(step.id);
-
-                                          return (
-                                            <div
-                                              key={step.id}
-                                              className={clsx(
-                                                'group flex items-center gap-1 rounded-lg pr-1 transition-colors',
-                                                stepActive && 'bg-dark-800',
-                                                stepMarked && !stepActive && 'bg-primary-500/10 ring-1 ring-primary-500/30',
-                                              )}
-                                            >
-                                              <button
-                                                type="button"
-                                                onClick={() => onSelectNode({ type: 'step', id: step.id })}
-                                                className={clsx(
-                                                  'flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors',
-                                                  stepActive
-                                                    ? 'text-dark-100'
-                                                    : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200',
-                                                  stepMarked && !stepActive && 'text-primary-200',
-                                                )}
-                                              >
-                                                <span className="w-5 shrink-0 text-dark-500">{step.position}</span>
-                                                <span className="truncate">{getStepTypeLabel(step.type.toLowerCase())}</span>
-                                              </button>
-                                              <RowActions
-                                                busy={stepBusy}
-                                                deleteLabel="Удалить шаг"
-                                                onDelete={() => onDeleteStep(step.id)}
-                                              />
-                                            </div>
-                                          );
-                                        })}
-                                        {canCreate && (
-                                          <button
-                                            type="button"
-                                            onClick={() => onCreateStep(lessonId)}
-                                            className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs text-dark-500 transition-colors hover:bg-dark-800 hover:text-primary-300"
-                                          >
-                                            <Plus className="h-3.5 w-3.5" />
-                                            Добавить шаг
-                                          </button>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                                        <span className="text-xs text-dark-500">Нет шагов</span>
-                                        {canCreate && (
-                                          <button
-                                            type="button"
-                                            onClick={() => onCreateStep(lessonId)}
-                                            className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-primary-400 transition-colors hover:bg-primary-500/10"
-                                          >
-                                            <Plus className="h-3 w-3" />
-                                            Шаг
-                                          </button>
-                                        )}
-                                      </div>
+                              return (
+                                <div>
+                                  <div
+                                    className={clsx(
+                                      'group flex items-center gap-1 rounded-lg pr-1 transition-colors',
+                                      lessonActive && 'bg-dark-800',
+                                      lessonMarked && !lessonActive && 'bg-primary-500/10 ring-1 ring-primary-500/30',
                                     )}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => onToggleLesson(lessonId, lessonExpanded)}
+                                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-dark-500 hover:bg-dark-800 hover:text-dark-300"
+                                      aria-label={lessonExpanded ? 'Свернуть урок' : 'Развернуть урок'}
+                                    >
+                                      {lessonExpanded
+                                        ? <ChevronDown className="h-3.5 w-3.5" />
+                                        : <ChevronRight className="h-3.5 w-3.5" />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onSelectNode({ type: 'lesson', id: lessonId })}
+                                      className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-dark-300 hover:bg-dark-800"
+                                    >
+                                      <FileText className="h-3.5 w-3.5 shrink-0 text-dark-500" />
+                                      <span className="truncate">{lessonNode.lesson.title}</span>
+                                    </button>
+                                    <RowActions
+                                      busy={lessonBusy}
+                                      addLabel="Добавить шаг"
+                                      renameLabel="Переименовать урок"
+                                      deleteLabel="Удалить урок"
+                                      onAdd={canCreate ? () => onCreateStep(lessonId) : undefined}
+                                      onRename={() => onRenameLesson(lessonId)}
+                                      onDelete={() => onDeleteLesson(lessonId)}
+                                    />
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })}
+
+                                  {lessonExpanded && (
+                                    <div className="ml-4 space-y-0.5 border-l border-dark-700/60 pl-2">
+                                      {lessonNode.stepsLoading ? (
+                                        <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-dark-500">
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                          Загрузка шагов…
+                                        </div>
+                                      ) : lessonNode.steps && lessonNode.steps.length > 0 ? (
+                                        <>
+                                          <SortableList
+                                            compact
+                                            disabled={structureLocked}
+                                            items={lessonNode.steps}
+                                            onReorder={(ordered) => onReorderSteps(lessonId, ordered)}
+                                            renderItem={(step) => {
+                                              const stepActive = selection?.type === 'step' && selection.id === step.id;
+                                              const stepMarked = isHighlighted(highlight, 'step', step.id);
+                                              const stepBusy = structureLocked || busyIds.has(step.id);
+
+                                              return (
+                                                <div
+                                                  className={clsx(
+                                                    'group flex items-center gap-1 rounded-lg pr-1 transition-colors',
+                                                    stepActive && 'bg-dark-800',
+                                                    stepMarked && !stepActive && 'bg-primary-500/10 ring-1 ring-primary-500/30',
+                                                  )}
+                                                >
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => onSelectNode({ type: 'step', id: step.id })}
+                                                    className={clsx(
+                                                      'flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors',
+                                                      stepActive
+                                                        ? 'text-dark-100'
+                                                        : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200',
+                                                      stepMarked && !stepActive && 'text-primary-200',
+                                                    )}
+                                                  >
+                                                    <span className="w-5 shrink-0 text-dark-500">{step.position}</span>
+                                                    <span className="truncate">{getStepTypeLabel(step.type.toLowerCase())}</span>
+                                                  </button>
+                                                  <RowActions
+                                                    busy={stepBusy}
+                                                    deleteLabel="Удалить шаг"
+                                                    onDelete={() => onDeleteStep(step.id)}
+                                                  />
+                                                </div>
+                                              );
+                                            }}
+                                          />
+                                          {canCreate && (
+                                            <button
+                                              type="button"
+                                              onClick={() => onCreateStep(lessonId)}
+                                              disabled={structureLocked}
+                                              className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs text-dark-500 transition-colors hover:bg-dark-800 hover:text-primary-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                              <Plus className="h-3.5 w-3.5" />
+                                              Добавить шаг
+                                            </button>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                                          <span className="text-xs text-dark-500">Нет шагов</span>
+                                          {canCreate && (
+                                            <button
+                                              type="button"
+                                              onClick={() => onCreateStep(lessonId)}
+                                              disabled={structureLocked}
+                                              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-primary-400 transition-colors hover:bg-primary-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                              <Plus className="h-3 w-3" />
+                                              Шаг
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }}
+                          />
                           {canCreate && (
                             <button
                               type="button"
                               onClick={() => onCreateLesson(sectionId)}
-                              className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs text-dark-500 transition-colors hover:bg-dark-800 hover:text-primary-300"
+                              disabled={structureLocked}
+                              className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs text-dark-500 transition-colors hover:bg-dark-800 hover:text-primary-300 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <Plus className="h-3.5 w-3.5" />
                               Добавить урок
@@ -386,8 +451,8 @@ export function CourseTreePanel({
                   )}
                 </div>
               );
-            })}
-          </div>
+            }}
+          />
         )}
       </div>
     </div>

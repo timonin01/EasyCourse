@@ -27,7 +27,7 @@ import {
   type CourseAuditPdfExportOptions,
 } from '../components/courseAudit/CourseAuditPdfExportModal';
 import { agentApi, coursesApi, lessonsApi, sectionsApi } from '../api';
-import { useAuthStore, useCourseStore, useCourseAgentStore } from '../store';
+import { useAuthStore, useCourseStore, useCourseAgentStore, useCourseAuditAnalysisStore } from '../store';
 import { fadeInUp } from '../components/ui/motion';
 import { useSubscription } from '../hooks/useSubscription';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -49,8 +49,11 @@ import {
 } from '../utils/parseCourseAuditSections';
 import { buildAuditAgentHandoffPrompt } from '../utils/buildAuditAgentHandoff';
 import type { MergedAuditHintGroup } from '../utils/parseCourseAuditHints';
-
-type AuditTab = 'report' | 'existing' | 'newContent';
+import {
+  readStoredCourseAudit,
+  writeStoredCourseAudit,
+  type AuditTab,
+} from '../utils/courseAuditStorage';
 
 function HintCard({
   location,
@@ -157,7 +160,9 @@ export function CourseAudit() {
   const [courseLessons, setCourseLessons] = useState<CourseLessonContext[]>([]);
   const [isLoadingCourses, setIsLoadingCourses] = useState(cachedCourses.length === 0);
   const [isLoadingLessons, setIsLoadingLessons] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const isAnalyzing = useCourseAuditAnalysisStore((state) => state.isAnalyzing);
+  const analyzingCourseId = useCourseAuditAnalysisStore((state) => state.analyzingCourseId);
+  const startAnalysis = useCourseAuditAnalysisStore((state) => state.startAnalysis);
   const [analyzeResult, setAnalyzeResult] = useState<string | null>(null);
   const [auditedCourseId, setAuditedCourseId] = useState<string | null>(null);
   const [hintLessonIds, setHintLessonIds] = useState<Record<string, string>>({});
@@ -165,6 +170,86 @@ export function CourseAudit() {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [activeTab, setActiveTab] = useState<AuditTab>('report');
+  const [auditHydrated, setAuditHydrated] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id || auditHydrated) {
+      return;
+    }
+    const stored = readStoredCourseAudit(user.id);
+    if (stored) {
+      setSelectedCourseId(stored.selectedCourseId);
+      if (!useCourseAuditAnalysisStore.getState().isAnalyzing) {
+        setAuditedCourseId(stored.auditedCourseId);
+        setAnalyzeResult(stored.analyzeResult);
+        setHintLessonIds(stored.hintLessonIds);
+        setActiveTab(stored.activeTab);
+      } else if (stored.selectedCourseId) {
+        setSelectedCourseId(stored.selectedCourseId);
+      }
+    }
+    const analyzingId = useCourseAuditAnalysisStore.getState().analyzingCourseId;
+    if (analyzingId) {
+      setSelectedCourseId(analyzingId);
+      setAnalyzeResult(null);
+      setAuditedCourseId(null);
+      setHintLessonIds({});
+      setActiveTab('report');
+    }
+    setAuditHydrated(true);
+  }, [user?.id, auditHydrated]);
+
+  // Pick up result after analysis finished while user was on another tab
+  useEffect(() => {
+    if (!user?.id || !auditHydrated || isAnalyzing) {
+      return;
+    }
+    const stored = readStoredCourseAudit(user.id);
+    if (!stored?.analyzeResult) {
+      return;
+    }
+    setAnalyzeResult(stored.analyzeResult);
+    setAuditedCourseId(stored.auditedCourseId);
+    setHintLessonIds(stored.hintLessonIds);
+    setActiveTab(stored.activeTab);
+    if (stored.selectedCourseId) {
+      setSelectedCourseId(stored.selectedCourseId);
+    }
+  }, [isAnalyzing, user?.id, auditHydrated]);
+
+  useEffect(() => {
+    if (!isAnalyzing) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isAnalyzing]);
+
+  useEffect(() => {
+    if (!user?.id || !auditHydrated || isAnalyzing) {
+      return;
+    }
+    writeStoredCourseAudit(user.id, {
+      selectedCourseId,
+      auditedCourseId,
+      analyzeResult,
+      hintLessonIds,
+      activeTab,
+    });
+  }, [
+    user?.id,
+    auditHydrated,
+    isAnalyzing,
+    selectedCourseId,
+    auditedCourseId,
+    analyzeResult,
+    hintLessonIds,
+    activeTab,
+  ]);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -174,9 +259,34 @@ export function CourseAudit() {
         const data = await coursesApi.getUserCourses(user.id);
         setCourses(data);
         setCachedCourses(data);
-        if (data.length > 0) {
-          setSelectedCourseId((prev) => prev || String(data[0].id));
+        if (data.length === 0) {
+          setSelectedCourseId('');
+          setAnalyzeResult(null);
+          setAuditedCourseId(null);
+          return;
         }
+
+        setSelectedCourseId((prev) => {
+          if (prev && data.some((course) => String(course.id) === prev)) {
+            return prev;
+          }
+          const storedId = readStoredCourseAudit(user.id)?.selectedCourseId;
+          if (storedId && data.some((course) => String(course.id) === storedId)) {
+            return storedId;
+          }
+          return String(data[0].id);
+        });
+
+        setAuditedCourseId((prev) => {
+          if (!prev) return null;
+          if (data.some((course) => String(course.id) === prev)) {
+            return prev;
+          }
+          setAnalyzeResult(null);
+          setHintLessonIds({});
+          setActiveTab('report');
+          return null;
+        });
       } catch (error) {
         toast.error(extractApiErrorMessage(error, 'Не удалось загрузить курсы'));
       } finally {
@@ -261,14 +371,18 @@ export function CourseAudit() {
         : [];
 
   useEffect(() => {
-    const defaults: Record<string, string> = {};
-    for (const group of [...groupedHints.existing, ...groupedHints.newContent]) {
-      const key = getHintLessonKey(group.hint);
-      if (group.hint.suggestedLessonId != null) {
-        defaults[key] = String(group.hint.suggestedLessonId);
+    setHintLessonIds((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const group of [...groupedHints.existing, ...groupedHints.newContent]) {
+        const key = getHintLessonKey(group.hint);
+        if (!next[key] && group.hint.suggestedLessonId != null) {
+          next[key] = String(group.hint.suggestedLessonId);
+          changed = true;
+        }
       }
-    }
-    setHintLessonIds(defaults);
+      return changed ? next : prev;
+    });
   }, [groupedHints]);
 
   const handleAnalyze = async () => {
@@ -276,25 +390,32 @@ export function CourseAudit() {
       toast.error('Выберите курс');
       return;
     }
+    if (!user?.id) {
+      toast.error('Необходима авторизация');
+      return;
+    }
+    if (isAnalyzing) {
+      toast.error('Аудит уже выполняется. Дождитесь завершения.');
+      return;
+    }
 
-    setIsAnalyzing(true);
     setAnalyzeResult(null);
     setAuditedCourseId(null);
+    setHintLessonIds({});
     setActiveTab('report');
-    try {
-      const response = await agentApi.analyzeCourse(Number(selectedCourseId));
-      setAnalyzeResult(response.analyzeResult);
-      setAuditedCourseId(selectedCourseId);
-      await refreshSubscription();
-      toast.success('Аудит курса завершён');
-    } catch (error) {
-      toast.error(extractApiErrorMessage(error, 'Не удалось выполнить аудит курса'));
-    } finally {
-      setIsAnalyzing(false);
-    }
+
+    await startAnalysis({
+      userId: user.id,
+      courseId: selectedCourseId,
+      refreshSubscription,
+    });
   };
 
   const handleClearAudit = () => {
+    if (isAnalyzing) {
+      toast.error('Дождитесь окончания аудита');
+      return;
+    }
     setAnalyzeResult(null);
     setAuditedCourseId(null);
     setHintLessonIds({});
@@ -302,6 +423,7 @@ export function CourseAudit() {
   };
 
   const auditedCourse = courses.find((c) => String(c.id) === auditedCourseId);
+  const analyzingCourse = courses.find((c) => String(c.id) === (analyzingCourseId ?? selectedCourseId));
   const showCoursePicker = !isAnalyzing && !analyzeResult;
 
   const handleCopyPrompt = async (prompt: string) => {
@@ -493,11 +615,16 @@ export function CourseAudit() {
 
       {isAnalyzing && (
         <Card className="mb-6 p-6">
-          <div className="flex items-center gap-3 text-dark-200">
-            <Spinner size="sm" />
-            <span>
-              Анализируем курс «{courses.find((c) => String(c.id) === selectedCourseId)?.title ?? '…'}»…
-            </span>
+          <div className="flex flex-col gap-2 text-dark-200">
+            <div className="flex items-center gap-3">
+              <Spinner size="sm" />
+              <span>
+                Анализируем курс «{analyzingCourse?.title ?? '…'}»…
+              </span>
+            </div>
+            <p className="pl-8 text-xs text-dark-500">
+              Можно переключаться на другие вкладки — аудит продолжится в фоне.
+            </p>
           </div>
         </Card>
       )}

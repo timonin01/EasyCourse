@@ -27,12 +27,20 @@ import {
   simulateCompletedSteps,
   waitingHonestyHint,
 } from './utils/planExecutionProgress';
+import { sanitizePlanMessage } from './utils/sanitizePlanMessage';
+import { readStoredLlmModel, writeStoredLlmModel } from '../../utils/llmModelStorage';
+import {
+  useCourseAgentExecutionStore,
+  type CourseStructureHandlers,
+} from '../../store/courseAgentExecutionStore';
 
 export type CourseAgentChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
 };
+
+export type { CourseStructureHandlers };
 
 function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -120,7 +128,9 @@ function mapHistoryToMessages(history: ChatMessage[]): CourseAgentChatMessage[] 
     .map((message) => ({
       id: newId(),
       role: message.role as 'user' | 'assistant',
-      content: message.content ?? '',
+      content: message.role === 'assistant'
+        ? (sanitizePlanMessage(message.content) || message.content || '')
+        : (message.content ?? ''),
     }));
 }
 
@@ -148,7 +158,12 @@ function restoreStateFromHistory(history: ChatMessage[]) {
 
   return {
     lastUserInput,
-    pendingPlan: lastResponse?.action === 'SHOW_PLAN' ? (lastResponse.plan ?? null) : null,
+    pendingPlan: lastResponse?.action === 'SHOW_PLAN'
+      ? {
+          ...(lastResponse.plan ?? { actions: [] }),
+          message: sanitizePlanMessage(lastResponse.plan?.message) || lastResponse.plan?.message,
+        }
+      : null,
     candidates: lastResponse?.action === 'NEED_CLARIFICATION'
       ? (lastResponse.candidates ?? [])
       : [],
@@ -186,31 +201,63 @@ export function useCourseAgent() {
   const [candidates, setCandidates] = useState<EntityCandidate[]>([]);
   const [resumeContext, setResumeContext] = useState<AgentResumeContext | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isExecuting, setIsExecuting] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [createdHighlight, setCreatedHighlight] = useState<CourseTreeHighlight | null>(null);
   const [pendingHandoff, setPendingHandoff] = useState<CourseAgentPendingRequest | null>(null);
   const [agentMode, setAgentModeState] = useState<CourseAgentMode>(readStoredAgentMode);
-  const [selectedLlmModel, setSelectedLlmModel] = useState('');
+  const [selectedLlmModel, setSelectedLlmModelState] = useState(readStoredLlmModel);
   const { canSelectModel } = useSubscription();
+
+  const isExecuting = useCourseAgentExecutionStore((state) => (
+    state.isExecuting && state.courseId === selectedCourseId
+  ));
+  const executionLive = useCourseAgentExecutionStore((state) => (
+    state.courseId === selectedCourseId ? state.live : null
+  ));
+  const executionPlan = useCourseAgentExecutionStore((state) => (
+    state.isExecuting && state.courseId === selectedCourseId ? state.plan : null
+  ));
+  const finishPayload = useCourseAgentExecutionStore((state) => state.finishPayload);
 
   const setAgentMode = useCallback((mode: CourseAgentMode) => {
     setAgentModeState(mode);
     writeStoredAgentMode(mode);
   }, []);
 
+  const setSelectedLlmModel = useCallback((model: string) => {
+    setSelectedLlmModelState(model);
+    writeStoredLlmModel(model);
+  }, []);
+
   useEffect(() => {
     if (!canSelectModel && selectedLlmModel) {
-      setSelectedLlmModel('');
+      setSelectedLlmModelState('');
+    } else if (canSelectModel && !selectedLlmModel) {
+      const stored = readStoredLlmModel();
+      if (stored) {
+        setSelectedLlmModelState(stored);
+      }
     }
   }, [canSelectModel, selectedLlmModel]);
 
   const sessionIdRef = useRef<string>(newSessionId());
   const lastUserInputRef = useRef<string>('');
-  const structureRefreshRef = useRef<(() => void) | undefined>(undefined);
+  const structureHandlersRef = useRef<CourseStructureHandlers | undefined>(undefined);
   const pendingHandoffRef = useRef<CourseAgentPendingRequest | null>(null);
   const loadingStartedAtRef = useRef<number | null>(null);
   const wasBusyRef = useRef(false);
+
+  useEffect(() => {
+    if (!isExecuting) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isExecuting]);
 
   useEffect(() => {
     const busy = isLoading || isExecuting;
@@ -224,6 +271,19 @@ export function useCourseAgent() {
       return;
     }
     wasBusyRef.current = busy;
+
+    if (isExecuting && executionLive) {
+      const { current, total, message, lessonTitle, stepType } = executionLive;
+      if (message) {
+        setLoadingStatus(message);
+        return;
+      }
+      const label = stepType
+        ? `Генерирую ${stepType.toLowerCase()}${lessonTitle ? ` · «${lessonTitle}»` : ''}`
+        : 'Генерирую шаги…';
+      setLoadingStatus(total > 0 ? `${label} ${current} / ${total}` : label);
+      return;
+    }
 
     const phases = isExecuting
       ? getExecuteLoadingPhases()
@@ -251,7 +311,7 @@ export function useCourseAgent() {
     tick();
     const interval = window.setInterval(tick, 2000);
     return () => window.clearInterval(interval);
-  }, [isLoading, isExecuting, pendingPlan]);
+  }, [isLoading, isExecuting, pendingPlan, executionLive]);
 
   const applyPendingHandoff = useCallback((handoff: CourseAgentPendingRequest) => {
     pendingHandoffRef.current = handoff;
@@ -279,9 +339,39 @@ export function useCourseAgent() {
     writeStoredSessionId(courseId, sessionId);
   }, []);
 
-  const registerStructureRefresh = useCallback((refresh: () => void) => {
-    structureRefreshRef.current = refresh;
+  const registerStructureHandlers = useCallback((handlers: CourseStructureHandlers) => {
+    structureHandlersRef.current = handlers;
+    useCourseAgentExecutionStore.getState().registerStructureHandlers(handlers);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      useCourseAgentExecutionStore.getState().registerStructureHandlers(null);
+    };
+  }, []);
+
+  // Restore plan panel + highlight + refresh tree if generation survived navigation
+  useEffect(() => {
+    if (!selectedCourseId || !isExecuting) {
+      return;
+    }
+    if (executionPlan) {
+      setPendingPlan(executionPlan);
+    }
+    const { createdIds } = useCourseAgentExecutionStore.getState();
+    if (
+      createdIds.sectionIds.length
+      || createdIds.lessonIds.length
+      || createdIds.stepIds.length
+    ) {
+      setCreatedHighlight({
+        sectionIds: new Set(createdIds.sectionIds),
+        lessonIds: new Set(createdIds.lessonIds),
+        stepIds: new Set(createdIds.stepIds),
+      });
+    }
+    structureHandlersRef.current?.refresh();
+  }, [selectedCourseId, isExecuting, executionPlan]);
 
   const appendInputContext = useCallback((text: string) => {
     if (!text) return;
@@ -340,8 +430,11 @@ export function useCourseAgent() {
       return;
     }
     let cancelled = false;
+    const executionActive = useCourseAgentExecutionStore.getState().isExecutingFor(selectedCourseId);
     setMessages([]);
-    setPendingPlan(null);
+    if (!executionActive) {
+      setPendingPlan(null);
+    }
     setCandidates([]);
     setResumeContext(null);
     setInput('');
@@ -371,7 +464,9 @@ export function useCourseAgent() {
         const restored = restoreStateFromHistory(history);
         setMessages(mapHistoryToMessages(history));
         lastUserInputRef.current = restored.lastUserInput;
-        setPendingPlan(restored.pendingPlan);
+        const stillExecuting = useCourseAgentExecutionStore.getState().isExecutingFor(selectedCourseId);
+        const livePlan = useCourseAgentExecutionStore.getState().plan;
+        setPendingPlan(stillExecuting ? (livePlan ?? restored.pendingPlan) : restored.pendingPlan);
         setCandidates(restored.candidates);
         setResumeContext(restored.resumeContext);
       } catch (error) {
@@ -406,10 +501,16 @@ export function useCourseAgent() {
 
   const applyResponse = useCallback((res: CourseAgentResponse) => {
     if (res.message) {
-      pushMessage('assistant', res.message);
+      const message = res.action === 'SHOW_PLAN'
+        ? sanitizePlanMessage(res.message)
+        : res.message;
+      pushMessage('assistant', message || res.message);
     }
     if (res.action === 'SHOW_PLAN') {
-      setPendingPlan(res.plan ?? null);
+      const plan = res.plan
+        ? { ...res.plan, message: sanitizePlanMessage(res.plan.message) || res.plan.message }
+        : null;
+      setPendingPlan(plan);
     } else if (
       res.action === 'PLAN_CANCELLED'
       || res.action === 'DRAFT_READY'
@@ -434,20 +535,23 @@ export function useCourseAgent() {
         res.createdLessonIds,
         res.createdStepIds,
       ));
-      structureRefreshRef.current?.();
+      // Structure already updated live via SSE; only refresh if nothing was added
+      if (!(res.createdStepIds?.length || res.createdLessonIds?.length || res.createdSectionIds?.length)) {
+        structureHandlersRef.current?.refresh();
+      }
       window.setTimeout(() => setCreatedHighlight(null), 8000);
     }
     if (res.action === 'STEP_MODIFIED') {
       toast.success('Шаг обновлён');
       if (res.step?.id) {
         setCreatedHighlight(buildTreeHighlight(null, [], [], [], [res.step.id]));
-        structureRefreshRef.current?.();
+        structureHandlersRef.current?.refresh();
         window.setTimeout(() => setCreatedHighlight(null), 5000);
       }
     }
     if (res.action === 'ENTITY_DELETED') {
       toast.success(res.message || 'Удалено');
-      structureRefreshRef.current?.();
+      structureHandlersRef.current?.refresh();
     }
     if (res.action === 'ERROR') {
       toast.error(res.message || 'Ошибка агента');
@@ -505,28 +609,174 @@ export function useCourseAgent() {
     void sendChat(input);
   }, [input, sendChat]);
 
+  useEffect(() => {
+    if (!finishPayload) {
+      return;
+    }
+    const executionCourseId = useCourseAgentExecutionStore.getState().courseId;
+    if (executionCourseId != null && selectedCourseId != null && executionCourseId !== selectedCourseId) {
+      return;
+    }
+    const payload = useCourseAgentExecutionStore.getState().consumeFinishPayload();
+    if (!payload) {
+      return;
+    }
+    if (payload.kind === 'success') {
+      applyResponse(payload.response);
+      return;
+    }
+    if (payload.kind === 'partial') {
+      pushMessage(
+        'assistant',
+        'Ответ не дождались, но часть черновика уже создана. Обновите структуру курса при необходимости.',
+      );
+      setPendingPlan(null);
+      setCreatedHighlight(buildTreeHighlight(
+        null,
+        [],
+        payload.created.sectionIds,
+        payload.created.lessonIds,
+        payload.created.stepIds,
+      ));
+      toast.success('Черновик частично создан');
+      structureHandlersRef.current?.refresh();
+      return;
+    }
+    pushMessage('assistant', 'Не удалось выполнить план.');
+    toast.error('Ошибка выполнения плана');
+  }, [finishPayload, selectedCourseId, applyResponse, pushMessage]);
+
   const confirmPlan = useCallback(async () => {
     if (!selectedCourseId || !pendingPlan) return;
-    setIsExecuting(true);
+
+    const executionStore = useCourseAgentExecutionStore.getState();
+    if (executionStore.isExecuting) {
+      toast.error('Генерация уже выполняется. Дождитесь завершения.');
+      return;
+    }
+
+    const started = executionStore.beginExecution({
+      courseId: selectedCourseId,
+      sessionId: sessionIdRef.current,
+      plan: pendingPlan,
+    });
+    if (!started) {
+      toast.error('Генерация уже выполняется. Дождитесь завершения.');
+      return;
+    }
+
+    if (!isDeletePlan(pendingPlan)) {
+      toast('Не меняйте структуру курса, пока идёт генерация', {
+        duration: 6000,
+      });
+    }
+
+    const abortController = new AbortController();
+    const planSnapshot = pendingPlan;
+    const courseIdSnapshot = selectedCourseId;
+    const sessionIdSnapshot = sessionIdRef.current;
+    const llmModel = selectedLlmModel || undefined;
+
     try {
-      const res = await agentApi.courseAgentExecutePlan(
-        selectedCourseId,
-        sessionIdRef.current,
-        pendingPlan,
-        selectedLlmModel || undefined,
+      if (isDeletePlan(planSnapshot)) {
+        const res = await agentApi.courseAgentExecutePlan(
+          courseIdSnapshot,
+          sessionIdSnapshot,
+          planSnapshot,
+          llmModel,
+        );
+        useCourseAgentExecutionStore.getState().completeExecution({ kind: 'success', response: res });
+        return;
+      }
+
+      let readyResolved = false;
+      let resolveReady: (() => void) | null = null;
+      const readyPromise = new Promise<void>((resolve) => {
+        resolveReady = () => {
+          if (!readyResolved) {
+            readyResolved = true;
+            resolve();
+          }
+        };
+      });
+
+      const streamPromise = agentApi.courseAgentExecutePlanStream(
+        courseIdSnapshot,
+        sessionIdSnapshot,
+        {
+          onReady: () => resolveReady?.(),
+          onProgress: (event) => {
+            useCourseAgentExecutionStore.getState().applyProgressEvent(event);
+            const type = event.planExecutionEventType;
+            if (type === 'SECTION_CREATED' && event.createdSectionId != null) {
+              setCreatedHighlight((prev) => ({
+                sectionIds: new Set([...(prev?.sectionIds ?? []), event.createdSectionId!]),
+                lessonIds: new Set(prev?.lessonIds ?? []),
+                stepIds: new Set(prev?.stepIds ?? []),
+              }));
+            }
+            if (type === 'LESSON_CREATED' && event.createdLessonId != null) {
+              setCreatedHighlight((prev) => ({
+                sectionIds: new Set(prev?.sectionIds ?? []),
+                lessonIds: new Set([...(prev?.lessonIds ?? []), event.createdLessonId!]),
+                stepIds: new Set(prev?.stepIds ?? []),
+              }));
+            }
+            if (type === 'STEP_CREATED' && event.createdStepId != null) {
+              setCreatedHighlight((prev) => ({
+                sectionIds: new Set(prev?.sectionIds ?? []),
+                lessonIds: new Set(prev?.lessonIds ?? []),
+                stepIds: new Set([...(prev?.stepIds ?? []), event.createdStepId!]),
+              }));
+            }
+          },
+        },
+        abortController.signal,
       );
-      applyResponse(res);
+
+      await Promise.race([
+        readyPromise,
+        new Promise<void>((resolve) => {
+          window.setTimeout(() => {
+            resolveReady?.();
+            resolve();
+          }, 2500);
+        }),
+      ]);
+
+      try {
+        const res = await agentApi.courseAgentExecutePlan(
+          courseIdSnapshot,
+          sessionIdSnapshot,
+          planSnapshot,
+          llmModel,
+        );
+        useCourseAgentExecutionStore.getState().completeExecution({ kind: 'success', response: res });
+      } finally {
+        abortController.abort();
+        await streamPromise.catch(() => undefined);
+      }
     } catch (error) {
       console.error('Course agent execute error:', error);
-      pushMessage('assistant', 'Не удалось выполнить план.');
-      toast.error('Ошибка выполнения плана');
+      const created = useCourseAgentExecutionStore.getState().createdIds;
+      if (created.stepIds.length > 0 || created.lessonIds.length > 0 || created.sectionIds.length > 0) {
+        useCourseAgentExecutionStore.getState().completeExecution({ kind: 'partial', created });
+      } else {
+        useCourseAgentExecutionStore.getState().completeExecution({ kind: 'failed' });
+      }
     } finally {
-      setIsExecuting(false);
+      if (!abortController.signal.aborted) {
+        abortController.abort();
+      }
     }
-  }, [selectedCourseId, pendingPlan, applyResponse, pushMessage, selectedLlmModel]);
+  }, [selectedCourseId, pendingPlan, selectedLlmModel]);
 
   const cancelPlan = useCallback(async () => {
     if (!selectedCourseId) return;
+    if (useCourseAgentExecutionStore.getState().isExecutingFor(selectedCourseId)) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await agentApi.courseAgentCancelPlan(
@@ -599,6 +849,10 @@ export function useCourseAgent() {
     if (!selectedCourseId) {
       return;
     }
+    if (useCourseAgentExecutionStore.getState().isExecutingFor(selectedCourseId)) {
+      toast.error('Дождитесь окончания генерации');
+      return;
+    }
     const previousSessionId = sessionIdRef.current;
     setIsLoading(true);
     try {
@@ -622,6 +876,8 @@ export function useCourseAgent() {
     }
   }, [selectedCourseId, adoptSessionId]);
 
+  const displayedPendingPlan = executionPlan ?? pendingPlan;
+
   return {
     courses,
     courseOptions,
@@ -630,10 +886,11 @@ export function useCourseAgent() {
     messages,
     input,
     setInput,
-    pendingPlan,
+    pendingPlan: displayedPendingPlan,
     candidates,
     isLoading,
     isExecuting,
+    executionLive,
     loadingStatus,
     handleSend,
     confirmPlan,
@@ -647,7 +904,7 @@ export function useCourseAgent() {
     setSelectedLlmModel,
     canSelectModel,
     appendInputContext,
-    registerStructureRefresh,
+    registerStructureHandlers,
     treeHighlight,
     pendingHandoff,
     clearPendingHandoff,
