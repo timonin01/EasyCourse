@@ -275,6 +275,7 @@ public class CourseAgentLoop {
 
     private CourseAgentResponse showPlan(CourseAgentContext courseAgentContext, String message) {
         String planMessage = firstNonBlank(message, coursePlanMessageBuilder.buildSummary(courseAgentContext.getPendingActions()));
+        planMessage = coursePlanMessageBuilder.sanitizeUserFacingMessage(planMessage);
         List<PlanActionDTO> actions = deleteMetadataService.prepareDeleteAction(
                 courseAgentContext.getUserId(), new ArrayList<>(courseAgentContext.getPendingActions()));
         CoursePlanDTO coursePlan = CoursePlanDTO.builder()
