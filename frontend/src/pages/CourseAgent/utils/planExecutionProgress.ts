@@ -80,6 +80,22 @@ function expandAction(action: PlanActionDTO): PlannedStepItem[] {
     }];
   }
 
+  if (action.type === 'MOVE_STEP') {
+    return [{
+      lessonTitle: action.targetLessonTitle || 'Урок',
+      type: 'move',
+      estimatedSec: 3,
+    }];
+  }
+
+  if (action.type === 'MOVE_LESSON') {
+    return [{
+      lessonTitle: action.targetLessonTitle || 'Урок',
+      type: 'move',
+      estimatedSec: 4,
+    }];
+  }
+
   return [];
 }
 

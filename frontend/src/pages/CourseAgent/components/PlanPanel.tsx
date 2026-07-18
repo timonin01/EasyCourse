@@ -17,7 +17,7 @@ import { Input } from '../../../components/ui/Input';
 import type { CountStepDTO, CoursePlanDTO, PlanActionDTO, PlanExecutionLiveProgress } from '../../../types';
 import { LessonPlanEditor, StepPlanEditor } from './PlanEditor';
 import { ExecuteProgress } from './ExecuteProgress';
-import { isCreateAction, isCopyAction, isDeleteAction, isDeletePlan, planSummaryLabel } from '../utils/planIntent';
+import { isCreateAction, isCopyAction, isDeleteAction, isDeletePlan, isMoveAction, planSummaryLabel } from '../utils/planIntent';
 import { sanitizePlanMessage } from '../utils/sanitizePlanMessage';
 
 const STEP_TYPE_LABELS: Record<string, string> = {
@@ -83,6 +83,18 @@ function actionBlockTitle(action: PlanActionDTO): string {
     return section
       ? `Копия: ${step} → ${section} / ${lesson}`
       : `Копия: ${step} → «${lesson}»`;
+  }
+  if (action.type === 'MOVE_STEP') {
+    const step = action.targetStepTitle ?? 'шаг';
+    const from = action.sourceLessonTitle ?? '—';
+    const to = action.targetLessonTitle ?? '—';
+    return `Перенос шага: ${step} · «${from}» → «${to}»`;
+  }
+  if (action.type === 'MOVE_LESSON') {
+    const lesson = action.targetLessonTitle ?? '—';
+    const from = action.sourceSectionTitle ?? '—';
+    const to = action.targetSectionTitle ?? '—';
+    return `Перенос урока: «${lesson}» · «${from}» → «${to}»`;
   }
   return 'Действие';
 }
@@ -238,6 +250,48 @@ function ActionPreview({ action }: { action: PlanActionDTO }) {
     );
   }
 
+  if (action.type === 'MOVE_STEP') {
+    return (
+      <CreateEntityCard>
+        <div className="text-sm font-medium text-primary-200">
+          {action.targetStepTitle ?? 'Шаг'}
+        </div>
+        <div className="mt-1 text-xs text-dark-400">
+          {action.sourceLessonTitle ?? '—'} → {action.targetSectionTitle ? `${action.targetSectionTitle} / ` : ''}
+          {action.targetLessonTitle ?? '—'}
+        </div>
+        <div className="mt-1 text-xs text-amber-300/90">
+          Исходный шаг будет удалён
+          {action.deleteFromStepik ? ' (в том числе со Stepik)' : ' локально'}.
+          Новый шаг — в конце урока, без авто синхронизации на Stepik.
+        </div>
+      </CreateEntityCard>
+    );
+  }
+
+  if (action.type === 'MOVE_LESSON') {
+    return (
+      <CreateEntityCard>
+        <div className="text-sm font-medium text-primary-200">
+          {action.targetLessonTitle ?? 'Урок'}
+        </div>
+        <div className="mt-1 text-xs text-dark-400">
+          {action.sourceSectionTitle ?? '—'} → {action.targetSectionTitle ?? '—'}
+        </div>
+        {(action.cascadeStepCount ?? 0) > 0 && (
+          <div className="mt-1 text-xs text-dark-500">
+            Вместе с уроком: {action.cascadeStepCount} шаг.
+          </div>
+        )}
+        <div className="mt-1 text-xs text-amber-300/90">
+          Исходный урок будет удалён
+          {action.deleteFromStepik ? ' (в том числе со Stepik)' : ' локально'}.
+          Копия — в конце модуля, без авто синхронизации на Stepik.
+        </div>
+      </CreateEntityCard>
+    );
+  }
+
   return null;
 }
 
@@ -357,7 +411,7 @@ function PlanManualEditor({
           key={`${action.type}-${index}`}
           className={clsx(
             'rounded-lg border p-3',
-            isCreateAction(action) || isCopyAction(action)
+            isCreateAction(action) || isCopyAction(action) || isMoveAction(action)
               ? 'border-primary-500/30 bg-primary-500/5'
               : isDeleteAction(action)
                 ? 'border-red-500/30 bg-red-500/5'
@@ -368,7 +422,7 @@ function PlanManualEditor({
             <div className="text-xs font-medium uppercase tracking-wide text-dark-500">
               {actionBlockTitle(action)}
             </div>
-            {isCreateAction(action) && actions.filter(isCreateAction).length > 1 && (
+            {(isCreateAction(action) || isCopyAction(action) || isMoveAction(action)) && actions.filter((item) => isCreateAction(item) || isCopyAction(item) || isMoveAction(item)).length > 1 && (
               <button
                 type="button"
                 aria-label="Удалить блок из плана"

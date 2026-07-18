@@ -3,6 +3,7 @@ import { Plus, Trash2, Upload, Loader2, FileText, CheckCircle, AlertTriangle, Pe
 import { Button, Card, SortableList, Tooltip, EmptyState } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { EditTitleModal } from '../modals/EditTitleModal';
+import { editorDragId } from '../utils/editorDragIds';
 import type { Lesson } from '../../../types';
 
 interface LessonsColumnProps {
@@ -19,6 +20,8 @@ interface LessonsColumnProps {
   deletingItems: Set<number>;
   syncingItems: Set<number>;
   onUpdateTitle: (id: number, title: string) => Promise<void> | void;
+  sharedDnd?: boolean;
+  dropHighlight?: boolean;
 }
 
 export function LessonsColumn({
@@ -35,6 +38,8 @@ export function LessonsColumn({
   deletingItems,
   syncingItems,
   onUpdateTitle,
+  sharedDnd = false,
+  dropHighlight = false,
 }: LessonsColumnProps) {
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
@@ -61,6 +66,9 @@ export function LessonsColumn({
           items={lessons}
           onReorder={onReorder}
           animateItems
+          shared={sharedDnd}
+          forceDraggable={sharedDnd}
+          getSortableId={(lesson) => editorDragId('lesson', lesson.id)}
           renderItem={(lesson) => {
             const lessonUnsynced = isUnsynced(lesson);
             const borderColor = lessonUnsynced
@@ -72,10 +80,12 @@ export function LessonsColumn({
               <Card
                 hover
                 padding="sm"
-                className={`${selectedLesson?.id === lesson.id ? 'ring-2 ring-primary-500' : ''} ${borderColor}`}
+                className={`${selectedLesson?.id === lesson.id ? 'ring-2 ring-primary-500' : ''} ${borderColor} ${
+                  dropHighlight ? 'ring-1 ring-primary-500/40' : ''
+                }`}
                 onClick={() => onSelectLesson(lesson)}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   {lessonUnsynced ? (
                     <AlertTriangle className="w-4 h-4 text-orange-400 flex-shrink-0" />
                   ) : lesson.stepikLessonId ? (
@@ -83,37 +93,37 @@ export function LessonsColumn({
                   ) : (
                     <FileText className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                   )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="flex-1 text-sm truncate" title={lesson.title}>
-                        {lesson.title}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="p-1 text-dark-400 hover:text-dark-200"
-                        onClick={(e) => handleEditClick(lesson, e)}
-                        title="Редактировать название урока"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  {lessonUnsynced && <span className="text-xs text-orange-400">Не синхр.</span>}
+                  <span className="min-w-0 flex-1 truncate text-sm" title={lesson.title}>
+                    {lesson.title}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 p-1 text-dark-400 hover:text-dark-200"
+                    onClick={(e) => handleEditClick(lesson, e)}
+                    title="Редактировать название урока"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                  {lessonUnsynced && (
+                    <span className="shrink-0 text-xs text-orange-400">Не синхр.</span>
+                  )}
                   {lesson.stepikLessonId && !lessonUnsynced && (
-                    <span className="text-xs text-green-400">#{lesson.stepikLessonId}</span>
+                    <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-green-400">
+                      #{lesson.stepikLessonId}
+                    </span>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`p-1 ${lessonUnsynced ? 'text-orange-400 hover:text-orange-300' : lesson.stepikLessonId ? 'text-green-400 hover:text-green-300' : ''}`}
+                    className={`shrink-0 p-1 ${lessonUnsynced ? 'text-orange-400 hover:text-orange-300' : lesson.stepikLessonId ? 'text-green-400 hover:text-green-300' : ''}`}
                     onClick={(e) => { e.stopPropagation(); onSync(lesson.id); }}
                     disabled={syncingItems.has(lesson.id) || deletingItems.has(lesson.id)}
                     title={lessonUnsynced ? 'Синхронизировать изменения' : lesson.stepikLessonId ? 'Обновить в Stepik' : 'Синхронизировать'}
                   >
                     {syncingItems.has(lesson.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
                   </Button>
-                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
                     <Tooltip
                       label={lesson.stepikLessonId ? 'Сначала удалите урок со Stepik' : 'Удалить локально'}
                     >

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { coursesApi, sectionsApi, lessonsApi, stepsApi, agentApi, stepikApi } from '../../../api';
@@ -9,11 +9,17 @@ import { AI_PROMPT_LIMITS, getPromptLimitMessage } from '../../../constants/aiPr
 import { extractApiErrorMessage } from '../../../utils/apiError';
 import { validateTitle } from '../../../utils/validation';
 import type { Model, Lesson, Step, StepType, UpdateStepDTO, StepikBlockRequest } from '../../../types';
+import { getStepTypeLabel } from '../../../constants/stepTypeLabels';
 import { stepMatchesStepik, getStepDiff } from '../../../utils/stepikCompare';
 import { hasPendingStepikUploads, stepNeedsUpload } from '../../../utils/stepikSyncStatus';
 import { stepTypeToAIString } from '../types';
 import { useStepDiffStorage } from './useStepDiffStorage';
 import { useStepBlockEdit } from './useStepBlockEdit';
+import type { StructureMoveTarget } from '../../../components/structure/StructureMoveModal';
+import type { StructureMovePickerTarget } from '../../../components/structure/StructureMovePickerModal';
+import { parseEditorDragId } from '../utils/editorDragIds';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 
 export function useCourseEditorPage() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -50,6 +56,10 @@ export function useCourseEditorPage() {
     markModelAsSynced,
     markLessonAsSynced,
     markStepAsSynced,
+    markModelAsUnsynced,
+    markLessonAsUnsynced,
+    unsyncedSections,
+    unsyncedLessons,
     saveSyncedModelPositions,
     saveSyncedLessonPositions,
     saveSyncedStepPositions,
@@ -1011,11 +1021,11 @@ export function useCourseEditorPage() {
 
   const isLessonUnsynced = (lesson: Lesson): boolean =>
     Boolean(lesson.stepikLessonId) &&
-    (lessonsWithNewSteps.has(lesson.id) || Boolean(lesson.needsStepikSync));
+    (lessonsWithNewSteps.has(lesson.id) || unsyncedLessons.has(lesson.id) || Boolean(lesson.needsStepikSync));
 
   const isModelUnsynced = (section: Model): boolean =>
     Boolean(section.stepikSectionId) &&
-    (sectionsWithNewSteps.has(section.id) || Boolean(section.needsStepikSync));
+    (sectionsWithNewSteps.has(section.id) || unsyncedSections.has(section.id) || Boolean(section.needsStepikSync));
 
   const hasUnsyncedContent = hasPendingStepikUploads({
     course: selectedCourse ?? undefined,
@@ -1049,6 +1059,267 @@ export function useCourseEditorPage() {
       throw error;
     }
   };
+
+  const [moveTarget, setMoveTarget] = useState<StructureMoveTarget | null>(null);
+  const [movePickerTarget, setMovePickerTarget] = useState<StructureMovePickerTarget | null>(null);
+  const [isMoving, setIsMoving] = useState(false);
+  const [moveLessonOptions, setMoveLessonOptions] = useState<Array<{ lesson: Lesson; sectionTitle: string }>>([]);
+  const [isLoadingMoveOptions, setIsLoadingMoveOptions] = useState(false);
+
+  const requestMoveStep = useCallback((
+    sourceStepId: number,
+    targetLessonId: number,
+    meta?: { sourceTitle?: string; sourceLessonTitle?: string; targetLessonTitle?: string; synced?: boolean },
+  ) => {
+    const step = steps.find((item) => item.id === sourceStepId);
+    const sourceLesson = selectedLesson;
+    const targetLesson = lessons.find((item) => item.id === targetLessonId)
+      ?? moveLessonOptions.find((item) => item.lesson.id === targetLessonId)?.lesson;
+    if (!step || !sourceLesson || !targetLesson) {
+      toast.error('Не удалось найти шаг или целевой урок');
+      return;
+    }
+    if (sourceLesson.id === targetLessonId) return;
+
+    setMoveTarget({
+      type: 'step',
+      sourceStepId,
+      sourceTitle: meta?.sourceTitle ?? `${step.position}. ${getStepTypeLabel(step.type.toLowerCase())}`,
+      sourceLessonTitle: meta?.sourceLessonTitle ?? sourceLesson.title,
+      targetLessonId,
+      targetLessonTitle: meta?.targetLessonTitle ?? targetLesson.title,
+      synced: meta?.synced ?? !!step.stepikStepId,
+    });
+  }, [lessons, moveLessonOptions, selectedLesson, steps]);
+
+  const requestMoveLesson = useCallback((
+    sourceLessonId: number,
+    targetSectionId: number,
+    meta?: { sourceTitle?: string; sourceSectionTitle?: string; targetSectionTitle?: string; synced?: boolean; stepCount?: number },
+  ) => {
+    const lesson = lessons.find((item) => item.id === sourceLessonId);
+    const sourceSection = selectedModel;
+    const targetSection = sections.find((item) => item.id === targetSectionId);
+    if (!lesson || !sourceSection || !targetSection) {
+      toast.error('Не удалось найти урок или целевой модуль');
+      return;
+    }
+    if (sourceSection.id === targetSectionId) return;
+
+    setMoveTarget({
+      type: 'lesson',
+      sourceLessonId,
+      sourceTitle: meta?.sourceTitle ?? lesson.title,
+      sourceSectionTitle: meta?.sourceSectionTitle ?? sourceSection.title,
+      targetSectionId,
+      targetSectionTitle: meta?.targetSectionTitle ?? targetSection.title,
+      synced: meta?.synced ?? !!lesson.stepikLessonId,
+      stepCount: meta?.stepCount ?? (selectedLesson?.id === sourceLessonId ? steps.length : 0),
+    });
+  }, [lessons, sections, selectedLesson, selectedModel, steps.length]);
+
+  const openMoveStepPicker = useCallback(async (step: Step) => {
+    if (!selectedLesson) return;
+    setMovePickerTarget({
+      type: 'step',
+      sourceStepId: step.id,
+      sourceTitle: getStepTypeLabel(step.type.toLowerCase()),
+      sourceLessonId: selectedLesson.id,
+      sourceLessonTitle: selectedLesson.title,
+      synced: !!step.stepikStepId,
+    });
+    setIsLoadingMoveOptions(true);
+    try {
+      const options: Array<{ lesson: Lesson; sectionTitle: string }> = [];
+      for (const section of sections) {
+        const sectionLessons = section.id === selectedModel?.id
+          ? lessons
+          : await lessonsApi.getSectionLessons(section.id);
+        for (const lesson of sectionLessons) {
+          options.push({ lesson, sectionTitle: section.title });
+        }
+      }
+      setMoveLessonOptions(options);
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось загрузить уроки'));
+      setMovePickerTarget(null);
+    } finally {
+      setIsLoadingMoveOptions(false);
+    }
+  }, [lessons, sections, selectedLesson, selectedModel?.id]);
+
+  const openMoveLessonPicker = useCallback((lesson: Lesson) => {
+    if (!selectedModel) return;
+    setMovePickerTarget({
+      type: 'lesson',
+      sourceLessonId: lesson.id,
+      sourceTitle: lesson.title,
+      sourceSectionId: selectedModel.id,
+      sourceSectionTitle: selectedModel.title,
+      synced: !!lesson.stepikLessonId,
+      stepCount: selectedLesson?.id === lesson.id ? steps.length : 0,
+    });
+  }, [selectedLesson?.id, selectedModel, steps.length]);
+
+  const confirmMove = useCallback(async () => {
+    if (!moveTarget) return;
+    setIsMoving(true);
+    try {
+      if (moveTarget.type === 'step') {
+        const sourceLessonId =
+          steps.find((item) => item.id === moveTarget.sourceStepId)?.lessonId ?? selectedLesson?.id;
+        const sourceLesson = lessons.find((item) => item.id === sourceLessonId)
+          ?? (selectedLesson?.id === sourceLessonId ? selectedLesson : undefined);
+        const created = await stepsApi.moveStep(moveTarget.sourceStepId, moveTarget.targetLessonId);
+        removeStep(moveTarget.sourceStepId);
+        const targetLesson = lessons.find((item) => item.id === moveTarget.targetLessonId)
+          ?? moveLessonOptions.find((item) => item.lesson.id === moveTarget.targetLessonId)?.lesson;
+        if (sourceLesson) {
+          if (sourceLesson.stepikLessonId) {
+            updateLesson({ ...sourceLesson, needsStepikSync: true });
+            markLessonAsUnsynced(sourceLesson.id, sourceLesson.sectionId);
+          }
+          const sourceSection = sections.find((item) => item.id === sourceLesson.sectionId);
+          if (sourceSection?.stepikSectionId) {
+            updateModel({ ...sourceSection, needsStepikSync: true });
+            markModelAsUnsynced(sourceSection.id);
+          }
+        }
+        if (targetLesson) {
+          if (targetLesson.stepikLessonId) {
+            updateLesson({ ...targetLesson, needsStepikSync: true });
+            markLessonAsUnsynced(targetLesson.id, targetLesson.sectionId);
+          }
+          const targetSection = sections.find((item) => item.id === targetLesson.sectionId);
+          if (targetSection?.stepikSectionId) {
+            updateModel({ ...targetSection, needsStepikSync: true });
+            markModelAsUnsynced(targetSection.id);
+          }
+          if (targetLesson.sectionId !== selectedModel?.id) {
+            if (targetSection) {
+              setSelectedModel({
+                ...targetSection,
+                needsStepikSync: targetSection.stepikSectionId ? true : targetSection.needsStepikSync,
+              });
+              const modelLessons = await lessonsApi.getSectionLessons(targetSection.id);
+              setLessons(modelLessons);
+            }
+          }
+          if (selectedLesson?.id === targetLesson.id) {
+            addStep(created);
+          } else {
+            setSelectedLesson(
+              targetLesson.stepikLessonId
+                ? { ...targetLesson, needsStepikSync: true }
+                : targetLesson,
+            );
+          }
+        }
+        toast.success('Шаг перемещён');
+      } else {
+        const sourceLesson = lessons.find((item) => item.id === moveTarget.sourceLessonId);
+        const sourceSectionId = sourceLesson?.sectionId ?? selectedModel?.id;
+        const created = await lessonsApi.moveLesson(moveTarget.sourceLessonId, moveTarget.targetSectionId);
+        removeLesson(moveTarget.sourceLessonId);
+        if (sourceSectionId) {
+          const sourceSection = sections.find((item) => item.id === sourceSectionId);
+          if (sourceSection?.stepikSectionId) {
+            updateModel({ ...sourceSection, needsStepikSync: true });
+            markModelAsUnsynced(sourceSection.id);
+          }
+        }
+        const targetSection = sections.find((item) => item.id === moveTarget.targetSectionId);
+        if (targetSection) {
+          if (targetSection.stepikSectionId) {
+            updateModel({ ...targetSection, needsStepikSync: true });
+            markModelAsUnsynced(targetSection.id);
+          }
+          setSelectedModel({ ...targetSection, needsStepikSync: targetSection.stepikSectionId ? true : targetSection.needsStepikSync });
+          const modelLessons = await lessonsApi.getSectionLessons(targetSection.id);
+          setLessons(modelLessons);
+          setSelectedLesson(created);
+        }
+        toast.success('Урок перемещён');
+      }
+      setMoveTarget(null);
+      setMovePickerTarget(null);
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось переместить'));
+      console.error('Failed to move entity in course editor:', error);
+    } finally {
+      setIsMoving(false);
+    }
+  }, [
+    addStep,
+    lessons,
+    markLessonAsUnsynced,
+    markModelAsUnsynced,
+    moveLessonOptions,
+    moveTarget,
+    removeLesson,
+    removeStep,
+    sections,
+    selectedLesson,
+    selectedModel?.id,
+    setLessons,
+    setSelectedLesson,
+    setSelectedModel,
+    steps,
+    updateLesson,
+    updateModel,
+  ]);
+
+  const handleEditorDragEnd = useCallback((event: DragEndEvent) => {
+    const active = parseEditorDragId(event.active.id);
+    const over = event.over ? parseEditorDragId(event.over.id) : null;
+    if (!active || !over) return;
+
+    if (active.type === 'section' && over.type === 'section') {
+      const oldIndex = sections.findIndex((item) => item.id === active.id);
+      const newIndex = sections.findIndex((item) => item.id === over.id);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+      void handleReorderModels(arrayMove(sections, oldIndex, newIndex));
+      return;
+    }
+
+    if (active.type === 'lesson' && over.type === 'lesson') {
+      const oldIndex = lessons.findIndex((item) => item.id === active.id);
+      const newIndex = lessons.findIndex((item) => item.id === over.id);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+      void handleReorderLessons(arrayMove(lessons, oldIndex, newIndex));
+      return;
+    }
+
+    if (active.type === 'lesson' && over.type === 'section') {
+      if (selectedModel?.id === over.id) return;
+      requestMoveLesson(active.id, over.id);
+      return;
+    }
+
+    if (active.type === 'step' && over.type === 'step') {
+      const oldIndex = steps.findIndex((item) => item.id === active.id);
+      const newIndex = steps.findIndex((item) => item.id === over.id);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+      void handleReorderSteps(arrayMove(steps, oldIndex, newIndex));
+      return;
+    }
+
+    if (active.type === 'step' && over.type === 'lesson') {
+      if (selectedLesson?.id === over.id) return;
+      requestMoveStep(active.id, over.id);
+    }
+  }, [
+    handleReorderLessons,
+    handleReorderModels,
+    handleReorderSteps,
+    lessons,
+    requestMoveLesson,
+    requestMoveStep,
+    sections,
+    selectedLesson?.id,
+    selectedModel?.id,
+    steps,
+  ]);
 
   return {
     courseId,
@@ -1134,6 +1405,19 @@ export function useCourseEditorPage() {
     handleReorderModels,
     handleReorderLessons,
     handleReorderSteps,
+    handleEditorDragEnd,
+    moveTarget,
+    setMoveTarget,
+    movePickerTarget,
+    setMovePickerTarget,
+    isMoving,
+    moveLessonOptions,
+    isLoadingMoveOptions,
+    requestMoveStep,
+    requestMoveLesson,
+    openMoveStepPicker,
+    openMoveLessonPicker,
+    confirmMove,
     handleOpenStepTypeChange,
     handleChangeStepType,
     isStepUnsynced,

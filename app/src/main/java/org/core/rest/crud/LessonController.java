@@ -5,8 +5,10 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
+import org.core.dto.lesson.MoveLessonDTO;
 import org.core.dto.lesson.UpdateLessonDTO;
 import org.core.service.crud.LessonService;
+import org.core.service.crud.move.LessonMoveService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.List;
 public class LessonController {
 
     private final LessonService lessonService;
+    private final LessonMoveService lessonMoveService;
 
     @GetMapping("/{lessonId}")
     public LessonResponseDTO getLessonByLessonID(@PathVariable Long lessonId) {
@@ -36,6 +39,11 @@ public class LessonController {
     @PutMapping("/update")
     public LessonResponseDTO updateLesson(@Valid @RequestBody UpdateLessonDTO updateDTO) {
         return lessonService.updateLesson(updateDTO);
+    }
+
+    @PostMapping("/move-lesson")
+    public LessonResponseDTO moveLesson(@RequestBody MoveLessonDTO moveLessonDTO){
+        return lessonMoveService.moveLesson(moveLessonDTO);
     }
 
     @DeleteMapping("/delete/{lessonId}")

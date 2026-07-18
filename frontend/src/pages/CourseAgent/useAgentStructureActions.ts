@@ -5,6 +5,7 @@ import { getStepTypeLabel } from '../../constants/stepTypeLabels';
 import { extractApiErrorMessage } from '../../utils/apiError';
 import type { CourseTreeSectionNode, CourseTreeSelection } from './types';
 import type { StructureDeleteTarget } from './components/StructureDeleteModal';
+import type { StructureMoveTarget } from './components/StructureMoveModal';
 
 interface UseAgentStructureActionsParams {
   sections: CourseTreeSectionNode[];
@@ -62,6 +63,8 @@ export function useAgentStructureActions({
   >(null);
   const [deleteTarget, setDeleteTarget] = useState<StructureDeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [moveTarget, setMoveTarget] = useState<StructureMoveTarget | null>(null);
+  const [isMoving, setIsMoving] = useState(false);
   const [busyIds, setBusyIds] = useState<Set<number>>(new Set());
 
   const markBusy = (id: number, busy: boolean) => {
@@ -291,6 +294,126 @@ export function useAgentStructureActions({
     }
   }, [reloadStructure, reorderSteps, sections]);
 
+  const requestMoveStep = useCallback((sourceStepId: number, targetLessonId: number) => {
+    let sourceStep: NonNullable<CourseTreeSectionNode['lessons'][number]['steps']>[number] | null = null;
+    let sourceLessonTitle = '';
+    let sourceLessonId: number | null = null;
+    let targetLessonTitle = '';
+
+    for (const sectionNode of sections) {
+      for (const lessonNode of sectionNode.lessons) {
+        if (lessonNode.lesson.id === targetLessonId) {
+          targetLessonTitle = lessonNode.lesson.title;
+        }
+        const step = lessonNode.steps?.find((item) => item.id === sourceStepId);
+        if (step) {
+          sourceStep = step;
+          sourceLessonTitle = lessonNode.lesson.title;
+          sourceLessonId = lessonNode.lesson.id;
+        }
+      }
+    }
+
+    if (!sourceStep || sourceLessonId == null || !targetLessonTitle) {
+      toast.error('Не удалось найти шаг или целевой урок');
+      return;
+    }
+    if (sourceLessonId === targetLessonId) {
+      return;
+    }
+
+    setMoveTarget({
+      type: 'step',
+      sourceStepId,
+      sourceTitle: `${sourceStep.position}. ${getStepTypeLabel(sourceStep.type.toLowerCase())}`,
+      sourceLessonTitle,
+      targetLessonId,
+      targetLessonTitle,
+      synced: !!sourceStep.stepikStepId,
+    });
+  }, [sections]);
+
+  const requestMoveLesson = useCallback((sourceLessonId: number, targetSectionId: number) => {
+    let sourceTitle = '';
+    let sourceSectionTitle = '';
+    let sourceSectionId: number | null = null;
+    let targetSectionTitle = '';
+    let synced = false;
+    let stepCount = 0;
+
+    for (const sectionNode of sections) {
+      if (sectionNode.section.id === targetSectionId) {
+        targetSectionTitle = sectionNode.section.title;
+      }
+      const lessonNode = sectionNode.lessons.find((item) => item.lesson.id === sourceLessonId);
+      if (lessonNode) {
+        sourceTitle = lessonNode.lesson.title;
+        sourceSectionTitle = sectionNode.section.title;
+        sourceSectionId = sectionNode.section.id;
+        synced = !!lessonNode.lesson.stepikLessonId
+          || (lessonNode.steps?.some((step) => !!step.stepikStepId) ?? false);
+        stepCount = lessonNode.steps?.length ?? countLessonSteps(sections, sourceLessonId);
+      }
+    }
+
+    if (!sourceTitle || sourceSectionId == null || !targetSectionTitle) {
+      toast.error('Не удалось найти урок или целевой модуль');
+      return;
+    }
+    if (sourceSectionId === targetSectionId) {
+      return;
+    }
+
+    setMoveTarget({
+      type: 'lesson',
+      sourceLessonId,
+      sourceTitle,
+      sourceSectionTitle,
+      targetSectionId,
+      targetSectionTitle,
+      synced,
+      stepCount,
+    });
+  }, [sections]);
+
+  const confirmMove = useCallback(async () => {
+    if (!moveTarget) return;
+
+    const busyId = moveTarget.type === 'step' ? moveTarget.sourceStepId : moveTarget.sourceLessonId;
+    setIsMoving(true);
+    markBusy(busyId, true);
+    try {
+      if (moveTarget.type === 'step') {
+        const created = await stepsApi.moveStep(moveTarget.sourceStepId, moveTarget.targetLessonId);
+        clearSelectionIfMatches('step', moveTarget.sourceStepId);
+        onStepRemoved?.(moveTarget.sourceStepId);
+        await reloadStructure();
+        setSelection({ type: 'step', id: created.id });
+        toast.success('Шаг перемещён');
+      } else {
+        const created = await lessonsApi.moveLesson(moveTarget.sourceLessonId, moveTarget.targetSectionId);
+        clearSelectionIfMatches('lesson', moveTarget.sourceLessonId);
+        await reloadStructure();
+        setSelection({ type: 'lesson', id: created.id });
+        toast.success('Урок перемещён');
+      }
+      setMoveTarget(null);
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, 'Не удалось переместить'));
+      console.error('Failed to move structure entity:', error);
+      await reloadStructure();
+    } finally {
+      setIsMoving(false);
+      markBusy(busyId, false);
+    }
+  }, [
+    clearSelectionIfMatches,
+    moveTarget,
+    onStepRemoved,
+    reloadStructure,
+    setSelection,
+  ]);
+
   return {
     renameTarget,
     setRenameTarget,
@@ -305,6 +428,12 @@ export function useAgentStructureActions({
     openDeleteLesson,
     openDeleteStep,
     confirmDelete,
+    moveTarget,
+    setMoveTarget,
+    isMoving,
+    requestMoveStep,
+    requestMoveLesson,
+    confirmMove,
     persistSectionOrder,
     persistLessonOrder,
     persistStepOrder,

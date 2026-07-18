@@ -1,10 +1,11 @@
-import { Plus, Trash2, Upload, Loader2, AlertTriangle, CheckCircle, RefreshCw, FileText, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Upload, Loader2, AlertTriangle, CheckCircle, RefreshCw, FileText, Sparkles, Pencil } from 'lucide-react';
 import { Button, Card, SortableList, Badge, Tooltip, EmptyState } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { getStepDisplayType } from '../../../types';
 import type { Lesson, Step } from '../../../types';
 import type { StepDiffInfo } from '../../../utils/stepikCompare';
 import { formatStepDiffTooltip } from '../../../utils/stepikCompare';
+import { editorDragId } from '../utils/editorDragIds';
 
 interface StepsColumnProps {
   steps: Step[];
@@ -24,6 +25,7 @@ interface StepsColumnProps {
   onDeleteFromStepik: (id: number) => void;
   deletingItems: Set<number>;
   syncingItems: Set<number>;
+  sharedDnd?: boolean;
 }
 
 export function StepsColumn({
@@ -44,6 +46,7 @@ export function StepsColumn({
   onDeleteFromStepik,
   deletingItems,
   syncingItems,
+  sharedDnd = false,
 }: StepsColumnProps) {
   return (
     <div>
@@ -78,6 +81,9 @@ export function StepsColumn({
           items={steps}
           onReorder={onReorder}
           animateItems
+          shared={sharedDnd}
+          forceDraggable={sharedDnd}
+          getSortableId={(step) => editorDragId('step', step.id)}
           renderItem={(step, index) => {
             const stepUnsynced = isUnsynced(step);
             const stepDiffers = stepsDiffersFromStepik.has(step.id);
@@ -101,7 +107,19 @@ export function StepsColumn({
                     {stepUnsynced ? <AlertTriangle className="w-2.5 h-2.5" /> : step.stepikStepId ? <CheckCircle className="w-2.5 h-2.5" /> : index + 1}
                   </span>
                   <Badge variant={stepUnsynced ? 'warning' : step.stepikStepId ? 'success' : 'info'} className="flex-shrink-0 text-xs px-1.5 py-0.5">{getStepDisplayType(step)}</Badge>
-                  <span className="flex-1 text-xs truncate text-dark-400 min-w-0">{step.content?.substring(0, 20) || 'Без контента'}...</span>
+                  <span className="min-w-0 flex-1" aria-hidden />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 p-1 text-dark-400 hover:text-dark-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStepClick(step);
+                    }}
+                    title="Просмотреть шаг"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
                   {stepUnsynced && <span className="text-xs text-orange-400 flex-shrink-0">!</span>}
                   {stepDiffers && (
                     <span

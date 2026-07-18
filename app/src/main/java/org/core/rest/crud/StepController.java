@@ -2,13 +2,13 @@ package org.core.rest.crud;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import org.core.context.UserContextBean;
 import org.core.domain.StepType;
 import org.core.dto.step.CreateStepDTO;
+import org.core.dto.step.MoveStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.step.UpdateStepDTO;
-import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.service.crud.StepService;
+import org.core.service.crud.move.StepMoveService;
 import org.core.service.stepik.step.StepTypeChangeService;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +21,7 @@ public class StepController {
 
     private final StepService stepService;
     private final StepTypeChangeService stepTypeChangeService;
-    private final UserContextBean userContextBean;
+    private final StepMoveService stepMoveService;
 
     @GetMapping("/{stepId}")
     public StepResponseDTO getStepById(@PathVariable Long stepId) {
@@ -49,8 +49,12 @@ public class StepController {
             @RequestParam StepType newStepType,
             @RequestParam String sessionId
     ){
-        Long userId = userContextBean.getUserId();
-        return stepTypeChangeService.changeStepType(stepId, newStepType, sessionId, userId);
+        return stepTypeChangeService.changeStepType(stepId, newStepType, sessionId);
+    }
+
+    @PostMapping("/move-step")
+    public StepResponseDTO moveStep(@RequestBody MoveStepDTO moveStepDTO){
+        return stepMoveService.moveStep(moveStepDTO);
     }
 
     @DeleteMapping("/delete/{stepId}")

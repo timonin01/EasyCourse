@@ -98,6 +98,39 @@ public class CoursePlanValidator {
                     throw new IllegalArgumentException("У исходного шага нет содержимого для копирования");
                 }
             }
+            case MOVE_STEP -> {
+                if (action.getTargetStepId() == null) {
+                    throw new IllegalArgumentException("Не указан исходный шаг для перемещения");
+                }
+                if (action.getTargetLessonId() == null) {
+                    throw new IllegalArgumentException("Не указан урок назначения для перемещения");
+                }
+                Step sourceStep = userAccessService.findStepAndVerifyOwner(userId, action.getTargetStepId());
+                verifyCourse(courseId, sourceStep.getLesson().getSection().getCourse().getId());
+                Lesson targetLesson = userAccessService.findLessonAndVerifyOwner(userId, action.getTargetLessonId());
+                verifyCourse(courseId, targetLesson.getSection().getCourse().getId());
+                if (sourceStep.getLesson().getId().equals(targetLesson.getId())) {
+                    throw new IllegalArgumentException("Нельзя переместить шаг в тот же урок");
+                }
+                if (sourceStep.getStepikBlockData() == null || sourceStep.getStepikBlockData().isBlank()) {
+                    throw new IllegalArgumentException("У исходного шага нет содержимого для перемещения");
+                }
+            }
+            case MOVE_LESSON -> {
+                if (action.getTargetLessonId() == null) {
+                    throw new IllegalArgumentException("Не указан урок для перемещения");
+                }
+                if (action.getTargetSectionId() == null) {
+                    throw new IllegalArgumentException("Не указан модуль назначения для перемещения");
+                }
+                Lesson sourceLesson = userAccessService.findLessonAndVerifyOwner(userId, action.getTargetLessonId());
+                verifyCourse(courseId, sourceLesson.getSection().getCourse().getId());
+                Section targetSection = userAccessService.findSectionAndVerifyOwner(userId, action.getTargetSectionId());
+                verifyCourse(courseId, targetSection.getCourse().getId());
+                if (sourceLesson.getSection().getId().equals(targetSection.getId())) {
+                    throw new IllegalArgumentException("Нельзя переместить урок в тот же модуль");
+                }
+            }
             default -> throw new IllegalArgumentException("Неподдерживаемое действие: " + action.getType());
         }
     }

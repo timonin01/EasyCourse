@@ -3,6 +3,7 @@ import { Plus, Trash2, Upload, Loader2, Layers, CheckCircle, AlertTriangle, Penc
 import { Button, Card, SortableList, Tooltip, EmptyState, Skeleton } from '../../../components/ui';
 import { StepikIcon } from '../../../components/StepikIcon';
 import { EditTitleModal } from '../modals/EditTitleModal';
+import { editorDragId } from '../utils/editorDragIds';
 import type { Model } from '../../../types';
 
 interface ModelsColumnProps {
@@ -18,6 +19,9 @@ interface ModelsColumnProps {
   onDeleteFromStepik: (id: number) => void;
   deletingItems: Set<number>;
   onUpdateTitle: (id: number, title: string) => Promise<void> | void;
+  /** Shared editor DnD — list does not create its own DndContext. */
+  sharedDnd?: boolean;
+  dropHighlight?: boolean;
 }
 
 export function ModelsColumn({
@@ -33,6 +37,8 @@ export function ModelsColumn({
   onDeleteFromStepik,
   deletingItems,
   onUpdateTitle,
+  sharedDnd = false,
+  dropHighlight = false,
 }: ModelsColumnProps) {
   const [editingModel, setEditingModel] = useState<Model | null>(null);
 
@@ -65,6 +71,9 @@ export function ModelsColumn({
           items={sections}
           onReorder={onReorder}
           animateItems
+          shared={sharedDnd}
+          forceDraggable={sharedDnd}
+          getSortableId={(section) => editorDragId('section', section.id)}
           renderItem={(section) => {
             const modelUnsynced = isUnsynced(section);
             const borderColor = modelUnsynced
@@ -76,7 +85,9 @@ export function ModelsColumn({
               <Card
                 hover
                 padding="sm"
-                className={`${selectedModel?.id === section.id ? 'ring-2 ring-primary-500' : ''} ${borderColor}`}
+                className={`${selectedModel?.id === section.id ? 'ring-2 ring-primary-500' : ''} ${borderColor} ${
+                  dropHighlight ? 'ring-1 ring-primary-500/40' : ''
+                }`}
                 onClick={() => onSelectModel(section)}
               >
                 <div className="flex items-center gap-2">

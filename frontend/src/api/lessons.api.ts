@@ -31,6 +31,14 @@ export const lessonsApi = {
     await api.delete(`/v1/lessons/delete/${lessonId}`);
   },
 
+  moveLesson: async (sourceLessonId: number, targetSectionId: number): Promise<Lesson> => {
+    const response = await api.post<Lesson>('/v1/lessons/move-lesson', {
+      sourceLessonId,
+      targetSectionId,
+    });
+    return response.data;
+  },
+
   // Stepik sync
   getUnsyncedLessons: async (sectionId: number): Promise<Lesson[]> => {
     const response = await api.get<Lesson[]>(`/v1/stepik/lessons/unsynced-lessons/${sectionId}`);

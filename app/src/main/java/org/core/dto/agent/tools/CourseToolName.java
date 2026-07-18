@@ -9,6 +9,8 @@ public enum CourseToolName {
     PROPOSE_DELETE_LESSON,
     PROPOSE_DELETE_STEP,
     PROPOSE_COPY_STEP,
+    PROPOSE_MOVE_STEP,
+    PROPOSE_MOVE_LESSON,
     MODIFY_STEP,
     ANSWER_QUESTION,
     FINISH;
@@ -24,7 +26,7 @@ public enum CourseToolName {
         return switch (this) {
             case PROPOSE_CREATE_SECTION, PROPOSE_CREATE_LESSONS, PROPOSE_CREATE_STEPS,
                  PROPOSE_DELETE_SECTION, PROPOSE_DELETE_LESSON, PROPOSE_DELETE_STEP,
-                 PROPOSE_COPY_STEP, MODIFY_STEP -> true;
+                 PROPOSE_COPY_STEP, PROPOSE_MOVE_STEP, PROPOSE_MOVE_LESSON, MODIFY_STEP -> true;
             default -> false;
         };
     }

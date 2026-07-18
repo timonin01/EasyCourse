@@ -331,7 +331,9 @@ export type PlanActionType =
   | 'DELETE_SECTION'
   | 'DELETE_LESSON'
   | 'DELETE_STEP'
-  | 'COPY_STEP';
+  | 'COPY_STEP'
+  | 'MOVE_STEP'
+  | 'MOVE_LESSON';
 
 export type CourseAgentAction =
   | 'NEED_CLARIFICATION'
@@ -405,6 +407,10 @@ export interface PlanActionDTO {
   targetLessonTitle?: string;
   targetStepId?: number;
   targetStepTitle?: string;
+  sourceSectionId?: number;
+  sourceSectionTitle?: string;
+  sourceLessonId?: number;
+  sourceLessonTitle?: string;
   /** Synced entities will also be removed on Stepik when the plan is confirmed. */
   deleteFromStepik?: boolean;
   cascadeLessonCount?: number;

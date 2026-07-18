@@ -146,6 +146,16 @@ public class SectionService {
         }
     }
 
+    public void markNeedsStepikSyncIfSynced(Long sectionId) {
+        Long contextUserId = userContextBean.getUserId();
+        Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
+        if (section.getStepikSectionId() != null && !section.isNeedsStepikSync()) {
+            section.setNeedsStepikSync(true);
+            sectionRepository.save(section);
+            log.info("Marked section {} as needing Stepik sync", sectionId);
+        }
+    }
+
     private Integer getNextPosition(Long courseId) {
         return sectionRepository.findMaxPositionByCourseId(courseId)
                 .map(pos -> pos + 1)

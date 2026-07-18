@@ -26,6 +26,8 @@ public final class CoursePlanHelper {
         return type == PlanActionType.CREATE_SECTION
                 || type == PlanActionType.CREATE_LESSONS
                 || type == PlanActionType.CREATE_STEPS
-                || type == PlanActionType.COPY_STEP;
+                || type == PlanActionType.COPY_STEP
+                || type == PlanActionType.MOVE_STEP
+                || type == PlanActionType.MOVE_LESSON;
     }
 }
