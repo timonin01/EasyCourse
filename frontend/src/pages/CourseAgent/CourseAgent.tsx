@@ -22,6 +22,7 @@ import { CourseAgentChatPanel } from './components/CourseAgentChatPanel';
 import { CourseTreePanel } from './components/CourseTreePanel';
 import { StepPreviewModal } from './components/StepPreviewModal';
 import { StructureDeleteModal } from './components/StructureDeleteModal';
+import { StructureMoveModal } from './components/StructureMoveModal';
 import type { CourseTreeSelection } from './types';
 import { useAgentStepEdit } from './useAgentStepEdit';
 import { useAgentStructureActions } from './useAgentStructureActions';
@@ -481,6 +482,12 @@ export function CourseAgent() {
               onReorderSteps={(lessonId, ordered) => guardStructureMutation(() => {
                 void structureActions.persistStepOrder(lessonId, ordered);
               })}
+              onRequestMoveStep={(sourceStepId, targetLessonId) => guardStructureMutation(() => {
+                structureActions.requestMoveStep(sourceStepId, targetLessonId);
+              })}
+              onRequestMoveLesson={(sourceLessonId, targetSectionId) => guardStructureMutation(() => {
+                structureActions.requestMoveLesson(sourceLessonId, targetSectionId);
+              })}
               onRefresh={handleRefreshStructure}
             />
           </div>
@@ -551,6 +558,13 @@ export function CourseAgent() {
         isDeleting={structureActions.isDeleting}
         onClose={() => structureActions.setDeleteTarget(null)}
         onConfirm={() => void structureActions.confirmDelete()}
+      />
+
+      <StructureMoveModal
+        target={structureActions.moveTarget}
+        isMoving={structureActions.isMoving}
+        onClose={() => structureActions.setMoveTarget(null)}
+        onConfirm={() => void structureActions.confirmMove()}
       />
 
       <StepViewModal

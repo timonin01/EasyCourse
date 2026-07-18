@@ -49,8 +49,14 @@ function collectFromAction(
   if (action.targetSectionId) {
     sectionIds.add(action.targetSectionId);
   }
+  if (action.sourceSectionId) {
+    sectionIds.add(action.sourceSectionId);
+  }
   if (action.targetLessonId) {
     lessonIds.add(action.targetLessonId);
+  }
+  if (action.sourceLessonId) {
+    lessonIds.add(action.sourceLessonId);
   }
   if (action.targetStepId) {
     stepIds.add(action.targetStepId);

@@ -45,6 +45,14 @@ export const stepsApi = {
     await api.delete(`/v1/steps/delete/${stepId}`);
   },
 
+  moveStep: async (sourceStepId: number, targetLessonId: number): Promise<Step> => {
+    const response = await api.post<Step>('/v1/steps/move-step', {
+      sourceStepId,
+      targetLessonId,
+    });
+    return response.data;
+  },
+
   // Stepik sync
   syncStep: async (stepId: number): Promise<unknown> => {
     const response = await api.post(`/v1/stepik/steps/sync-step?stepId=${stepId}`);

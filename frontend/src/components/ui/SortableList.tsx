@@ -97,6 +97,15 @@ interface SortableListProps<T extends { id: number }> {
   /** Inline grip handle, no left padding — for dense trees. */
   compact?: boolean;
   disabled?: boolean;
+  /** Custom sortable id (needed when multiple lists share one DndContext). */
+  getSortableId?: (item: T) => string | number;
+  /**
+   * Participate in an outer DndContext — do not create a nested one.
+   * Parent must handle drag-end and call onReorder / move callbacks.
+   */
+  shared?: boolean;
+  /** Keep items draggable even when the list has a single item (cross-list moves). */
+  forceDraggable?: boolean;
 }
 
 export function SortableList<T extends { id: number }>({
@@ -107,6 +116,9 @@ export function SortableList<T extends { id: number }>({
   animateItems = false,
   compact = false,
   disabled = false,
+  getSortableId = (item) => item.id,
+  shared = false,
+  forceDraggable = false,
 }: SortableListProps<T>) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -119,12 +131,15 @@ export function SortableList<T extends { id: number }>({
     })
   );
 
+  const sortableIds = items.map(getSortableId);
+  const canDrag = !disabled && (forceDraggable || items.length > 1);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
+      const oldIndex = items.findIndex((item) => getSortableId(item) === active.id);
+      const newIndex = items.findIndex((item) => getSortableId(item) === over.id);
       if (oldIndex < 0 || newIndex < 0) return;
       onReorder(arrayMove(items, oldIndex, newIndex));
     }
@@ -147,7 +162,9 @@ export function SortableList<T extends { id: number }>({
       renderItem(item, index)
     );
 
-    if (disabled || items.length <= 1) {
+    const sortableId = getSortableId(item);
+
+    if (!canDrag) {
       return (
         <StaticItem key={item.id} compact={compact}>
           {body}
@@ -156,13 +173,25 @@ export function SortableList<T extends { id: number }>({
     }
 
     return (
-      <SortableItem key={item.id} id={item.id} compact={compact}>
+      <SortableItem key={item.id} id={sortableId} compact={compact}>
         {body}
       </SortableItem>
     );
   };
 
-  if (disabled || items.length <= 1) {
+  const listBody = (
+    <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+      <div className={listClassName}>
+        {items.map((item, index) => renderWrapped(item, index))}
+      </div>
+    </SortableContext>
+  );
+
+  if (shared) {
+    return listBody;
+  }
+
+  if (!canDrag) {
     return (
       <div className={listClassName}>
         {items.map((item, index) => renderWrapped(item, index))}
@@ -176,14 +205,7 @@ export function SortableList<T extends { id: number }>({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext
-        items={items.map((item) => item.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className={listClassName}>
-          {items.map((item, index) => renderWrapped(item, index))}
-        </div>
-      </SortableContext>
+      {listBody}
     </DndContext>
   );
 }

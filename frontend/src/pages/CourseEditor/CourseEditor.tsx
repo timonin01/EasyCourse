@@ -1,8 +1,21 @@
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { useState } from 'react';
 import { MainLayout } from '../../components/Layout';
 import { Breadcrumbs, StaggerList, StaggerItem } from '../../components/ui';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
+import { StructureMoveModal } from '../../components/structure/StructureMoveModal';
 import { getStepDisplayType, getStepBlockName } from '../../types';
 import { STEP_TYPE_CHANGE_PRO_MESSAGE } from '../../constants/subscription';
 import { EDIT_TASK_BLOCK_NAMES } from './types';
@@ -12,10 +25,45 @@ import { CourseEditorHeader } from './components/CourseEditorHeader';
 import { StepContentAiEditModal } from './components/StepContentAiEditModal';
 import { DeleteCourseModals } from './components/DeleteCourseModals';
 import { useCourseEditorPage } from './hooks/useCourseEditorPage';
+import { parseEditorDragId } from './utils/editorDragIds';
 
 export function CourseEditor() {
   const page = useCourseEditorPage();
   const navigate = useNavigate();
+  const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
+  const [draggingType, setDraggingType] = useState<'step' | 'lesson' | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const parsed = parseEditorDragId(event.active.id);
+    if (!parsed) {
+      setActiveDragLabel(null);
+      setDraggingType(null);
+      return;
+    }
+    if (parsed.type === 'section') {
+      setActiveDragLabel(page.sections.find((item) => item.id === parsed.id)?.title ?? 'Модуль');
+      setDraggingType(null);
+      return;
+    }
+    if (parsed.type === 'lesson') {
+      setActiveDragLabel(page.lessons.find((item) => item.id === parsed.id)?.title ?? 'Урок');
+      setDraggingType('lesson');
+      return;
+    }
+    const step = page.steps.find((item) => item.id === parsed.id);
+    setActiveDragLabel(step ? `Шаг ${step.position}` : 'Шаг');
+    setDraggingType('step');
+  };
+
+  const clearDragState = () => {
+    setActiveDragLabel(null);
+    setDraggingType(null);
+  };
 
   return (
     <MainLayout>
@@ -37,74 +85,105 @@ export function CourseEditor() {
         setModels={page.setModels}
       />
 
-      <StaggerList className="flex gap-6" stagger={0.08}>
-        <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
-          <ModelsColumn
-            sections={page.sections}
-            isLoading={page.isSectionsLoading}
-            selectedModel={page.selectedModel}
-            onSelectModel={page.setSelectedModel}
-            onAddClick={() => page.setIsModelModalOpen(true)}
-            onReorder={page.handleReorderModels}
-            isUnsynced={page.isModelUnsynced}
-            onSync={page.handleSyncModel}
-            onDeleteLocal={page.handleDeleteModelLocal}
-            onDeleteFromStepik={page.handleDeleteModelFromStepik}
-            deletingItems={page.deletingItems}
-            onUpdateTitle={page.handleUpdateModelTitle}
-          />
-        </StaggerItem>
-        <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
-          <LessonsColumn
-            lessons={page.lessons}
-            selectedLesson={page.selectedLesson}
-            hasSelectedModel={!!page.selectedModel}
-            onSelectLesson={page.setSelectedLesson}
-            onAddClick={() => page.setIsLessonModalOpen(true)}
-            onReorder={page.handleReorderLessons}
-            isUnsynced={page.isLessonUnsynced}
-            onSync={page.handleSyncLesson}
-            onDeleteLocal={page.handleDeleteLessonLocal}
-            onDeleteFromStepik={page.handleDeleteLessonFromStepik}
-            deletingItems={page.deletingItems}
-            syncingItems={page.syncingItems}
-            onUpdateTitle={page.handleUpdateLessonTitle}
-          />
-        </StaggerItem>
-        <StaggerItem className="flex-shrink-0 w-96 min-w-[320px]">
-          <StepsColumn
-            steps={page.steps}
-            selectedLesson={page.selectedLesson}
-            onStepClick={(step) => {
-              page.setSelectedStep(step);
-              page.setIsStepViewModalOpen(true);
-            }}
-            onAddClick={() => {
-              page.setFormData({ title: '', description: '', type: 'TEXT' });
-              page.setIsStepModalOpen(true);
-            }}
-            onGenerateClick={() => {
-              if (page.selectedLesson) {
-                page.setSelectedLessonId(page.selectedLesson.id);
-                page.setMode('generate');
-                navigate('/ai-generator');
-              }
-            }}
-            onReorder={page.handleReorderSteps}
-            isUnsynced={page.isStepUnsynced}
-            stepsDiffersFromStepik={page.stepsDiffersFromStepik}
-            stepsDiffDetails={page.stepsDiffDetails}
-            stepsChecking={page.stepsChecking}
-            onShowDiff={(step) => page.setDiffModalStepId(step.id)}
-            onSync={page.handleSyncStep}
-            onCheckStepik={page.handleCheckStepWithStepik}
-            onDeleteLocal={page.handleDeleteStepLocal}
-            onDeleteFromStepik={page.handleDeleteStepFromStepik}
-            deletingItems={page.deletingItems}
-            syncingItems={page.syncingItems}
-          />
-        </StaggerItem>
-      </StaggerList>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={(event) => {
+          page.handleEditorDragEnd(event);
+          clearDragState();
+        }}
+        onDragCancel={clearDragState}
+      >
+        <StaggerList className="flex gap-6" stagger={0.08}>
+          <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
+            <ModelsColumn
+              sections={page.sections}
+              isLoading={page.isSectionsLoading}
+              selectedModel={page.selectedModel}
+              onSelectModel={page.setSelectedModel}
+              onAddClick={() => page.setIsModelModalOpen(true)}
+              onReorder={page.handleReorderModels}
+              isUnsynced={page.isModelUnsynced}
+              onSync={page.handleSyncModel}
+              onDeleteLocal={page.handleDeleteModelLocal}
+              onDeleteFromStepik={page.handleDeleteModelFromStepik}
+              deletingItems={page.deletingItems}
+              onUpdateTitle={page.handleUpdateModelTitle}
+              sharedDnd
+              dropHighlight={draggingType === 'lesson'}
+            />
+          </StaggerItem>
+          <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
+            <LessonsColumn
+              lessons={page.lessons}
+              selectedLesson={page.selectedLesson}
+              hasSelectedModel={!!page.selectedModel}
+              onSelectLesson={page.setSelectedLesson}
+              onAddClick={() => page.setIsLessonModalOpen(true)}
+              onReorder={page.handleReorderLessons}
+              isUnsynced={page.isLessonUnsynced}
+              onSync={page.handleSyncLesson}
+              onDeleteLocal={page.handleDeleteLessonLocal}
+              onDeleteFromStepik={page.handleDeleteLessonFromStepik}
+              deletingItems={page.deletingItems}
+              syncingItems={page.syncingItems}
+              onUpdateTitle={page.handleUpdateLessonTitle}
+              sharedDnd
+              dropHighlight={draggingType === 'step'}
+            />
+          </StaggerItem>
+          <StaggerItem className="flex-shrink-0 w-96 min-w-[320px]">
+            <StepsColumn
+              steps={page.steps}
+              selectedLesson={page.selectedLesson}
+              onStepClick={(step) => {
+                page.setSelectedStep(step);
+                page.setIsStepViewModalOpen(true);
+              }}
+              onAddClick={() => {
+                page.setFormData({ title: '', description: '', type: 'TEXT' });
+                page.setIsStepModalOpen(true);
+              }}
+              onGenerateClick={() => {
+                if (page.selectedLesson) {
+                  page.setSelectedLessonId(page.selectedLesson.id);
+                  page.setMode('generate');
+                  navigate('/ai-generator');
+                }
+              }}
+              onReorder={page.handleReorderSteps}
+              isUnsynced={page.isStepUnsynced}
+              stepsDiffersFromStepik={page.stepsDiffersFromStepik}
+              stepsDiffDetails={page.stepsDiffDetails}
+              stepsChecking={page.stepsChecking}
+              onShowDiff={(step) => page.setDiffModalStepId(step.id)}
+              onSync={page.handleSyncStep}
+              onCheckStepik={page.handleCheckStepWithStepik}
+              onDeleteLocal={page.handleDeleteStepLocal}
+              onDeleteFromStepik={page.handleDeleteStepFromStepik}
+              deletingItems={page.deletingItems}
+              syncingItems={page.syncingItems}
+              sharedDnd
+            />
+          </StaggerItem>
+        </StaggerList>
+
+        <DragOverlay>
+          {activeDragLabel ? (
+            <div className="rounded-lg border border-primary-500/40 bg-dark-850 px-3 py-2 text-xs text-dark-100 shadow-lg">
+              {activeDragLabel}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      <StructureMoveModal
+        target={page.moveTarget}
+        isMoving={page.isMoving}
+        onClose={() => page.setMoveTarget(null)}
+        onConfirm={() => void page.confirmMove()}
+      />
 
       <CreateModelModal
         isOpen={page.isModelModalOpen}
