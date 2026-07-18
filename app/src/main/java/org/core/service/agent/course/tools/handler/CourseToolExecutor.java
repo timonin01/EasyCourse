@@ -22,6 +22,8 @@ public class CourseToolExecutor {
     private final ProposeDeleteLessonHandler proposeDeleteLessonHandler;
     private final ProposeDeleteStepHandler proposeDeleteStepHandler;
     private final ProposeCopyStepHandler proposeCopyStepHandler;
+    private final ProposeMoveStepHandler proposeMoveStepHandler;
+    private final ProposeMoveLessonHandler proposeMoveLessonHandler;
     private final ModifyStepHandler modifyStepHandler;
     private final AnswerQuestionHandler answerQuestionHandler;
 
@@ -54,6 +56,8 @@ public class CourseToolExecutor {
             case PROPOSE_DELETE_LESSON -> proposeDeleteLessonHandler.handleProposeDeleteLesson(courseAgentContext, args);
             case PROPOSE_DELETE_STEP -> proposeDeleteStepHandler.handleProposeDeleteStep(courseAgentContext, args);
             case PROPOSE_COPY_STEP -> proposeCopyStepHandler.handleProposeCopyStep(courseAgentContext, args);
+            case PROPOSE_MOVE_STEP -> proposeMoveStepHandler.handleProposeMoveStep(courseAgentContext, args);
+            case PROPOSE_MOVE_LESSON -> proposeMoveLessonHandler.handleProposeMoveLesson(courseAgentContext, args);
             case MODIFY_STEP -> modifyStepHandler.handleModifyStep(courseAgentContext, args);
             case ANSWER_QUESTION -> answerQuestionHandler.handleAnswerQuestion(courseAgentContext, args);
             case FINISH -> CourseToolResult.ok("finish");

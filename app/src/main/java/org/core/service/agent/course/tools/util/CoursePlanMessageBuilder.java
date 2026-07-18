@@ -31,6 +31,7 @@ public final class CoursePlanMessageBuilder {
         int lessons = 0;
         int steps = 0;
         int copies = 0;
+        int moves = 0;
         int deletes = 0;
 
         for (PlanActionDTO action : actions) {
@@ -49,6 +50,7 @@ public final class CoursePlanMessageBuilder {
                 }
                 case CREATE_STEPS -> steps += countSteps(action.getSteps());
                 case COPY_STEP -> copies++;
+                case MOVE_STEP, MOVE_LESSON -> moves++;
                 case DELETE_SECTION, DELETE_LESSON, DELETE_STEP -> deletes++;
                 default -> {
                 }
@@ -86,6 +88,10 @@ public final class CoursePlanMessageBuilder {
         if (copies > 0) {
             message.append(sections + lessons + steps > 0 ? "," : "")
                     .append(" скопировать ").append(copies).append(" шаг(ов)");
+        }
+        if (moves > 0) {
+            message.append(sections + lessons + steps + copies > 0 ? "," : "")
+                    .append(" переместить ").append(moves).append(" элемент(ов)");
         }
         if (deletes > 0) {
             message.append(" удалить ").append(deletes).append(" элемент(ов)");

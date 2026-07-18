@@ -29,6 +29,12 @@ public class PlanActionDTO {
     private Long targetStepId;
     private String targetStepTitle;
 
+    private Long sourceSectionId;
+    private String sourceSectionTitle;
+
+    private Long sourceLessonId;
+    private String sourceLessonTitle;
+
     private Boolean deleteFromStepik;
     private Integer cascadeLessonCount;
     private Integer cascadeStepCount;

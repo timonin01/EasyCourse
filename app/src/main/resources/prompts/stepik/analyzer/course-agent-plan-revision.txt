@@ -15,10 +15,13 @@
 - CREATE_LESSONS — targetSectionId, targetSectionTitle, lessons[]
 - CREATE_STEPS — targetLessonId, targetLessonTitle, steps[]
 - COPY_STEP — targetStepId (исходный шаг), targetLessonId (урок назначения), titles
+- MOVE_STEP — targetStepId (исходный шаг), targetLessonId (урок назначения), sourceLesson*, titles; исходник удаляется
+- MOVE_LESSON — targetLessonId (урок), targetSectionId (модуль назначения), sourceSection*; исходник удаляется
 - DELETE_* — только target* поля, без section/lessons/steps
 
 Сохрани всё, что пользователь не просил менять. Не меняй targetSectionId, targetLessonId, targetStepId.
 Для COPY_STEP не превращай копию в CREATE_STEPS и не удаляй исходный шаг.
+Для MOVE_STEP / MOVE_LESSON не превращай перемещение в CREATE_* + DELETE_* и не меняй на COPY_STEP.
 
 Допустимые типы шагов:
 text, choice, matching, sorting, table, fill-blanks, string, number,

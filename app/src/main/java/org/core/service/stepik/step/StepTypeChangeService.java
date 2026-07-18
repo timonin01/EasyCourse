@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.context.UserContextBean;
 import org.core.domain.Step;
 import org.core.domain.StepType;
 import org.core.dto.step.StepResponseDTO;
@@ -31,9 +32,12 @@ public class StepTypeChangeService {
     private final StepService stepService;
     private final StepikStepService stepikStepService;
     private final SubscriptionService subscriptionService;
+    private final UserContextBean userContextBean;
 
-    public StepResponseDTO changeStepType(Long stepId, StepType newType, String sessionId, Long userId) {
+    public StepResponseDTO changeStepType(Long stepId, StepType newType, String sessionId) {
+        Long userId = userContextBean.getUserId();
         subscriptionService.validateStepTypeChangeAllowed(userId);
+
         log.info("Starting change stepType for stepId: {}, and newStepType: {}", stepId, newType);
         StepResponseDTO stepResponseDTO = stepService.getStepById(stepId);
         StepType oldStepType = stepResponseDTO.getType();

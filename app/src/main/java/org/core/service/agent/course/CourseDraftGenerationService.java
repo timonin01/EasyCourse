@@ -12,10 +12,12 @@ import org.core.dto.agent.course.PlanActionDTO;
 import org.core.dto.agent.course.PlanActionType;
 import org.core.dto.lesson.CreateLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
+import org.core.dto.lesson.MoveLessonDTO;
 import org.core.dto.section.CreateSectionDTO;
 import org.core.dto.section.SectionResponseDTO;
 import org.core.dto.step.CopyStepDTO;
 import org.core.dto.step.CreateStepDTO;
+import org.core.dto.step.MoveStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
@@ -23,7 +25,9 @@ import org.core.enums.LlmModel;
 import org.core.service.agent.batch.BatchGeneratorService;
 import org.core.service.agent.batch.TheorySummaryCache;
 import org.core.service.agent.course.sse.PlanExecutionProgress;
-import org.core.service.crud.CourseStepCopyService;
+import org.core.service.crud.copy.StepCopyService;
+import org.core.service.crud.move.LessonMoveService;
+import org.core.service.crud.move.StepMoveService;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.SectionService;
 import org.core.service.crud.StepService;
@@ -46,7 +50,9 @@ public class CourseDraftGenerationService {
     private final SectionService sectionService;
     private final LessonService lessonService;
     private final StepService stepService;
-    private final CourseStepCopyService courseStepCopyService;
+    private final StepCopyService stepCopyService;
+    private final StepMoveService stepMoveService;
+    private final LessonMoveService lessonMoveService;
     private final BatchGeneratorService batchGeneratorService;
     private final CourseStepTypeMapper stepTypeMapper;
     private final UserAccessService userAccessService;
@@ -74,6 +80,8 @@ public class CourseDraftGenerationService {
                 case CREATE_STEPS -> executeCreateSteps(
                         userId, sessionId, action, generationContext, llmModel, stepIds, planExecutionProgress);
                 case COPY_STEP -> executeCopyStep(action, stepIds, planExecutionProgress);
+                case MOVE_STEP -> executeMoveStep(action, stepIds, planExecutionProgress);
+                case MOVE_LESSON -> executeMoveLesson(action, lessonIds, planExecutionProgress);
                 default -> throw new IllegalArgumentException("План не поддерживает выполнение: " + action.getType());
             }
         }
@@ -158,7 +166,7 @@ public class CourseDraftGenerationService {
         }
         try {
             CopyStepDTO copyStepDTO = new CopyStepDTO(action.getTargetStepId(), action.getTargetLessonId());
-            StepResponseDTO created = courseStepCopyService.createStepCopy(copyStepDTO);
+            StepResponseDTO created = stepCopyService.createStepCopy(copyStepDTO);
             stepIds.add(created.getId());
             if (planExecutionProgress != null) {
                 planExecutionProgress.publishStepCreated(lessonTitle, created.getType(), created.getId(),
@@ -170,6 +178,67 @@ public class CourseDraftGenerationService {
             if (planExecutionProgress != null) {
                 planExecutionProgress.publishStepFailed(lessonTitle, null, lessonId, e.getMessage());
             }
+        }
+    }
+
+    private void executeMoveStep(PlanActionDTO action, List<Long> stepIds, PlanExecutionProgress planExecutionProgress) {
+        if (action.getTargetStepId() == null) {
+            throw new IllegalArgumentException("Не указан исходный шаг (targetStepId) для перемещения");
+        }
+        if (action.getTargetLessonId() == null) {
+            throw new IllegalArgumentException("Не указан урок назначения (targetLessonId) для перемещения");
+        }
+        String lessonTitle = action.getTargetLessonTitle();
+        Long lessonId = action.getTargetLessonId();
+        if (planExecutionProgress != null) {
+            planExecutionProgress.publishStepStarted(lessonTitle, null, lessonId, PlanActionType.MOVE_STEP);
+        }
+        try {
+            StepResponseDTO created = stepMoveService.moveStep(new MoveStepDTO(
+                    action.getTargetStepId(),
+                    action.getTargetLessonId()));
+            stepIds.add(created.getId());
+            if (planExecutionProgress != null) {
+                planExecutionProgress.publishStepCreated(lessonTitle, created.getType(), created.getId(),
+                        lessonId, created.getPosition(), PlanActionType.MOVE_STEP);
+            }
+        } catch (Exception e) {
+            log.error("Failed to move step {} into lesson {}: {}",
+                    action.getTargetStepId(), action.getTargetLessonId(), e.getMessage());
+            if (planExecutionProgress != null) {
+                planExecutionProgress.publishStepFailed(lessonTitle, null, lessonId, e.getMessage());
+            }
+            throw e instanceof RuntimeException runtimeException
+                    ? runtimeException
+                    : new IllegalStateException(e.getMessage(), e);
+        }
+    }
+
+    private void executeMoveLesson(PlanActionDTO action, List<Long> lessonIds,
+                                   PlanExecutionProgress planExecutionProgress) {
+        if (action.getTargetLessonId() == null) {
+            throw new IllegalArgumentException("Не указан урок (targetLessonId) для перемещения");
+        }
+        if (action.getTargetSectionId() == null) {
+            throw new IllegalArgumentException("Не указан модуль назначения (targetSectionId) для перемещения");
+        }
+        String sectionTitle = action.getTargetSectionTitle();
+        try {
+            LessonResponseDTO created = lessonMoveService.moveLesson(new MoveLessonDTO(
+                    action.getTargetLessonId(),
+                    action.getTargetSectionId()));
+            lessonIds.add(created.getId());
+            if (planExecutionProgress != null) {
+                planExecutionProgress.publishLessonCreated(
+                        sectionTitle, created.getTitle(), created.getId(),
+                        action.getTargetSectionId(), created.getPosition());
+            }
+        } catch (Exception e) {
+            log.error("Failed to move lesson {} into section {}: {}",
+                    action.getTargetLessonId(), action.getTargetSectionId(), e.getMessage());
+            throw e instanceof RuntimeException runtimeException
+                    ? runtimeException
+                    : new IllegalStateException(e.getMessage(), e);
         }
     }
 
