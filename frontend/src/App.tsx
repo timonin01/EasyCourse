@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store';
 import { 
+  Landing,
   Login, 
   Register, 
   Dashboard, 
@@ -17,7 +18,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
@@ -37,6 +38,11 @@ export default function App() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={
+        <PublicRoute>
+          <Landing />
+        </PublicRoute>
+      } />
       <Route path="/login" element={
         <PublicRoute>
           <Login />
@@ -91,9 +97,7 @@ export default function App() {
       } />
 
       {/* Redirects */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
-

@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Search, CheckCircle, Eye } from 'lucide-react';
+import { Plus, BookOpen, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MainLayout } from '../components/Layout';
 import { VideoStepsWarningBanner } from '../components/VideoStepsWarningBanner';
-import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, Spinner, StaggerList, StaggerItem, ContentReveal } from '../components/ui';
+import { Button, Input, Modal, Textarea, Badge, PageHeader, EmptyState, CoursesPageSkeleton, StaggerList, StaggerItem, ContentReveal } from '../components/ui';
 import { CourseCard } from '../components/courses/CourseCard';
-import { StepView } from '../components/StepView';
-import { coursesApi, sectionsApi, lessonsApi, stepsApi } from '../api';
+import { coursesApi, sectionsApi } from '../api';
 import { useAuthStore, useCourseStore } from '../store';
-import type { Course, Model, Lesson, Step } from '../types';
-import { getStepDisplayType } from '../types';
+import type { Course } from '../types';
 import { extractApiErrorMessage } from '../utils/apiError';
 import { validateTitle } from '../utils/validation';
 import { getCoursesSubtitle } from '../utils/pageCopy';
@@ -26,18 +24,6 @@ export function Courses() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [formData, setFormData] = useState({ title: '', description: '' });
   const [isSaving, setIsSaving] = useState(false);
-
-  const [isCourseDetailsModalOpen, setIsCourseDetailsModalOpen] = useState(false);
-  const [courseDetails, setCourseDetails] = useState<{
-    course: Course;
-    sections: Model[];
-    lessons: Lesson[];
-    steps: Step[];
-  } | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-
-  const [isStepViewModalOpen, setIsStepViewModalOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<Step | null>(null);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -167,43 +153,6 @@ export function Courses() {
     setIsEditModalOpen(true);
   };
 
-  const loadCourseDetails = async (course: Course) => {
-    setIsLoadingDetails(true);
-    try {
-      const sections = await sectionsApi.getCourseSections(course.id);
-      const allLessons: Lesson[] = [];
-      const allSteps: Step[] = [];
-
-      for (const section of sections) {
-        const lessons = await lessonsApi.getSectionLessons(section.id);
-        allLessons.push(...lessons);
-
-        for (const lesson of lessons) {
-          const steps = await stepsApi.getLessonSteps(lesson.id);
-          allSteps.push(...steps);
-        }
-      }
-
-      setCourseDetails({
-        course,
-        sections,
-        lessons: allLessons,
-        steps: allSteps
-      });
-      setIsCourseDetailsModalOpen(true);
-    } catch (error) {
-      toast.error('Не удалось загрузить детали курса');
-      console.error('Failed to load course details:', error);
-    } finally {
-      setIsLoadingDetails(false);
-    }
-  };
-
-  const openStepView = (step: Step) => {
-    setSelectedStep(step);
-    setIsStepViewModalOpen(true);
-  };
-
   return (
     <MainLayout>
       <ContentReveal
@@ -273,14 +222,13 @@ export function Courses() {
           }
         />
       ) : (
-        <StaggerList className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3">
+        <StaggerList className="grid grid-cols-1 gap-6 overflow-visible sm:grid-cols-2 2xl:grid-cols-3">
           {filteredCourses.map((course) => (
-            <StaggerItem key={course.id}>
+            <StaggerItem key={course.id} className="h-full overflow-visible">
             <CourseCard
               course={course}
               variant="detailed"
               onOpen={openCourseEditor}
-              onViewDetails={loadCourseDetails}
               onEdit={openEditModal}
               onSync={handleSyncCourse}
               onDelete={handleDeleteCourse}
@@ -350,109 +298,6 @@ export function Courses() {
             </Button>
           </div>
         </div>
-      </Modal>
-
-      {/* Course Details Modal */}
-      <Modal
-        isOpen={isCourseDetailsModalOpen}
-        onClose={() => {
-          setIsCourseDetailsModalOpen(false);
-          setCourseDetails(null);
-        }}
-        title={courseDetails ? `Детали курса: ${courseDetails.course.title}` : 'Детали курса'}
-      >
-        {isLoadingDetails ? (
-          <div className="flex justify-center py-8">
-            <Spinner size="lg" />
-          </div>
-        ) : courseDetails ? (
-          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-dark-800 rounded-xl text-center">
-                <p className="text-2xl font-bold text-primary-400">{courseDetails.sections.length}</p>
-                <p className="text-sm text-dark-400">Модулей</p>
-              </div>
-              <div className="p-4 bg-dark-800 rounded-xl text-center">
-                <p className="text-2xl font-bold text-primary-400">{courseDetails.lessons.length}</p>
-                <p className="text-sm text-dark-400">Уроков</p>
-              </div>
-              <div className="p-4 bg-dark-800 rounded-xl text-center">
-                <p className="text-2xl font-bold text-primary-400">{courseDetails.steps.length}</p>
-                <p className="text-sm text-dark-400">Шагов</p>
-              </div>
-            </div>
-
-            {courseDetails.steps.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-dark-100 mb-3">Шаги курса</h3>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {courseDetails.steps.map((step) => (
-                    <div
-                      key={step.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-dark-700 hover:border-dark-600 hover:bg-dark-800/50 transition-colors cursor-pointer"
-                      onClick={() => openStepView(step)}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
-                        step.stepikStepId ? 'bg-green-500/20 text-green-400' : 'bg-dark-700 text-dark-400'
-                      }`}>
-                        {step.stepikStepId ? <CheckCircle className="w-4 h-4" /> : step.position}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={step.stepikStepId ? 'success' : 'info'}>{getStepDisplayType(step)}</Badge>
-                          {step.stepikStepId && (
-                            <span className="text-xs text-green-400">Stepik ID: {step.stepikStepId}</span>
-                          )}
-                        </div>
-                        <p className="text-sm text-dark-300 truncate">
-                          {step.content?.substring(0, 50) || 'Без контента'}...
-                        </p>
-                      </div>
-                      <Eye className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {courseDetails.steps.length === 0 && (
-              <EmptyState
-                compact
-                icon={Eye}
-                title="В этом курсе пока нет шагов"
-                description="Откройте курс в редакторе, чтобы добавить контент"
-              />
-            )}
-          </div>
-        ) : null}
-      </Modal>
-
-      {/* Step View Modal */}
-      <Modal 
-        isOpen={isStepViewModalOpen} 
-        onClose={() => {
-          setIsStepViewModalOpen(false);
-          setSelectedStep(null);
-        }} 
-        title={`Просмотр шага - ${selectedStep?.type || ''}`}
-        size="lg"
-      >
-        {selectedStep ? (
-          <div className="space-y-4">
-            <StepView step={selectedStep} />
-            <div className="flex justify-end gap-3 pt-4 border-t border-dark-700">
-              <Button 
-                variant="secondary" 
-                onClick={() => {
-                  setIsStepViewModalOpen(false);
-                  setSelectedStep(null);
-                }}
-              >
-                Закрыть
-              </Button>
-            </div>
-          </div>
-        ) : null}
       </Modal>
       </ContentReveal>
     </MainLayout>

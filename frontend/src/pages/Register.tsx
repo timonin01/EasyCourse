@@ -154,10 +154,12 @@ export function Register() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <FadeIn className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg mb-4">
-            <GraduationCap className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-semibold text-dark-100">EasyCourse</h1>
+          <Link to="/" className="inline-flex flex-col items-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg mb-4">
+              <GraduationCap className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-semibold text-dark-100">EasyCourse</h1>
+          </Link>
           <p className="text-dark-400 mt-2">
             {step === 'form' ? 'Создайте аккаунт' : 'Подтвердите email'}
           </p>
@@ -276,7 +278,7 @@ export function Register() {
             <p className="text-dark-400">
               Уже есть аккаунт?{' '}
               <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium">
-                Войдите
+                Войти
               </Link>
             </p>
           </div>

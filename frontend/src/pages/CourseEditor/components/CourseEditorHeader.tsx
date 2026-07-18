@@ -71,7 +71,7 @@ export function CourseEditorHeader({
         icon={<Sparkles className="w-4 h-4" />}
         onClick={() => navigate('/ai-generator')}
       >
-        AI Генератор
+        Генерация шагов
       </Button>
       {needsRefresh && (
         <Button
