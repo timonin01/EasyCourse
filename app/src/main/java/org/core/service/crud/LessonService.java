@@ -177,6 +177,16 @@ public class LessonService {
         }
     }
 
+    public void markNeedsStepikSyncIfSynced(Long lessonId) {
+        Long contextUserId = userContextBean.getUserId();
+        Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
+        if (lesson.getStepikLessonId() != null && !lesson.isNeedsStepikSync()) {
+            lesson.setNeedsStepikSync(true);
+            lessonRepository.save(lesson);
+            log.info("Marked lesson {} as needing Stepik sync", lessonId);
+        }
+    }
+
     private LessonResponseDTO mapToResponseDTO(Lesson lesson) {
         return LessonResponseDTO.builder()
                 .id(lesson.getId())

@@ -1,4 +1,4 @@
-package org.core.service.crud;
+package org.core.service.crud.copy;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +11,7 @@ import org.core.dto.step.CopyStepDTO;
 import org.core.dto.step.CreateStepDTO;
 import org.core.dto.step.StepResponseDTO;
 import org.core.dto.stepik.step.StepikBlockRequest;
+import org.core.service.crud.StepService;
 import org.core.service.stepik.step.StepikBlockJsonNormalizer;
 import org.core.util.UserAccessService;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CourseStepCopyService {
+public class StepCopyService {
 
     private final StepService stepService;
     private final UserContextBean userContextBean;
