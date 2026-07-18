@@ -120,7 +120,7 @@ export function Dashboard() {
           ) : (
             <StaggerList className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {recentCourses.map((course) => (
-                <StaggerItem key={course.id}>
+                <StaggerItem key={course.id} className="h-full overflow-visible">
                   <CourseCard course={course} variant="compact" />
                 </StaggerItem>
               ))}

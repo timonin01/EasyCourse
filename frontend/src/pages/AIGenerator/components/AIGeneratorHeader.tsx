@@ -23,7 +23,7 @@ export function AIGeneratorHeader({
       size="workspace"
       className="mb-4 flex-shrink-0"
       icon={<Sparkles className="w-6 h-6 text-primary-400" />}
-      title="AI Ассистент"
+      title="Генерация шагов"
       description={MODE_SUBTITLES[mode]}
       action={
         <div className="flex items-center gap-2">

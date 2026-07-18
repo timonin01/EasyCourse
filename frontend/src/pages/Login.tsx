@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Input, PasswordInput, FadeIn } from '../components/ui';
-import { ProductIntro } from '../components/auth/ProductIntro';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
 import { extractApiErrorMessage, getApiErrorStatus, isBackendUserNotFound, isNetworkError } from '../utils/apiError';
@@ -53,70 +52,58 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Описание продукта — десктоп */}
-      <div className="hidden lg:flex lg:w-1/2 border-r border-dark-700 bg-dark-900/50">
-        <ProductIntro />
-      </div>
-
-      {/* Форма входа */}
-      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
-        <FadeIn className="w-full max-w-md">
-          {/* Logo — мобильная версия */}
-          <div className="text-center mb-8 lg:mb-6">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <FadeIn className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex flex-col items-center">
             <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg mb-4">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-semibold text-dark-100">EasyCourse</h1>
-            <p className="text-dark-400 mt-2">Войдите в свой аккаунт</p>
+          </Link>
+          <p className="text-dark-400 mt-2">Войдите в свой аккаунт</p>
+        </div>
+
+        <div className="surface rounded-brand-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              type="email"
+              placeholder="Email"
+              icon={<Mail className="w-5 h-5" />}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+            />
+
+            <PasswordInput
+              placeholder="Пароль"
+              icon={<Lock className="w-5 h-5" />}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+            />
+
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              isLoading={isLoading}
+              icon={<ArrowRight className="w-5 h-5" />}
+            >
+              Войти
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-dark-400">
+              Нет аккаунта?{' '}
+              <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
+                Зарегистрируйтесь
+              </Link>
+            </p>
           </div>
-
-          {/* Краткое описание — только мобильная */}
-          <div className="lg:hidden mb-6">
-            <ProductIntro compact />
-          </div>
-
-          <div className="surface rounded-brand-xl p-8">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <Input
-                type="email"
-                placeholder="Email"
-                icon={<Mail className="w-5 h-5" />}
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-
-              <PasswordInput
-                placeholder="Пароль"
-                icon={<Lock className="w-5 h-5" />}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-              />
-
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                isLoading={isLoading}
-                icon={<ArrowRight className="w-5 h-5" />}
-              >
-                Войти
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-dark-400">
-                Нет аккаунта?{' '}
-                <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
-                  Зарегистрируйтесь
-                </Link>
-              </p>
-            </div>
-          </div>
-        </FadeIn>
-      </div>
+        </div>
+      </FadeIn>
     </div>
   );
 }

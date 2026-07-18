@@ -20,7 +20,8 @@ export interface LlmModelOption {
 export const LLM_MODEL_OPTIONS: LlmModelOption[] = [
   { value: '', label: 'Auto' },
   { value: LlmModel.DEEPSEEK_V4_PRO, label: 'DeepSeek Pro', icon: '/logos/deepseek.svg' },
-  { value: LlmModel.SONNET_4_6, label: 'Claude Sonnet 4.6', icon: '/logos/claude.png' },
+  // Claude временно скрыт — не предлагаем в селекторе
+  // { value: LlmModel.SONNET_4_6, label: 'Claude Sonnet 4.6', icon: '/logos/claude.png' },
   { value: LlmModel.Z_AI_GLM_5_2, label: 'Z.ai GLM 5.2', icon: '/logos/z-ai.svg' },
   { value: LlmModel.QWEN_3_7_MAX, label: 'Qwen 3.7 Max', icon: '/logos/qwen.svg' },
   { value: LlmModel.GEMINI_3_1_FLASH, label: 'Gemini 3 Flash', icon: '/logos/gemini.svg' },

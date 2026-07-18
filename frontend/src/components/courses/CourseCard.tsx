@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -5,13 +6,12 @@ import {
   CheckCircle,
   Edit,
   ExternalLink,
-  Eye,
   Trash2,
   Upload,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { Course } from '../../types';
-import { Card, Badge, Button } from '../ui';
+import { Card, Badge, Button, Modal, Tooltip } from '../ui';
 import { sectionsApi } from '../../api';
 import { useCourseStore } from '../../store';
 
@@ -21,8 +21,11 @@ interface CourseCardProps {
   onEdit?: (course: Course) => void;
   onDelete?: (courseId: number) => void;
   onSync?: (courseId: number) => void;
-  onViewDetails?: (course: Course) => void;
   onOpen?: (courseId: number) => void;
+}
+
+function stepikCourseUrl(stepikCourseId: number | string) {
+  return `https://stepik.org/course/${stepikCourseId}`;
 }
 
 export function CourseCard({
@@ -31,9 +34,9 @@ export function CourseCard({
   onEdit,
   onDelete,
   onSync,
-  onViewDetails,
   onOpen,
 }: CourseCardProps) {
+  const [isStepikModalOpen, setIsStepikModalOpen] = useState(false);
   const hasStepikId = Boolean(course.stepikCourseId);
   // Полностью синхронизирован, только если бэкенд это подтвердил.
   // Для старых данных без флага считаем по наличию stepikCourseId.
@@ -53,6 +56,68 @@ export function CourseCard({
       // loadCourse в редакторе повторит запрос
     });
   };
+
+  const openStepik = () => {
+    if (!course.stepikCourseId) return;
+    window.open(stepikCourseUrl(course.stepikCourseId), '_blank', 'noopener,noreferrer');
+  };
+
+  const handleStepikBadgeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (fullySynced) {
+      openStepik();
+      return;
+    }
+    if (partiallySynced) {
+      setIsStepikModalOpen(true);
+    }
+  };
+
+  const handleSyncFromModal = () => {
+    setIsStepikModalOpen(false);
+    onSync?.(course.id);
+  };
+
+  const handleOpenStepikFromModal = () => {
+    setIsStepikModalOpen(false);
+    openStepik();
+  };
+
+  const syncStatusBadge = fullySynced ? (
+    <button
+      type="button"
+      onClick={handleStepikBadgeClick}
+      className="shrink-0"
+      title={`Открыть на Stepik · ID ${course.stepikCourseId}`}
+    >
+      <Badge variant="success" className="flex cursor-pointer items-center gap-1 hover:bg-green-500/30">
+        <CheckCircle className="h-3 w-3" />
+        Открыть на Stepik
+        <ExternalLink className="h-3 w-3" />
+      </Badge>
+    </button>
+  ) : partiallySynced ? (
+    <button
+      type="button"
+      onClick={handleStepikBadgeClick}
+      className="shrink-0"
+      title="Курс на Stepik, но часть содержимого ещё не выгружена"
+    >
+      <Badge variant="warning" className="flex cursor-pointer items-center gap-1 hover:bg-amber-500/30">
+        <AlertTriangle className="h-3 w-3" />
+        Не полностью синхронизирован
+        <ExternalLink className="h-3 w-3" />
+      </Badge>
+    </button>
+  ) : (
+    <span title="Курс ещё не выгружен на Stepik" className="shrink-0">
+      <Badge variant="warning" className="flex items-center gap-1">
+        <AlertTriangle className="h-3 w-3" />
+        Не синхронизирован
+      </Badge>
+    </span>
+  );
 
   const cardContent = (
     <>
@@ -82,41 +147,7 @@ export function CourseCard({
               <BookOpen className="h-5 w-5 text-primary-400" />
             )}
           </div>
-          {fullySynced ? (
-            <a
-              href={`https://stepik.org/course/${course.stepikCourseId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Badge variant="success" className="flex cursor-pointer items-center gap-1 hover:bg-green-500/30">
-                <CheckCircle className="h-3 w-3" />
-                #{course.stepikCourseId}
-                <ExternalLink className="h-3 w-3" />
-              </Badge>
-            </a>
-          ) : partiallySynced ? (
-            <a
-              href={`https://stepik.org/course/${course.stepikCourseId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              title="Курс выгружен, но часть содержимого ещё не на Stepik"
-            >
-              <Badge variant="warning" className="flex cursor-pointer items-center gap-1 hover:bg-amber-500/30">
-                <AlertTriangle className="h-3 w-3" />
-                Не полностью
-                <ExternalLink className="h-3 w-3" />
-              </Badge>
-            </a>
-          ) : (
-            <span title="Курс ещё не выгружен на Stepik">
-              <Badge variant="warning" className="flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Не синхронизирован
-              </Badge>
-            </span>
-          )}
+          {syncStatusBadge}
         </div>
 
         <h3 className="mb-1 line-clamp-1 font-semibold text-dark-100">{course.title}</h3>
@@ -141,36 +172,41 @@ export function CourseCard({
               >
                 Открыть
               </Button>
-              {onViewDetails && (
-                <Button variant="ghost" size="sm" onClick={() => onViewDetails(course)} title="Детали">
-                  <Eye className="h-4 w-4" />
-                </Button>
-              )}
               {onEdit && (
-                <Button variant="ghost" size="sm" onClick={() => onEdit(course)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
+                <Tooltip label="Редактировать" side="top">
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(course)} aria-label="Редактировать">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
               )}
               {onSync && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onSync(course.id)}
-                  title={hasStepikId ? 'Обновить в Stepik' : 'Синхронизировать'}
-                  className={fullySynced ? 'text-green-400 hover:text-green-300' : partiallySynced ? 'text-amber-400 hover:text-amber-300' : ''}
+                <Tooltip
+                  label={hasStepikId ? 'Обновить в Stepik' : 'Синхронизировать'}
+                  side="top"
                 >
-                  <Upload className="h-4 w-4" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSync(course.id)}
+                    aria-label={hasStepikId ? 'Обновить в Stepik' : 'Синхронизировать'}
+                    className={fullySynced ? 'text-green-400 hover:text-green-300' : partiallySynced ? 'text-amber-400 hover:text-amber-300' : ''}
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
               )}
               {onDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(course.id)}
-                  className="text-red-400 hover:text-red-300"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <Tooltip label="Удалить" side="top">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(course.id)}
+                    aria-label="Удалить"
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
               )}
             </div>
           ) : (
@@ -181,23 +217,71 @@ export function CourseCard({
     </>
   );
 
+  const stepikModal = (
+    <Modal
+      isOpen={isStepikModalOpen}
+      onClose={() => setIsStepikModalOpen(false)}
+      title="Курс синхронизирован не полностью"
+      size="sm"
+    >
+      <div className="space-y-4">
+        <p className="text-sm leading-relaxed text-dark-400">
+          Курс уже есть на Stepik, но часть модулей, уроков или шагов ещё не выгружена.
+          Можно досинхронизировать сейчас или открыть текущую версию на Stepik.
+        </p>
+        {course.stepikCourseId && (
+          <p className="text-xs text-dark-500">Stepik ID: {course.stepikCourseId}</p>
+        )}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" onClick={handleOpenStepikFromModal} icon={<ExternalLink className="h-4 w-4" />}>
+            Перейти на Stepik
+          </Button>
+          {onSync ? (
+            <Button onClick={handleSyncFromModal} icon={<Upload className="h-4 w-4" />}>
+              Синхронизировать
+            </Button>
+          ) : (
+            <Link to="/stepik-sync" onClick={() => setIsStepikModalOpen(false)}>
+              <Button className="w-full sm:w-auto" icon={<Upload className="h-4 w-4" />}>
+                Синхронизировать
+              </Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+
+  const hoverCardClass =
+    'relative h-full transition-[transform,border-color] duration-150 hover:z-10 hover:scale-[1.02]';
+
   if (variant === 'compact') {
     return (
-      <Link to={`/courses/${course.id}`} onClick={prepareEditor}>
-        <Card hover className="relative h-full overflow-hidden">
-          {cardContent}
-        </Card>
-      </Link>
+      <>
+        <Link
+          to={`/courses/${course.id}`}
+          onClick={prepareEditor}
+          className="block h-full transition-transform duration-150 hover:z-10 hover:scale-[1.02]"
+        >
+          <Card hover className="relative h-full">
+            {cardContent}
+          </Card>
+        </Link>
+        {stepikModal}
+      </>
     );
   }
 
   return (
-    <Card
-      hover={Boolean(onOpen)}
-      className="relative flex h-full min-w-0 flex-col"
-      onClick={onOpen ? () => onOpen(course.id) : undefined}
-    >
-      {cardContent}
-    </Card>
+    <>
+      <Card
+        hover={Boolean(onOpen)}
+        className={clsx(hoverCardClass, 'flex min-w-0 flex-col')}
+        onClick={onOpen ? () => onOpen(course.id) : undefined}
+      >
+        {cardContent}
+      </Card>
+      {stepikModal}
+    </>
   );
 }

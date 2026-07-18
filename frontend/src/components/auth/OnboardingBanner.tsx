@@ -43,7 +43,7 @@ export function OnboardingBanner() {
             icon={<Sparkles className="w-4 h-4" />}
             className="border-purple-500/40 bg-purple-600/20 text-purple-100 shadow-lg shadow-purple-950/20 hover:border-purple-400/60 hover:bg-purple-600/30 hover:text-white"
           >
-            Попробовать AI-генератор
+            Попробовать генерацию шагов
             <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </Link>
