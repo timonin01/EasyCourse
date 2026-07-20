@@ -92,7 +92,8 @@ public class UserService {
                 .name(name)
                 .email(email)
                 .password(passwordHash)
-                .role(UserRole.DEFAULT)
+                //TODO В дальнейшем убрать PRO и вернуть DEFAULT
+                .role(UserRole.PRO)
                 .emailVerified(true)
                 .build();
 
