@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, GraduationCap } from 'lucide-react';
 import { Button } from '../components/ui';
@@ -6,8 +7,67 @@ import {
   PRODUCT_FEATURES,
   PRODUCT_TAGLINE,
 } from '../constants/productInfo';
+import {
+  LANDING_FAQ,
+  LANDING_SEO_PARAGRAPHS,
+  SITE_CANONICAL_URL,
+  SITE_DESCRIPTION,
+  SITE_ORIGIN,
+  SITE_TITLE,
+} from '../constants/seo';
+import { usePageMeta } from '../hooks/usePageMeta';
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: LANDING_FAQ.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
+};
+
+const orgJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'EasyCourse',
+  applicationCategory: 'EducationalApplication',
+  operatingSystem: 'Web',
+  url: SITE_ORIGIN,
+  description: SITE_DESCRIPTION,
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'RUB',
+  },
+};
+
+function upsertJsonLd(id: string, data: unknown) {
+  let el = document.getElementById(id) as HTMLScriptElement | null;
+  if (!el) {
+    el = document.createElement('script');
+    el.id = id;
+    el.type = 'application/ld+json';
+    document.head.appendChild(el);
+  }
+  el.text = JSON.stringify(data);
+}
 
 export function Landing() {
+  usePageMeta({
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    canonicalUrl: SITE_CANONICAL_URL,
+  });
+
+  useEffect(() => {
+    upsertJsonLd('easycourse-faq-jsonld', faqJsonLd);
+    upsertJsonLd('easycourse-app-jsonld', orgJsonLd);
+  }, []);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-dark-900">
       <div
@@ -49,6 +109,11 @@ export function Landing() {
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-dark-400 sm:text-base">
               {PRODUCT_DESCRIPTION}
             </p>
+            <div className="mt-5 max-w-2xl space-y-3 text-sm leading-relaxed text-dark-400 sm:text-base">
+              {LANDING_SEO_PARAGRAPHS.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
           </section>
 
           <section className="mb-10 sm:mb-12">
@@ -80,6 +145,33 @@ export function Landing() {
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="mb-10 sm:mb-12" aria-labelledby="landing-faq-heading">
+            <h2
+              id="landing-faq-heading"
+              className="mb-5 text-sm font-medium uppercase tracking-wide text-dark-500"
+            >
+              Частые вопросы
+            </h2>
+            <div className="divide-y divide-dark-700/60 border-y border-dark-700/60">
+              {LANDING_FAQ.map((item) => (
+                <details key={item.question} className="group py-4">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-dark-100 marker:content-none [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-start justify-between gap-4">
+                      {item.question}
+                      <span
+                        className="shrink-0 text-dark-500 transition-transform group-open:rotate-45"
+                        aria-hidden
+                      >
+                        +
+                      </span>
+                    </span>
+                  </summary>
+                  <p className="mt-3 text-sm leading-relaxed text-dark-400">{item.answer}</p>
+                </details>
+              ))}
+            </div>
           </section>
 
           <section className="mt-auto flex flex-col gap-3 border-t border-dark-700/60 pt-8 sm:flex-row sm:items-center">

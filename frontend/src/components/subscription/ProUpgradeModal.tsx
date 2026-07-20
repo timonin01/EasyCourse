@@ -53,7 +53,7 @@ export function ProUpgradeModal({ isOpen, onClose }: ProUpgradeModalProps) {
           <Button
             icon={<Sparkles className="h-4 w-4" />}
             onClick={() => {
-              window.open('mailto:support@easycourse.ru?subject=Подписка%20Pro', '_blank');
+              window.open('mailto:support@easy-course.ru?subject=Подписка%20Pro', '_blank');
               onClose();
             }}
           >

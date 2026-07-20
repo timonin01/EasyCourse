@@ -6,8 +6,17 @@ import { Button, Input, PasswordInput, FadeIn } from '../components/ui';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
 import { extractApiErrorMessage, getApiErrorStatus, isBackendUserNotFound, isNetworkError } from '../utils/apiError';
+import { SITE_ORIGIN } from '../constants/seo';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 export function Login() {
+  usePageMeta({
+    title: 'Вход — EasyCourse',
+    description: 'Войдите в EasyCourse, чтобы редактировать курсы Stepik и работать с AI-агентом.',
+    canonicalUrl: `${SITE_ORIGIN}/login`,
+    noIndex: true,
+  });
+
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);

@@ -7,10 +7,19 @@ import { authApi } from '../api';
 import { useAuthStore } from '../store';
 import { extractApiErrorMessage, getApiErrorStatus, isNetworkError } from '../utils/apiError';
 import { validateEmail, validateUserName } from '../utils/validation';
+import { SITE_ORIGIN } from '../constants/seo';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 type RegisterStep = 'form' | 'verify';
 
 export function Register() {
+  usePageMeta({
+    title: 'Регистрация — EasyCourse',
+    description: 'Создайте аккаунт EasyCourse и начните собирать курсы для Stepik с помощью AI.',
+    canonicalUrl: `${SITE_ORIGIN}/register`,
+    noIndex: true,
+  });
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const login = useAuthStore((state) => state.login);
