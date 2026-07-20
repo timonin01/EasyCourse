@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /courses
+Disallow: /ai-generator
+Disallow: /course-agent
+Disallow: /course-audit
+Disallow: /settings
+Disallow: /stepik-sync
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://easy-course.ru/sitemap.xml
