@@ -1,7 +1,9 @@
 import { CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from './ui';
+import { StepikVideoPlayer } from './StepikVideoPlayer';
 import type { Step } from '../types';
 import { getStepDisplayType } from '../types';
+import { parseStepikVideoSource } from '../utils/stepikVideo';
 
 interface StepViewProps {
   step: Step;
@@ -11,7 +13,7 @@ interface StepViewProps {
 interface StepikBlock {
   name: string | null;
   text?: string;
-  video?: string | null;
+  video?: unknown;
   source?: {
     options?: Array<{
       text?: string;
@@ -42,6 +44,10 @@ interface StepikBlock {
 
 /** Определяет тип блока по структуре source, если name отсутствует или null. */
 function inferBlockName(block: StepikBlock): string {
+  if (parseStepikVideoSource(block.video) && block.name === 'video') {
+    return 'video';
+  }
+
   const src = block.source;
   if (!src) return 'text';
 
@@ -125,10 +131,18 @@ export function StepView({ step, variant = 'full' }: StepViewProps) {
         ? String(blockData.name).trim()
         : inferBlockName(blockData);
     const blockText = blockData.text || step.content || '';
+    const videoSource = parseStepikVideoSource(blockData.video);
 
     return (
       <div className="space-y-4">
-        {blockText && blockName !== 'text' && (
+        {blockName === 'video' && (
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">Видео</label>
+            <StepikVideoPlayer video={blockData.video} />
+          </div>
+        )}
+
+        {blockText && blockName !== 'text' && blockName !== 'video' && (
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">Вопрос/Текст</label>
             <div 
@@ -140,13 +154,32 @@ export function StepView({ step, variant = 'full' }: StepViewProps) {
           </div>
         )}
 
-        {/* Video */}
-        {blockData.video && (
+        {blockText && blockName === 'video' && (
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">Описание</label>
+            <div
+              className="w-full px-4 py-3 bg-dark-800 border border-dark-600 rounded-xl text-dark-100 min-h-[60px] max-h-[500px] overflow-y-auto prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: blockText || '<p class="text-dark-500">Нет описания</p>',
+              }}
+            />
+          </div>
+        )}
+
+        {blockText && blockName === 'text' && (
+          <div
+            className="w-full px-4 py-3 bg-dark-800 border border-dark-600 rounded-xl text-dark-100 min-h-[100px] max-h-[500px] overflow-y-auto prose prose-invert max-w-none"
+            dangerouslySetInnerHTML={{
+              __html: blockText || '<p class="text-dark-500">Нет текста</p>',
+            }}
+          />
+        )}
+
+        {/* Video attachment on non-video step types */}
+        {blockName !== 'video' && videoSource && (
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">Видео</label>
-            <div className="w-full px-4 py-3 bg-dark-800 border border-dark-600 rounded-xl text-dark-100">
-              <p className="text-sm">{String(blockData.video)}</p>
-            </div>
+            <StepikVideoPlayer video={blockData.video} />
           </div>
         )}
 

@@ -188,6 +188,7 @@ public class StepikBlockJsonNormalizer {
             case FREE_ANSWER -> "free-answer";
             case RANDOM_TASKS -> "random-tasks";
             case CODE -> "code";
+            case VIDEO -> "video";
             default -> null;
         };
     }

@@ -12,7 +12,7 @@ const STEP_TYPE_TO_BLOCK: Record<StepType, string> = {
   MATH: 'math',
   FREE_ANSWER: 'free-answer',
   CODE: 'code',
-  VIDEO: 'text',
+  VIDEO: 'video',
   RANDOM_TASKS: 'random-tasks',
 };
 
@@ -173,6 +173,9 @@ export function createDefaultStepikBlock(type: StepType): StepikBlockRequest {
           test_archive: [],
         },
       };
+
+    case 'video':
+      return { name: 'video', text: '', video: null };
 
     default:
       return { name: 'text', text: '' };

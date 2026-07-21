@@ -14,6 +14,7 @@ import org.core.dto.stepik.step.test.sorting.request.StepikBlockSortingRequest;
 import org.core.dto.stepik.step.test.table.request.StepikBlockTableRequest;
 import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.dto.stepik.step.code.request.StepikBlockCodeRequest;
+import org.core.dto.stepik.step.video.request.StepikBlockVideoRequest;
 
 @Getter
 @Setter
@@ -35,7 +36,8 @@ public class UpdateStepDTO {
         @JsonSubTypes.Type(value = StepikBlockSortingRequest.class, name = "sorting"),
         @JsonSubTypes.Type(value = StepikBlockMatchingRequest.class, name = "matching"),
         @JsonSubTypes.Type(value = StepikBlockTableRequest.class, name = "table"),
-        @JsonSubTypes.Type(value = StepikBlockCodeRequest.class, name = "code")
+        @JsonSubTypes.Type(value = StepikBlockCodeRequest.class, name = "code"),
+        @JsonSubTypes.Type(value = StepikBlockVideoRequest.class, name = "video")
     })
     private StepikBlockRequest stepikBlock;
 
