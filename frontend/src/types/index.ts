@@ -201,6 +201,13 @@ export interface StepikStepSourceResponseData {
   [key: string]: unknown;
 }
 
+export interface StepikSyncFailure {
+  entityType: 'step' | 'lesson' | 'section' | string;
+  entityId: number;
+  title?: string;
+  error: string;
+}
+
 export interface CaptchaChallenge {
   requiresCaptcha: boolean;
   captchaKey?: string;
@@ -208,6 +215,7 @@ export interface CaptchaChallenge {
   message?: string;
   courseId?: number;
   lessonId?: number;
+  failures?: StepikSyncFailure[];
 }
 
 // AI Agent types

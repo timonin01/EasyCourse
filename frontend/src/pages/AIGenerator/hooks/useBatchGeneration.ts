@@ -16,6 +16,7 @@ interface UseBatchGenerationParams {
   selectedLessonId: number | null;
   isPro: boolean;
   maxBatchSteps: number;
+  selectedLlmModel: string;
   refreshSubscription: () => void;
   getOrCreateChatSession: () => string;
 }
@@ -25,6 +26,7 @@ export function useBatchGeneration({
   selectedLessonId,
   isPro,
   maxBatchSteps,
+  selectedLlmModel,
   refreshSubscription,
   getOrCreateChatSession,
 }: UseBatchGenerationParams) {
@@ -238,6 +240,7 @@ export function useBatchGeneration({
       sessionId: getOrCreateChatSession(),
       userInput: userInputString,
       plan,
+      llmModel: selectedLlmModel || undefined,
       refreshSubscription,
     });
   };
@@ -257,7 +260,10 @@ export function useBatchGeneration({
       return;
     }
 
-    const plan = await startBatchAnalyze({ userInput: userInputString });
+    const plan = await startBatchAnalyze({
+      userInput: userInputString,
+      llmModel: selectedLlmModel || undefined,
+    });
     if (!plan) {
       return;
     }
