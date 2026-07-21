@@ -37,6 +37,7 @@ export function useAIGeneratorPage() {
     selectedLessonId,
     isPro,
     maxBatchSteps,
+    selectedLlmModel: chatGenerate.selectedLlmModel,
     refreshSubscription,
     getOrCreateChatSession: sessions.getOrCreateChatSession,
   });

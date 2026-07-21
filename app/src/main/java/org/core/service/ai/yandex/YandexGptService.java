@@ -73,41 +73,73 @@ public class YandexGptService implements AiService {
             return yandexAiStudioService.generateResponse(messages, maxTokens, uriToUse);
         }
 
-        try{
-            List<Message> yandexMessages = messages.stream()
-                    .map(chatMessage -> new Message(chatMessage.getRole(), chatMessage.getContent()))
-                    .toList();
-            YandexGptRequest yandexGptRequest = new YandexGptRequest(uriToUse, yandexMessages, jsonObject);
-            yandexGptRequest.setMaxTokens(maxTokens);
-            log.info("Sending request to Yandex GPT (model: {}): {}", uriToUse, objectMapper.writeValueAsString(yandexGptRequest));
-
-            HttpEntity<YandexGptRequest> entity = new HttpEntity<>(yandexGptRequest, createHeaders());
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                log.info("Response from Yandex GPT: {}", response.getBody());
-                YandexGptResponse yandexGptResponse = objectMapper.readValue(response.getBody(), YandexGptResponse.class);
-                if (yandexGptResponse.getError() != null) {
-                    throw new YandexGptException("Yandex GPT error: " + yandexGptResponse.getError().getMessage());
-                }
-                if (yandexGptResponse.getResult() != null &&
-                        yandexGptResponse.getResult().getAlternatives() != null &&
-                        !yandexGptResponse.getResult().getAlternatives().isEmpty()) {
-                    return yandexGptResponse.getResult().getAlternatives().get(0).getMessage().getText();
-                }
-                throw new YandexGptException("No response from Yandex GPT");
+        try {
+            return callYandexCompletion(messages, hasSystemPrompt, maxTokens, uriToUse, jsonObject);
+        } catch (RuntimeException e) {
+            if (jsonObject && shouldRetryWithoutJsonMode(e)) {
+                log.warn("Yandex GPT json_object mode rejected for model {}, retrying without json format", uriToUse);
+                return callYandexCompletion(messages, hasSystemPrompt, maxTokens, uriToUse, false);
             }
-
-        }catch (RuntimeException e){
             log.error("Error calling Yandex GPT API: {}", e.getMessage());
             throw new YandexGptException("Sorry, I couldn't generate a response at the moment.");
         }
-        return "Sorry, I couldn't generate a response at the moment.";
+    }
+
+    @SneakyThrows
+    private String callYandexCompletion(List<ChatMessage> messages,
+                                        boolean hasSystemPrompt,
+                                        int maxTokens,
+                                        String uriToUse,
+                                        boolean jsonObject) {
+        List<Message> yandexMessages = messages.stream()
+                .map(chatMessage -> new Message(chatMessage.getRole(), chatMessage.getContent()))
+                .toList();
+        YandexGptRequest yandexGptRequest = new YandexGptRequest(uriToUse, yandexMessages, jsonObject);
+        yandexGptRequest.setMaxTokens(maxTokens);
+        log.info("Sending request to Yandex GPT (model: {}, jsonObject: {}): {}",
+                uriToUse, jsonObject, objectMapper.writeValueAsString(yandexGptRequest));
+
+        HttpEntity<YandexGptRequest> entity = new HttpEntity<>(yandexGptRequest, createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                entity,
+                String.class
+        );
+
+        if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+            log.info("Response from Yandex GPT: {}", response.getBody());
+            YandexGptResponse yandexGptResponse = objectMapper.readValue(response.getBody(), YandexGptResponse.class);
+            if (yandexGptResponse.getError() != null) {
+                throw new YandexGptException("Yandex GPT error: " + yandexGptResponse.getError().getMessage());
+            }
+            if (yandexGptResponse.getResult() != null &&
+                    yandexGptResponse.getResult().getAlternatives() != null &&
+                    !yandexGptResponse.getResult().getAlternatives().isEmpty()) {
+                return yandexGptResponse.getResult().getAlternatives().get(0).getMessage().getText();
+            }
+            throw new YandexGptException("No response from Yandex GPT");
+        }
+        throw new YandexGptException("No response from Yandex GPT");
+    }
+
+    private boolean shouldRetryWithoutJsonMode(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            String message = current.getMessage();
+            if (message == null) {
+                continue;
+            }
+            String lower = message.toLowerCase();
+            if (lower.contains("400")
+                    || lower.contains("bad request")
+                    || lower.contains("response_format")
+                    || lower.contains("json_object")
+                    || lower.contains("json format")
+                    || lower.contains("not support")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private HttpHeaders createHeaders() {

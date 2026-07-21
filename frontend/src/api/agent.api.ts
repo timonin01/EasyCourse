@@ -164,9 +164,14 @@ export const agentApi = {
   },
 
   // Analyze batch request and get plan
-  analyzeBatchRequest: async (userInput: string): Promise<BatchStepDTO> => {
+  analyzeBatchRequest: async (userInput: string, llmModel?: string): Promise<BatchStepDTO> => {
+    const params = new URLSearchParams();
+    if (llmModel) {
+      params.append('llmModel', llmModel);
+    }
+    const query = params.toString();
     const response = await api.post<BatchStepDTO>(
-      `/agent/analyze-batch-request`,
+      `/agent/analyze-batch-request${query ? `?${query}` : ''}`,
       userInput,
       { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
     );
@@ -177,19 +182,25 @@ export const agentApi = {
   generateBatchSteps: async (
     sessionId: string,
     userInput: string,
-    plan?: BatchStepDTO
+    plan?: BatchStepDTO,
+    llmModel?: string
   ): Promise<StepikBlockRequest[]> => {
+    const params = new URLSearchParams({ sessionId });
+    if (llmModel) {
+      params.append('llmModel', llmModel);
+    }
+    const query = params.toString();
     // Если есть план, отправляем его как JSON, иначе отправляем userInput как строку
     if (plan) {
       const response = await api.post<StepikBlockRequest[]>(
-        `/agent/generate-batch-steps?sessionId=${sessionId}`,
+        `/agent/generate-batch-steps?${query}`,
         plan,
         { headers: { 'Content-Type': 'application/json' }, ...aiRequestConfig }
       );
       return response.data;
     } else {
       const response = await api.post<StepikBlockRequest[]>(
-        `/agent/generate-batch-steps?sessionId=${sessionId}`,
+        `/agent/generate-batch-steps?${query}`,
         userInput,
         { headers: { 'Content-Type': 'text/plain' }, ...aiRequestConfig }
       );

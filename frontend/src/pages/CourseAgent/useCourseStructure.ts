@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { lessonsApi, sectionsApi, stepsApi } from '../../api';
 import type { Lesson, Model, Step } from '../../types';
@@ -9,48 +9,8 @@ export function useCourseStructure(courseId: number | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   const [expandedLessons, setExpandedLessons] = useState<Set<number>>(new Set());
-
-  const loadStructure = useCallback(async () => {
-    if (!courseId) {
-      setSections([]);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const courseSections = await sectionsApi.getCourseSections(courseId);
-      const sortedSections = [...courseSections].sort((a, b) => a.position - b.position);
-
-      const nodes: CourseTreeSectionNode[] = await Promise.all(
-        sortedSections.map(async (section) => {
-          const lessons = await lessonsApi.getSectionLessons(section.id);
-          return {
-            section,
-            lessonsLoading: false,
-            lessons: [...lessons]
-              .sort((a, b) => a.position - b.position)
-              .map((lesson) => ({
-                lesson,
-                steps: null,
-                stepsLoading: false,
-              })),
-          };
-        }),
-      );
-
-      setSections(nodes);
-    } catch (error) {
-      console.error('Failed to load course structure:', error);
-      toast.error('Не удалось загрузить структуру курса');
-      setSections([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [courseId]);
-
-  useEffect(() => {
-    void loadStructure();
-  }, [loadStructure]);
+  const expandedLessonsRef = useRef(expandedLessons);
+  expandedLessonsRef.current = expandedLessons;
 
   const loadLessonSteps = useCallback(async (lessonId: number) => {
     setSections((prev) => prev.map((sectionNode) => ({
@@ -80,12 +40,61 @@ export function useCourseStructure(courseId: number | null) {
         ...sectionNode,
         lessons: sectionNode.lessons.map((lessonNode) => (
           lessonNode.lesson.id === lessonId
-            ? { ...lessonNode, stepsLoading: false }
+            ? { ...lessonNode, steps: lessonNode.steps ?? [], stepsLoading: false }
             : lessonNode
         )),
       })));
     }
   }, []);
+
+  const loadStructure = useCallback(async () => {
+    if (!courseId) {
+      setSections([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const courseSections = await sectionsApi.getCourseSections(courseId);
+      const sortedSections = [...courseSections].sort((a, b) => a.position - b.position);
+      const expandedLessonIds = Array.from(expandedLessonsRef.current);
+
+      const nodes: CourseTreeSectionNode[] = await Promise.all(
+        sortedSections.map(async (section) => {
+          const lessons = await lessonsApi.getSectionLessons(section.id);
+          return {
+            section,
+            lessonsLoading: false,
+            lessons: [...lessons]
+              .sort((a, b) => a.position - b.position)
+              .map((lesson) => ({
+                lesson,
+                // Keep expanded lessons in loading state until steps are re-fetched
+                steps: null as Step[] | null,
+                stepsLoading: expandedLessonIds.includes(lesson.id),
+              })),
+          };
+        }),
+      );
+
+      setSections(nodes);
+
+      // Refresh previously kept expanded lessons — otherwise UI shows "Нет шагов"
+      await Promise.all(
+        expandedLessonIds.map((lessonId) => loadLessonSteps(lessonId)),
+      );
+    } catch (error) {
+      console.error('Failed to load course structure:', error);
+      toast.error('Не удалось загрузить структуру курса');
+      setSections([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [courseId, loadLessonSteps]);
+
+  useEffect(() => {
+    void loadStructure();
+  }, [loadStructure]);
 
   const toggleSection = useCallback((sectionId: number) => {
     setExpandedSections((prev) => {

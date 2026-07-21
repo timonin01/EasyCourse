@@ -116,7 +116,8 @@ public class AgentController {
     @PostMapping("/generate-batch-steps")
     public ResponseEntity<?> generateBatchSteps(
             @RequestParam String sessionId,
-            @RequestBody BatchStepDTO batchStepDTO) {
+            @RequestBody BatchStepDTO batchStepDTO,
+            @RequestParam(required = false) String llmModel) {
         Long batchGenerationId = null;
         Long userId = userContextBean.getUserId();
         try {
@@ -127,8 +128,10 @@ public class AgentController {
             batchGenerationId = batchSessionMessageService.startGeneration(
                     userId, buildUserInputFromPlan(batchStepDTO), batchStepDTO, totalSteps);
 
-            log.info("Start generating batch steps with plan: {}", batchStepDTO);
-            List<StepikBlockRequest> results = batchGeneratorService.generateBatchRequests(userId, sessionId, batchStepDTO);
+            log.info("Start generating batch steps with plan: {}, model={}", batchStepDTO, llmModel);
+            LlmModel model = parseLlmModel(llmModel);
+            List<StepikBlockRequest> results = batchGeneratorService.generateBatchRequests(
+                    userId, sessionId, batchStepDTO, List.of(), model, null);
             subscriptionService.recordAiUsage(userId, totalSteps);
             batchSessionMessageService.markCompleted(batchGenerationId, results);
             String json = objectMapper
@@ -153,14 +156,20 @@ public class AgentController {
     }
 
     @PostMapping("/analyze-batch-request")
-    public ResponseEntity<?> analyzeBatchRequest(@RequestBody String userInput) {
+    public ResponseEntity<?> analyzeBatchRequest(
+            @RequestBody String userInput,
+            @RequestParam(required = false) String llmModel) {
         try {
             aiPromptLimitService.validateBatchPrompt(userInput);
-            log.info("Analyzing batch request: {}", userInput);
-            BatchStepDTO plan = batchAnalyzerService.analyzeUserInput(userInput);
+            LlmModel model = parseLlmModel(llmModel);
+            log.info("Analyzing batch request (model={}): {}", model, userInput);
+            BatchStepDTO plan = batchAnalyzerService.analyzeUserInput(userInput, model);
             return ResponseEntity.ok(plan);
         } catch (PromptLengthExceededException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid LLM model: {}", llmModel);
+            return ResponseEntity.badRequest().body("Неверная модель LLM: " + llmModel);
         } catch (Exception e) {
             log.error("Error analyzing batch request: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();

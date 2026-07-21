@@ -129,6 +129,33 @@ public class CourseEntityResolver {
         return matched;
     }
 
+    /**
+     * All lessons in the course, optionally limited to modules mentioned in {@code text}.
+     * Used for bulk intents like «в каждый урок», «во все уроки модуля X».
+     */
+    public List<Lesson> findLessonsForBulkIntent(Long courseId, String text, Set<Long> excludeLessonIds) {
+        List<Section> scopeSections = findSectionsMentionedInText(courseId, text, Set.of());
+        List<Section> sections = scopeSections.isEmpty()
+                ? sectionRepository.findByCourseIdOrderByPositionAsc(courseId)
+                : scopeSections;
+
+        List<Lesson> matched = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        if (excludeLessonIds != null) {
+            seen.addAll(excludeLessonIds);
+        }
+        for (Section section : sections) {
+            for (Lesson lesson : lessonRepository.findByModelIdOrderByPositionAsc(section.getId())) {
+                if (seen.contains(lesson.getId())) {
+                    continue;
+                }
+                matched.add(lesson);
+                seen.add(lesson.getId());
+            }
+        }
+        return matched;
+    }
+
     public List<Lesson> findLessonsExplicitlyNamedInText(Long courseId, String text, Set<Long> excludeLessonIds) {
         if (text == null || text.isBlank()) {
             return List.of();

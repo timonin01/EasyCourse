@@ -24,8 +24,15 @@ public class StepGenerationTokenConfig {
     @Value("${max.tokens.batch}")
     private int batchMaxTokens;
 
+    @Value("${max.tokens.batch.analyzer}")
+    private int batchAnalyzerMaxTokens;
+
     public int getBatchMaxTokens() {
         return batchMaxTokens;
+    }
+
+    public int getBatchAnalyzerMaxTokens() {
+        return batchAnalyzerMaxTokens;
     }
 
     public int resolveMaxTokens(String stepType) {

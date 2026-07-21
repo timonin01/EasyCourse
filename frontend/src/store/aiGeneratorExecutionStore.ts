@@ -45,12 +45,14 @@ type AIGeneratorExecutionState = {
 
   startBatchAnalyze: (params: {
     userInput: string;
+    llmModel?: string;
   }) => Promise<BatchStepDTO | null>;
 
   startBatchGenerate: (params: {
     sessionId: string;
     userInput: string;
     plan: BatchStepDTO;
+    llmModel?: string;
     refreshSubscription: () => void;
   }) => Promise<void>;
 };
@@ -180,7 +182,7 @@ export const useAIGeneratorExecutionStore = create<AIGeneratorExecutionState>((s
     }
   },
 
-  startBatchAnalyze: async ({ userInput }) => {
+  startBatchAnalyze: async ({ userInput, llmModel }) => {
     if (get().isBusy()) {
       toast.error('Генерация уже выполняется. Дождитесь завершения.');
       return null;
@@ -188,7 +190,7 @@ export const useAIGeneratorExecutionStore = create<AIGeneratorExecutionState>((s
 
     set({ kind: 'batch-analyze', isGeneratingBatch: true });
     try {
-      const plan = await agentApi.analyzeBatchRequest(userInput);
+      const plan = await agentApi.analyzeBatchRequest(userInput, llmModel);
       set({ kind: 'idle', isGeneratingBatch: false });
       return plan;
     } catch (error) {
@@ -199,7 +201,7 @@ export const useAIGeneratorExecutionStore = create<AIGeneratorExecutionState>((s
     }
   },
 
-  startBatchGenerate: async ({ sessionId, userInput, plan, refreshSubscription }) => {
+  startBatchGenerate: async ({ sessionId, userInput, plan, llmModel, refreshSubscription }) => {
     if (get().isBusy()) {
       toast.error('Генерация уже выполняется. Дождитесь завершения.');
       return;
@@ -217,7 +219,7 @@ export const useAIGeneratorExecutionStore = create<AIGeneratorExecutionState>((s
     startBatchProgressTimer(planItems.length);
 
     try {
-      const results = await agentApi.generateBatchSteps(sessionId, userInput, plan);
+      const results = await agentApi.generateBatchSteps(sessionId, userInput, plan, llmModel);
       stopBatchProgressTimer();
       set((state) => ({
         kind: 'idle',

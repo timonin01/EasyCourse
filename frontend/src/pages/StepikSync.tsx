@@ -122,11 +122,21 @@ export function StepikSync() {
     setIsSyncing(true);
     setSyncProgress(null);
 
-    const finishSync = async () => {
+    const finishSync = async (result?: CaptchaChallenge) => {
       const updatedCourse = await coursesApi.getCourse(selectedCourse.id);
       updateCourse(updatedCourse);
       await loadCourseDetails(updatedCourse);
-      toast.success('Синхронизация с Stepik завершена');
+      const failures = result?.failures ?? [];
+      if (failures.length > 0) {
+        const stepFails = failures.filter((f) => f.entityType === 'step').length;
+        toast.error(
+          `Синхронизация завершена с ошибками: ${failures.length} (шагов: ${stepFails}). Остальное выгружено.`,
+          { duration: 8000 }
+        );
+        console.warn('Stepik sync failures:', failures);
+      } else {
+        toast.success(result?.message || 'Синхронизация с Stepik завершена');
+      }
       setIsSyncing(false);
     };
 
@@ -140,8 +150,8 @@ export function StepikSync() {
           onSubmit: async (token) => {
             setCaptchaModal({ isOpen: false });
             try {
-              await stepikApi.syncCourse(selectedCourse.id, token);
-              await finishSync();
+              const captchaResult = await stepikApi.syncCourse(selectedCourse.id, token);
+              await finishSync(captchaResult);
             } catch {
               toast.error('Ошибка при синхронизации с captcha');
               setIsSyncing(false);
@@ -151,7 +161,7 @@ export function StepikSync() {
         return;
       }
 
-      await finishSync();
+      await finishSync(result);
     } catch (error) {
       toast.error('Ошибка при синхронизации курса');
       console.error('Failed to sync course:', error);
@@ -199,8 +209,14 @@ export function StepikSync() {
     setSyncingItems(prev => new Set(prev).add(lessonId));
     try {
       if (!lesson.stepikLessonId) {
-        await stepikApi.syncLesson(lesson.id);
-        toast.success('Урок синхронизирован!');
+        const result = await stepikApi.syncLesson(lesson.id);
+        const failures = result.failures ?? [];
+        if (failures.length > 0) {
+          toast.error(`Урок частично синхронизирован: ошибок ${failures.length}`, { duration: 8000 });
+          console.warn('Lesson sync failures:', failures);
+        } else {
+          toast.success(result.message || 'Урок синхронизирован!');
+        }
       } else {
         await stepikApi.updateLessonInStepik(lesson.id);
         toast.success('Урок обновлён в Stepik!');
