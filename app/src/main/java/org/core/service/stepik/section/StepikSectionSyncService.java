@@ -14,6 +14,7 @@ import org.core.exception.exceptions.StepikSectionIntegrationException;
 import org.core.service.crud.SectionService;
 import org.core.service.crud.CourseService;
 import org.core.service.crud.LessonService;
+import org.core.service.crud.StepService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class StepikSectionSyncService {
     private final LessonService lessonService;
     private final UpdateStepikSectionService updateStepikSectionService;
     private final StepikLessonSyncService stepikLessonSyncService;
+    private final StepService stepService;
 
     public StepikSectionResponseData syncSectionWithStepik(Long sectionId) {
         SectionResponseDTO sectionDTO = sectionService.getSectionBySectionId(sectionId);
@@ -103,6 +105,7 @@ public class StepikSectionSyncService {
         if (sectionDTO.getStepikSectionId() == null) {
             throw new IllegalStateException("Section is not synced with Stepik. Section ID: " + sectionId);
         }
+        stepService.clearStepikStepIdsBySectionId(sectionId);
         lessonService.clearStepikLessonIdsBySectionId(sectionId);
 
         updateStepikSectionService.performStepikPositionShiftAfterDeletion(sectionDTO.getCourseId(),sectionDTO.getPosition());

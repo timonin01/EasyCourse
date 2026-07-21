@@ -175,6 +175,27 @@ public class StepService {
         }
     }
 
+    public void clearStepikStepIdsByLessonId(Long lessonId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);
+        int updatedCount = stepRepository.clearStepikStepIdsByLessonId(lessonId);
+        log.info("Cleared stepikStepId for {} steps in lesson {}", updatedCount, lessonId);
+    }
+
+    public void clearStepikStepIdsBySectionId(Long sectionId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);
+        int updatedCount = stepRepository.clearStepikStepIdsBySectionId(sectionId);
+        log.info("Cleared stepikStepId for {} steps in section {}", updatedCount, sectionId);
+    }
+
+    public void clearStepikStepIdsByCourseId(Long courseId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findByCourseIdAndVerifyOwner(contextUserId, courseId);
+        int updatedCount = stepRepository.clearStepikStepIdsByCourseId(courseId);
+        log.info("Cleared stepikStepId for {} steps in course {}", updatedCount, courseId);
+    }
+
     private Integer getNextPosition(Long lessonId) {
         Integer maxPosition = stepRepository.findMaxPositionByLessonId(lessonId);
         return maxPosition == null ? 1 : maxPosition + 1;

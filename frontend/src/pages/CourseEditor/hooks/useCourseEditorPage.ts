@@ -441,15 +441,12 @@ export function useCourseEditorPage() {
     }
   };
 
-  // Удаление со Stepik (каскадное)
+  // Удаление со Stepik
   const handleDeleteModelFromStepik = async (modelId: number) => {
     const section = sections.find(m => m.id === modelId);
     if (!section || !section.stepikSectionId) return;
 
-    const children = getModelChildrenCount(modelId);
-    const warningText = children.lessons > 0 || children.steps > 0
-      ? `Внимание! Будет удалено каскадно: модуль "${section.title}", ${children.lessons} урок(ов), ${children.steps} шаг(ов).\n\nРекомендуется удалять сущности в порядке их позиций (1→2→3) для избежания проблем с позициями на Stepik.\n\nПродолжить?`
-      : `Удалить модуль "${section.title}" со Stepik? Это действие нельзя отменить.`;
+    const warningText = `Удалить модуль "${section.title}" со Stepik? На Stepik удалится только модуль; локально связь со Stepik будет снята у дочерних уроков и шагов.\n\nПродолжить?`;
 
     if (!confirm(warningText)) return;
 
@@ -509,10 +506,7 @@ export function useCourseEditorPage() {
     const lesson = lessons.find(l => l.id === lessonId);
     if (!lesson || !lesson.stepikLessonId) return;
 
-    const childrenCount = getLessonChildrenCount(lessonId);
-    const warningText = childrenCount > 0
-      ? `Внимание! Будет удалено каскадно: урок "${lesson.title}", ${childrenCount} шаг(ов).\n\nРекомендуется удалять сущности в порядке их позиций (1→2→3) для избежания проблем с позициями на Stepik.\n\nПродолжить?`
-      : `Удалить урок "${lesson.title}" со Stepik? Это действие нельзя отменить.`;
+    const warningText = `Удалить урок "${lesson.title}" со Stepik? На Stepik удалится только урок; локально связь со Stepik будет снята у его шагов.\n\nПродолжить?`;
 
     if (!confirm(warningText)) return;
 

@@ -146,6 +146,13 @@ public class SectionService {
         }
     }
 
+    public void clearStepikSectionIdsByCourseId(Long courseId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findByCourseIdAndVerifyOwner(contextUserId, courseId);
+        int updatedCount = sectionRepository.clearStepikSectionIdsByCourseId(courseId);
+        log.info("Cleared stepikSectionId for {} sections in course {}", updatedCount, courseId);
+    }
+
     public void markNeedsStepikSyncIfSynced(Long sectionId) {
         Long contextUserId = userContextBean.getUserId();
         Section section = userAccessService.findSectionAndVerifyOwner(contextUserId, sectionId);

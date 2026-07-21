@@ -4,22 +4,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
 import org.core.domain.Lesson;
-import org.core.domain.Step;
 import org.core.dto.lesson.CopyLessonDTO;
 import org.core.dto.lesson.LessonResponseDTO;
 import org.core.dto.lesson.MoveLessonDTO;
-import org.core.repository.StepRepository;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.SectionService;
 import org.core.service.crud.copy.LessonCopyService;
 import org.core.service.stepik.StepikCascadeDeleteService;
-import org.core.service.stepik.step.StepikStepSyncService;
 import org.core.util.UserAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Comparator;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,8 +24,6 @@ public class LessonMoveService {
     private final SectionService sectionService;
     private final LessonCopyService lessonCopyService;
     private final StepikCascadeDeleteService cascadeDeleteService;
-    private final StepikStepSyncService stepSyncService;
-    private final StepRepository stepRepository;
 
     private final UserAccessService userAccessService;
     private final UserContextBean userContextBean;
@@ -78,13 +70,6 @@ public class LessonMoveService {
     private void deleteSourceFromStepik(Long userId, Lesson sourceLesson) {
         if (sourceLesson.getStepikLessonId() != null) {
             cascadeDeleteService.deleteFullLessonFromStepikById(sourceLesson.getId(), userId);
-            return;
         }
-
-        List<Step> steps = stepRepository.findByLessonIdOrderByPositionAsc(sourceLesson.getId());
-        steps.stream()
-                .filter(step -> step.getStepikStepId() != null)
-                .sorted(Comparator.comparing(Step::getPosition))
-                .forEach(step -> stepSyncService.deleteStepFromStepik(step.getId()));
     }
 }

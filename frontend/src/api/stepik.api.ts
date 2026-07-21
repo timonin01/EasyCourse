@@ -83,7 +83,7 @@ export const stepikApi = {
     return response.data;
   },
 
-  // Delete section from Stepik (cascade)
+  // Delete section from Stepik
   deleteSectionFromStepik: async (sectionId: number): Promise<string> => {
     const response = await api.delete<string>(`/v1/stepik/sections/delete-section/${sectionId}`);
     return response.data;
@@ -119,7 +119,7 @@ export const stepikApi = {
     return response.data;
   },
 
-  // Delete lesson from Stepik (cascade)
+  // Delete lesson from Stepik
   deleteLessonFromStepik: async (lessonId: number): Promise<void> => {
     await api.delete(`/v1/stepik/lessons/delete-lesson/${lessonId}`);
   },
