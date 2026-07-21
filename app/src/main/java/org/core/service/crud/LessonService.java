@@ -167,6 +167,13 @@ public class LessonService {
         log.info("Cleared stepikLessonId for {} lessons in section {}", updatedCount, sectionId);
     }
 
+    public void clearStepikLessonIdsByCourseId(Long courseId) {
+        Long contextUserId = userContextBean.getUserId();
+        userAccessService.findByCourseIdAndVerifyOwner(contextUserId, courseId);
+        int updatedCount = lessonRepository.clearStepikLessonIdsByCourseId(courseId);
+        log.info("Cleared stepikLessonId for {} lessons in course {}", updatedCount, courseId);
+    }
+
     public void clearNeedsStepikSync(Long lessonId) {
         Long contextUserId = userContextBean.getUserId();
         Lesson lesson = userAccessService.findLessonAndVerifyOwner(contextUserId, lessonId);

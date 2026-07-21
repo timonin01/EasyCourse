@@ -1,27 +1,18 @@
 package org.core.service.stepik;
 
-import jakarta.annotation.Resource;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.context.UserContextBean;
-import org.core.domain.Course;
 import org.core.domain.Lesson;
 import org.core.domain.Section;
-import org.core.domain.Step;
 import org.core.repository.LessonRepository;
 import org.core.repository.SectionRepository;
 import org.core.util.UserAccessService;
 import org.core.service.stepik.course.StepikCourseSyncService;
 import org.core.service.stepik.lesson.StepikLessonSyncService;
 import org.core.service.stepik.section.StepikSectionSyncService;
-import org.core.service.stepik.step.StepikStepSyncService;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 @Service
 @RequiredArgsConstructor
@@ -29,13 +20,9 @@ import java.util.concurrent.ExecutorService;
 @Transactional
 public class StepikCascadeDeleteService {
 
-    @Resource(name = "virtualExecutor")
-    private final ExecutorService virtualExecutor;
-
     private final StepikCourseSyncService courseSyncService;
     private final StepikSectionSyncService sectionSyncService;
     private final StepikLessonSyncService lessonSyncService;
-    private final StepikStepSyncService stepSyncService;
 
     private final UserContextBean userContextBean;
     private final UserAccessService userAccessService;
@@ -43,129 +30,33 @@ public class StepikCascadeDeleteService {
     private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
 
-    public void deleteFullCourseFromStepik(Long courseId, Long userId){
+    public void deleteFullCourseFromStepik(Long courseId, Long userId) {
         runWithRestoredUserContext(userId, () -> {
-            Course course = userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
-            if (course.getStepikCourseId() == null) {
-                log.error("Course with id: {} not synchronized with stepik", courseId);
-                throw new IllegalArgumentException("Course with id " + courseId + " not synchronized with stepik");
-            }
-
-            List<CompletableFuture<Void>> sectionFutures = new ArrayList<>();
-            List<Section> courseSections = course.getSections();
-            for (Section section : courseSections) {
-                if (section.getStepikSectionId() != null) {
-                    log.info("Start async deleting section from stepik with sectionId: {}", section.getId());
-                    sectionFutures.add(CompletableFuture.runAsync(() -> {
-                        userContextBean.setUserId(userId);
-                        try {
-                            deleteFullSectionFromStepik(section, userId).join();
-                        } finally {
-                            userContextBean.clear();
-                        }
-                    }, virtualExecutor));
-                } else {
-                    log.error("Section {} is not synchronized with stepik, skipping", section.getId());
-                }
-            }
-
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(sectionFutures.toArray(new CompletableFuture[0]))
-                    .exceptionally(ex -> {
-                        log.error("Error during section deletion for course {}: {}", courseId, ex.getMessage(), ex);
-                        return null;
-                    });
-            allFutures.join();
-
+            userAccessService.findByCourseIdAndVerifyOwner(userId, courseId);
             courseSyncService.deleteCourseFromStepik(courseId);
-            log.info("Course {} cascade deletion success", courseId);
+            log.info("Course {} deleted from Stepik", courseId);
         });
     }
 
-    public CompletableFuture<Void> deleteFullSectionFromStepik(Section section, Long userId) {
-        if(section.getStepikSectionId() == null){
-            log.error("Section with id: {} not synchronized with stepik", section.getId());
-            return CompletableFuture.completedFuture(null);
-        }
-
-        List<CompletableFuture<Void>> lessonFutures = new ArrayList<>();
-        List<Lesson> sectionLessons = section.getLessons();
-        for(Lesson lesson : sectionLessons){
-            if (lesson.getStepikLessonId() != null) {
-                log.info("Start async deleting lesson from stepik with lessonId: {}", lesson.getId());
-                lessonFutures.add(CompletableFuture.runAsync(() -> {
-                    userContextBean.setUserId(userId);
-                    try {
-                        deleteFullLessonFromStepik(lesson, userId).join();
-                    } finally {
-                        userContextBean.clear();
-                    }
-                }, virtualExecutor));
-            } else {
-                log.error("Lesson {} is not synchronized with stepik, skipping", lesson.getId());
-            }
-        }
-
-        return CompletableFuture.allOf(lessonFutures.toArray(new CompletableFuture[0]))
-                .exceptionally(ex -> {
-                    log.error("Error during lesson deletion for section {}: {}", section.getId(), ex.getMessage(), ex);
-                    return null;
-                })
-                .thenRun(() -> {
-                    userContextBean.setUserId(userId);
-                    try {
-                        sectionSyncService.deleteSectionFromStepik(section.getId());
-                        log.info("Section {} cascade deletion success", section.getId());
-                    } finally {
-                        userContextBean.clear();
-                    }
-                });
+    public void deleteFullSectionFromStepik(Section section, Long userId) {
+        runWithRestoredUserContext(userId, () -> {
+            sectionSyncService.deleteSectionFromStepik(section.getId());
+            log.info("Section {} deleted from Stepik", section.getId());
+        });
     }
 
-    public CompletableFuture<Void> deleteFullLessonFromStepik(Lesson lesson, Long userId) {
-        if(lesson.getStepikLessonId() == null){
-            log.error("Lesson with id: {} not synchronized with stepik", lesson.getId());
-            return CompletableFuture.completedFuture(null);
-        }
-
-        List<CompletableFuture<Void>> stepFutures = new ArrayList<>();
-        List<Step> lessonSteps = lesson.getSteps();
-        for(Step step : lessonSteps){
-            if(step.getStepikStepId() != null){
-                log.info("Start async deleting step from stepik with stepId: {}", step.getId());
-                stepFutures.add(CompletableFuture.runAsync(() -> {
-                    userContextBean.setUserId(userId);
-                    try {
-                        stepSyncService.deleteStepFromStepik(step.getId());
-                    } catch (RuntimeException e) {
-                        log.error("Failed to delete step {} from Stepik: {}", step.getId(), e.getMessage());
-                    } finally {
-                        userContextBean.clear();
-                    }
-                }, virtualExecutor));
-            }
-        }
-
-        return CompletableFuture.allOf(stepFutures.toArray(new CompletableFuture[0]))
-                .exceptionally(ex -> {
-                    log.error("Error during step deletion for lesson {}: {}", lesson.getId(), ex.getMessage(), ex);
-                    return null;
-                })
-                .thenRun(() -> {
-                    userContextBean.setUserId(userId);
-                    try {
-                        lessonSyncService.deleteLessonFromStepik(lesson.getId());
-                        log.info("Lesson {} cascade deletion success", lesson.getId());
-                    } finally {
-                        userContextBean.clear();
-                    }
-                });
+    public void deleteFullLessonFromStepik(Lesson lesson, Long userId) {
+        runWithRestoredUserContext(userId, () -> {
+            lessonSyncService.deleteLessonFromStepik(lesson.getId());
+            log.info("Lesson {} deleted from Stepik", lesson.getId());
+        });
     }
 
     public void deleteFullSectionFromStepikById(Long sectionId, Long userId) {
         runWithRestoredUserContext(userId, () -> {
             Section section = sectionRepository.findById(sectionId)
                     .orElseThrow(() -> new IllegalArgumentException("Section with id " + sectionId + " not found"));
-            deleteFullSectionFromStepik(section, userId).join();
+            deleteFullSectionFromStepik(section, userId);
         });
     }
 
@@ -173,7 +64,7 @@ public class StepikCascadeDeleteService {
         runWithRestoredUserContext(userId, () -> {
             Lesson lesson = lessonRepository.findById(lessonId)
                     .orElseThrow(() -> new IllegalArgumentException("Lesson with id " + lessonId + " not found"));
-            deleteFullLessonFromStepik(lesson, userId).join();
+            deleteFullLessonFromStepik(lesson, userId);
         });
     }
 

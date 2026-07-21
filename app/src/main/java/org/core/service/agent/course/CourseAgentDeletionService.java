@@ -11,7 +11,6 @@ import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.exception.exceptions.StepikSectionIntegrationException;
 import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.repository.LessonRepository;
-import org.core.repository.StepRepository;
 import org.core.service.crud.LessonService;
 import org.core.service.crud.SectionService;
 import org.core.service.crud.StepService;
@@ -21,7 +20,6 @@ import org.core.util.UserAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -37,7 +35,6 @@ public class CourseAgentDeletionService {
     private final StepikStepSyncService stepSyncService;
     private final UserAccessService userAccessService;
     private final LessonRepository lessonRepository;
-    private final StepRepository stepRepository;
 
     @Transactional
     public void executeDelete(Long courseId, Long userId, CoursePlanDTO plan) {
@@ -68,7 +65,9 @@ public class CourseAgentDeletionService {
                 cascadeDeleteService.deleteFullSectionFromStepikById(sectionId, userId);
             } else {
                 for (Lesson lesson : lessons) {
-                    deleteLessonFromStepikOnly(userId, lesson);
+                    if (lesson.getStepikLessonId() != null) {
+                        deleteLessonFromStepikOnly(userId, lesson);
+                    }
                 }
             }
         } catch (RuntimeException ex) {
@@ -116,13 +115,6 @@ public class CourseAgentDeletionService {
     private void deleteLessonFromStepikOnly(Long userId, Lesson lesson) {
         if (lesson.getStepikLessonId() != null) {
             cascadeDeleteService.deleteFullLessonFromStepikById(lesson.getId(), userId);
-            return;
         }
-
-        List<Step> steps = stepRepository.findByLessonIdOrderByPositionAsc(lesson.getId());
-        steps.stream()
-                .filter(step -> step.getStepikStepId() != null)
-                .sorted(Comparator.comparing(Step::getPosition))
-                .forEach(step -> stepSyncService.deleteStepFromStepik(step.getId()));
     }
 }

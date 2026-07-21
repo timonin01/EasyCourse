@@ -8,6 +8,9 @@ import org.core.dto.CourseCaptchaChallenge;
 import org.core.dto.course.CourseResponseDTO;
 import org.core.dto.stepik.course.StepikCourseResponseData;
 import org.core.service.crud.CourseService;
+import org.core.service.crud.LessonService;
+import org.core.service.crud.SectionService;
+import org.core.service.crud.StepService;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,6 +20,9 @@ public class StepikCourseSyncService {
 
     private final StepikCourseService stepikCourseService;
     private final CourseService courseService;
+    private final SectionService sectionService;
+    private final LessonService lessonService;
+    private final StepService stepService;
 
     public CourseCaptchaChallenge syncCourseWithStepik(Long courseId, String captchaToken) {
         log.info("Starting sync course ID: {} with Stepik (captcha provided: {})", courseId, captchaToken != null);
@@ -64,6 +70,9 @@ public class StepikCourseSyncService {
         if (courseDTO.getStepikCourseId() == null) {
             throw new IllegalStateException("Course is not synced with Stepik. Course ID: " + courseId);
         }
+        stepService.clearStepikStepIdsByCourseId(courseId);
+        lessonService.clearStepikLessonIdsByCourseId(courseId);
+        sectionService.clearStepikSectionIdsByCourseId(courseId);
         stepikCourseService.deleteCourse(courseDTO.getStepikCourseId());
         courseService.updateCourseStepikId(courseId, null);
         

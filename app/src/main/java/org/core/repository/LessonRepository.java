@@ -50,4 +50,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     @Modifying
     @Query("UPDATE Lesson l SET l.stepikLessonId = NULL WHERE l.section.id = :modelId")
     int clearStepikLessonIdsByModelId(@Param("modelId") Long modelId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Lesson l SET l.stepikLessonId = null, l.needsStepikSync = false WHERE l.section.course.id = :courseId")
+    int clearStepikLessonIdsByCourseId(@Param("courseId") Long courseId);
 }

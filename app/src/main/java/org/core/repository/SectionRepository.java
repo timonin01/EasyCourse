@@ -37,4 +37,8 @@ public interface SectionRepository extends JpaRepository<Section, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Section m SET m.position = m.position - 1 WHERE m.course.id = :courseId AND m.position >= :fromPosition AND m.position <= :toPosition")
     void decrementPositionsRange(@Param("courseId") Long courseId, @Param("fromPosition") Integer fromPosition, @Param("toPosition") Integer toPosition);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Section s SET s.stepikSectionId = null, s.needsStepikSync = false WHERE s.course.id = :courseId")
+    int clearStepikSectionIdsByCourseId(@Param("courseId") Long courseId);
 }

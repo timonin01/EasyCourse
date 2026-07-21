@@ -12,6 +12,7 @@ import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.dto.stepik.unit.StepikUnitResponseData;
 import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.service.crud.LessonService;
+import org.core.service.crud.StepService;
 import org.core.service.crud.SectionService;
 import org.core.service.stepik.unit.StepikUnitService;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class StepikLessonSyncService {
     private final SectionService sectionService;
     private final StepikUnitService stepikUnitService;
     private final UpdateStepikLessonService updateStepikLessonService;
+    private final StepService stepService;
 
     public LessonCaptchaChallenge syncLessonWithStepik(Long lessonId, String captchaToken) {
         if (captchaToken != null) {
@@ -90,6 +92,7 @@ public class StepikLessonSyncService {
         if (lessonDTO.getStepikLessonId() == null) {
             throw new IllegalStateException("Lesson is not synced with Stepik. Lesson ID: " + lessonId);
         }
+        stepService.clearStepikStepIdsByLessonId(lessonId);
         updateStepikLessonService.performStepikPositionShiftAfterDeletion(lessonDTO.getSectionId(),lessonDTO.getPosition());
         lessonService.updateLessonStepikLessonIdSetNull(lessonId);
 
