@@ -1,6 +1,10 @@
 package org.core.dto;
 
 import lombok.*;
+import org.core.dto.stepik.StepikSyncFailure;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -14,9 +18,13 @@ public class LessonCaptchaChallenge {
     private String siteKey;
     private Long lessonId;
     private String message;
+    private List<StepikSyncFailure> failures = new ArrayList<>();
     
     public static LessonCaptchaChallenge noCaptchaNeeded(Long lessonId) {
-        return new LessonCaptchaChallenge(null, null, null, null, lessonId, "Lesson created successfully without captcha");
+        return new LessonCaptchaChallenge(
+                null, null, null, null, lessonId,
+                "Lesson created successfully without captcha",
+                new ArrayList<>());
     }
     
     public static LessonCaptchaChallenge requiresCaptcha(Long lessonId, String siteKey) {

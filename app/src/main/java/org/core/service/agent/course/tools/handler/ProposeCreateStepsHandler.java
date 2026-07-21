@@ -1,6 +1,7 @@
 package org.core.service.agent.course.tools.handler;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.core.domain.Lesson;
 import org.core.dto.agent.batchAnalyzer.BatchStepDTO;
 import org.core.dto.agent.course.PlanActionDTO;
@@ -17,6 +18,7 @@ import org.core.service.agent.course.tools.util.ToolArgsHelper;
 import org.core.util.UserAccessService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ProposeCreateStepsHandler {
 
     private final BatchAnalyzerService batchAnalyzerService;
@@ -37,6 +40,15 @@ public class ProposeCreateStepsHandler {
         CourseToolResult pendingLessonsHint = checkPendingLessonPlans(courseAgentContext, instruction);
         if (pendingLessonsHint != null) {
             return pendingLessonsHint;
+        }
+
+        String searchText = firstNonBlank(instruction, courseAgentContext.getUserInput());
+        if (hasAllLessonsIntent(courseAgentContext, instruction)) {
+            String bulkScopeText = firstNonBlank(courseAgentContext.getUserInput(), instruction);
+            List<Lesson> bulkLessons = findBulkTargetLessons(courseAgentContext, bulkScopeText);
+            if (!bulkLessons.isEmpty()) {
+                return planStepsForLessons(courseAgentContext, bulkLessons, instruction);
+            }
         }
 
         ResolvedLesson lesson = resolveLesson(courseAgentContext, args);
@@ -103,31 +115,47 @@ public class ProposeCreateStepsHandler {
                                                  String instruction) {
         int totalSteps = 0;
         StringBuilder summary = new StringBuilder();
+        List<String> failedLessons = new ArrayList<>();
         for (Lesson lesson : lessons) {
             String scopedInstruction = String.format(
                     "Для урока «%s» в модуле «%s»: %s",
                     lesson.getTitle(),
                     lesson.getSection().getTitle(),
                     instruction);
-            BatchStepDTO analyzed = batchAnalyzerService.analyzeUserInput(scopedInstruction);
-            int stepCount = analyzed.getSteps() == null ? 0 : analyzed.getSteps().size();
+            try {
+                BatchStepDTO analyzed = batchAnalyzerService.analyzeUserInput(
+                        scopedInstruction, courseAgentContext.getLlmModel());
+                int stepCount = analyzed.getSteps() == null ? 0 : analyzed.getSteps().size();
 
-            courseAgentContext.getPendingActions().add(PlanActionDTO.builder()
-                    .type(PlanActionType.CREATE_STEPS)
-                    .targetSectionId(lesson.getSection().getId())
-                    .targetSectionTitle(lesson.getSection().getTitle())
-                    .targetLessonId(lesson.getId())
-                    .targetLessonTitle(lesson.getTitle())
-                    .steps(analyzed.getSteps())
-                    .build());
-            totalSteps += stepCount;
-            if (!summary.isEmpty()) {
-                summary.append("; ");
+                courseAgentContext.getPendingActions().add(PlanActionDTO.builder()
+                        .type(PlanActionType.CREATE_STEPS)
+                        .targetSectionId(lesson.getSection().getId())
+                        .targetSectionTitle(lesson.getSection().getTitle())
+                        .targetLessonId(lesson.getId())
+                        .targetLessonTitle(lesson.getTitle())
+                        .steps(analyzed.getSteps())
+                        .build());
+                totalSteps += stepCount;
+                if (!summary.isEmpty()) {
+                    summary.append("; ");
+                }
+                summary.append(String.format("%d шаг(ов) в «%s»", stepCount, lesson.getTitle()));
+            } catch (Exception ex) {
+                log.warn("Failed to plan steps for lesson «{}» (id={}): {}",
+                        lesson.getTitle(), lesson.getId(), ex.getMessage());
+                failedLessons.add(lesson.getTitle());
             }
-            summary.append(String.format("%d шаг(ов) в «%s»", stepCount, lesson.getTitle()));
         }
-        return CourseToolResult.ok(String.format(
-                "Добавлено в план: %s (всего %d шаг(ов))", summary, totalSteps));
+        if (totalSteps == 0 && !failedLessons.isEmpty()) {
+            return CourseToolResult.fail(String.format(
+                    "Не удалось спланировать шаги ни для одного урока: %s",
+                    String.join(", ", failedLessons)));
+        }
+        String message = String.format("Добавлено в план: %s (всего %d шаг(ов))", summary, totalSteps);
+        if (!failedLessons.isEmpty()) {
+            message += String.format(". Не удалось для уроков: %s", String.join(", ", failedLessons));
+        }
+        return CourseToolResult.ok(message);
     }
 
     private boolean hasExistingLessonsExplicitlyMentioned(CourseAgentContext courseAgentContext, String searchText) {
@@ -143,6 +171,38 @@ public class ProposeCreateStepsHandler {
                 courseAgentContext.getCourse().getId(),
                 searchText,
                 plannedStepLessonIds).isEmpty();
+    }
+
+    private List<Lesson> findBulkTargetLessons(CourseAgentContext courseAgentContext, String searchText) {
+        Set<Long> plannedLessonIds = courseAgentContext.getPendingActions().stream()
+                .filter(action -> action != null && action.getType() == PlanActionType.CREATE_STEPS)
+                .map(PlanActionDTO::getTargetLessonId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(HashSet::new));
+        return entityResolver.findLessonsForBulkIntent(
+                courseAgentContext.getCourse().getId(),
+                searchText,
+                plannedLessonIds);
+    }
+
+    private boolean hasAllLessonsIntent(CourseAgentContext courseAgentContext, String instruction) {
+        return isAllLessonsIntent(instruction) || isAllLessonsIntent(courseAgentContext.getUserInput());
+    }
+
+    private boolean isAllLessonsIntent(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        String lower = text.toLowerCase();
+        return lower.contains("в каждый урок")
+                || lower.contains("во все урок")
+                || lower.contains("во всех урок")
+                || lower.contains("в все урок")
+                || lower.contains("каждый урок")
+                || lower.contains("все уроки")
+                || lower.contains("all lessons")
+                || lower.contains("every lesson")
+                || lower.contains("each lesson");
     }
 
     private List<Lesson> findUnplannedLessons(CourseAgentContext courseAgentContext, String instruction) {

@@ -13,15 +13,6 @@ public class LlmModelConfig {
     @Value("${provod.api.model-name.default}")
     private String defaultModel;
 
-    @Value("${provod.api.model-name.claude-sonnet-4.6}")
-    private String agentModel;
-
-    @Value("${provod.api.model-name.default}")
-    private String askModel;
-
-    @Value("${provod.api.model-name.z-ai}")
-    private String batchModel;
-
     @Value("${provod.api.model-name.deepseek-v4-flash}")
     private String deepseekV4FlashModel;
 
@@ -66,18 +57,6 @@ public class LlmModelConfig {
 
     public String getDefaultModelUri() {
         return defaultModel;
-    }
-
-    public String getAgentModelUri() {
-        return agentModel;
-    }
-
-    public String getAskModelUri() {
-        return askModel;
-    }
-
-    public String getBatchModelUri() {
-        return batchModel;
     }
 
     private void initializeModelUriMap() {

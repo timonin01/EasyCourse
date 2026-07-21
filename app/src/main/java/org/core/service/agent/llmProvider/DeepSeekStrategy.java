@@ -42,6 +42,19 @@ public class DeepSeekStrategy implements LlmProvider {
         }
         return chat(messages, modelUri);
     }
+
+    @Override
+    public String chatJson(List<ChatMessage> messages, int maxTokens) {
+        return chatJson(messages, null, maxTokens);
+    }
+
+    @Override
+    public String chatJson(List<ChatMessage> messages, String modelUri, int maxTokens) {
+        if (modelUri != null && !modelUri.trim().isEmpty()) {
+            log.warn("DeepSeek does not support custom model selection. Ignoring modelUri: {}", modelUri);
+        }
+        return chat(messages, null, maxTokens);
+    }
     
     private String buildPrompt(List<ChatMessage> messages) {
         StringBuilder prompt = new StringBuilder();

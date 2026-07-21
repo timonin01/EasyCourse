@@ -58,4 +58,22 @@ public class YandexGptStrategy implements LlmProvider {
             throw new RuntimeException("Failed to get response from YandexGPT: " + e.getMessage());
         }
     }
+
+    @Override
+    public String chatJson(List<ChatMessage> messages, int maxTokens) {
+        return chatJson(messages, null, maxTokens);
+    }
+
+    @Override
+    public String chatJson(List<ChatMessage> messages, String modelUri, int maxTokens) {
+        try {
+            boolean hasSystemPrompt = messages.stream()
+                    .anyMatch(chatMessage -> chatMessage.getRole().equals("system"));
+
+            return yandexGptService.generateResponse(messages, hasSystemPrompt, maxTokens, modelUri, true);
+        } catch (Exception e) {
+            log.error("Error in YandexGPT JSON adapter (modelUri={}): {}", modelUri, e.getMessage());
+            throw new RuntimeException("Failed to get JSON response from YandexGPT: " + e.getMessage());
+        }
+    }
 }

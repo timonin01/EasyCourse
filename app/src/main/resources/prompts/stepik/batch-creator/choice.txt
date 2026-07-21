@@ -74,10 +74,10 @@
       "preserve_order": false,
       "is_options_feedback": false,
       "options": [
-        {"text": "<class 'float'>", "is_correct": true, "feedback": "Верно! 3.14 — дробное число"},
-        {"text": "<class 'int'>", "is_correct": false, "feedback": "int только для целых"},
-        {"text": "<class 'str'>", "is_correct": false, "feedback": "Это не строка"},
-        {"text": "<class 'number'>", "is_correct": false, "feedback": "Такого типа нет в Python"}
+        {"text": "&lt;class 'float'&gt;", "is_correct": true, "feedback": "Верно! 3.14 — дробное число"},
+        {"text": "&lt;class 'int'&gt;", "is_correct": false, "feedback": "int только для целых"},
+        {"text": "&lt;class 'str'&gt;", "is_correct": false, "feedback": "Это не строка"},
+        {"text": "&lt;class 'number'&gt;", "is_correct": false, "feedback": "Такого типа нет в Python"}
       ]
     }
   }
@@ -104,5 +104,12 @@
 11. СЛОЖНОСТЬ: вопросы средней и выше — не «что такое переменная», а понимание нюансов, типичных ошибок, поведения кода.
 12. ЯЗЫК: если в user-сообщении указан язык курса — формулировки и примеры кода только на этом языке.
 13. JSON: весь массив закрыт валидно; короткий feedback; не обрывай ответ посередине.
+14. КРИТИЧЕСКИ ВАЖНО — экранирование кода в HTML (иначе Stepik вернёт Incorrect HTML):
+    * Во ВСЕХ строковых полях (text вопроса, text варианта, feedback) символы < и > внутри кода/generics ОБЯЗАТЕЛЬНО экранируй как &lt; и &gt;.
+    * Особенно: List&lt;T&gt;, List&lt;?&gt;, List&lt;? extends T&gt;, List&lt;? super T&gt;, Map&lt;K,V&gt;, Class&lt;T&gt;, а также выводы вроде &lt;class 'int'&gt;.
+    * Разрешённые HTML-теги (<b>, <i>, <code>, <br>, <ul>, <li>, <p>) НЕ экранируй.
+    * Код с generics лучше в <code>…</code>, но внутри всё равно entities: <code>List&lt;? extends Number&gt;</code>.
+    * НЕПРАВИЛЬНО: "List<? extends B>" / "<code>List<? super Integer></code>"
+    * ПРАВИЛЬНО: "List&lt;? extends B&gt;" / "<code>List&lt;? super Integer&gt;</code>"
 
 КРИТИЧЕСКИ ВАЖНО: ВСЕГДА возвращай валидный JSON массив, даже если запрос кажется недостаточно конкретным. НЕ задавай уточняющих вопросов. Если тема указана обобщенно (например, "по Java core"), создай тесты на любые подходящие темы из этой области. НЕ возвращай текст вместо JSON.

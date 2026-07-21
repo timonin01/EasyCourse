@@ -9,6 +9,7 @@ import org.core.dto.stepik.step.text.StepikBlockTextRequest;
 import org.core.enums.LlmModel;
 import org.core.exception.exceptions.YandexGptException;
 import org.core.config.LlmModelConfig;
+import org.core.config.StepGenerationTokenConfig;
 import org.core.service.agent.SystemPromptService;
 import org.core.service.agent.llmProvider.LlmProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,6 +28,7 @@ public class BatchAnalyzerService {
     private final SystemPromptService systemPromptService;
     private final LlmProvider llmProvider;
     private final LlmModelConfig llmModelConfig;
+    private final StepGenerationTokenConfig tokenConfig;
     private final BatchStepParser batchStepParser;
 
     private final ObjectMapper objectMapper;
@@ -35,17 +37,23 @@ public class BatchAnalyzerService {
                                 @Qualifier("virtualExecutor") ExecutorService executorService,
                                  SystemPromptService systemPromptService,
                                  LlmModelConfig llmModelConfig,
+                                 StepGenerationTokenConfig tokenConfig,
                                  ObjectMapper objectMapper,
                                  BatchStepParser batchStepParser){
         this.llmProvider = llmProvider;
         this.executorService = executorService;
         this.systemPromptService = systemPromptService;
         this.llmModelConfig = llmModelConfig;
+        this.tokenConfig = tokenConfig;
         this.objectMapper = objectMapper;
         this.batchStepParser = batchStepParser;
     }
 
     public BatchStepDTO analyzeUserInput(String userInput) {
+        return analyzeUserInput(userInput, null);
+    }
+
+    public BatchStepDTO analyzeUserInput(String userInput, LlmModel llmModel) {
         String systemPrompt = systemPromptService.getAnalyzerPromptByQuery("batch-analyzer");
         List<ChatMessage> messages = List.of(
                 ChatMessage.builder()
@@ -58,8 +66,11 @@ public class BatchAnalyzerService {
                         .build()
         );
 
-        String aiResponse = llmProvider.chat(messages);
-        log.info("Get response from llm for BatchStepDTO: {}", aiResponse);
+        int maxTokens = tokenConfig.getBatchAnalyzerMaxTokens();
+        String modelUri = llmModel != null ? llmModelConfig.getModelUri(llmModel) : null;
+        String aiResponse = llmProvider.chatJson(messages, modelUri, maxTokens);
+        log.info("Get response from llm for BatchStepDTO (model={}, maxTokens={}): {}",
+                modelUri != null ? modelUri : llmModelConfig.getDefaultModelUri(), maxTokens, aiResponse);
 
         try {
             String json = batchStepParser.extractJsonFromResponse(aiResponse);
