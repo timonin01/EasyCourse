@@ -270,10 +270,25 @@ export interface GeneratedStepHistory {
   createdAt?: string;
 }
 
+export interface StepikVideoUrl {
+  quality?: string | number;
+  url?: string;
+}
+
+export interface StepikVideoSource {
+  id?: number;
+  thumbnail?: string;
+  urls?: StepikVideoUrl[];
+  duration?: number;
+  status?: string;
+  upload_date?: string;
+  filename?: string;
+}
+
 export interface StepikBlockRequest {
   name: string;
   text?: string;
-  video?: string | null;
+  video?: StepikVideoSource | null;
   options?: unknown;
   source?: unknown;
   feedback_correct?: string;
@@ -282,7 +297,7 @@ export interface StepikBlockRequest {
 
 export interface GeneratedStep {
   text: string;
-  video?: string | null;
+  video?: StepikVideoSource | null;
   options?: unknown;
   source?: ChoiceSource | MatchingSource | unknown;
 }
@@ -463,6 +478,9 @@ export function getStepDisplayType(step: Step): StepType {
       if (parsed && typeof parsed === 'object' && parsed.name === 'code') {
         return 'CODE';
       }
+      if (parsed && typeof parsed === 'object' && parsed.name === 'video') {
+        return 'VIDEO';
+      }
     } catch {
       // ignore
     }
@@ -482,7 +500,7 @@ const STEP_TYPE_TO_BLOCK: Record<StepType, string> = {
   MATH: 'math',
   FREE_ANSWER: 'free-answer',
   CODE: 'code',
-  VIDEO: 'text',
+  VIDEO: 'video',
   RANDOM_TASKS: 'random-tasks',
 };
 

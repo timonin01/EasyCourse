@@ -39,7 +39,7 @@ export function stepTypeToAIString(stepType: StepType): string {
     RANDOM_TASKS: 'random-tasks',
     TABLE: 'table',
     CODE: 'text',
-    VIDEO: 'text',
+    VIDEO: 'video',
   };
   return mapping[stepType] || 'text';
 }

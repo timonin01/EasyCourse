@@ -4,6 +4,7 @@ import { Modal, Button } from '../../../components/ui';
 import { StepView } from '../../../components/StepView';
 import { STEP_TYPE_CHANGE_PRO_MESSAGE } from '../../../constants/subscription';
 import type { Step } from '../../../types';
+import { getStepBlockName, getStepDisplayType } from '../../../types';
 
 interface StepViewModalProps {
   isOpen: boolean;
@@ -32,6 +33,10 @@ export function StepViewModal({
   onEditTask,
   onOpenContentEdit,
 }: StepViewModalProps) {
+  const isVideoStep =
+    selectedStep != null &&
+    (getStepBlockName(selectedStep) === 'video' || getStepDisplayType(selectedStep) === 'VIDEO');
+
   return (
     <Modal
       isOpen={isOpen}
@@ -44,7 +49,7 @@ export function StepViewModal({
           <StepView step={selectedStep} />
           <div className="flex justify-end gap-3 pt-4 border-t border-dark-700 flex-wrap">
             <Button variant="secondary" onClick={onClose}>Закрыть</Button>
-            {canChangeType && (
+            {!isVideoStep && canChangeType && (
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -71,7 +76,7 @@ export function StepViewModal({
                 )}
               </Button>
             )}
-            {canEditTask && (
+            {!isVideoStep && canEditTask && (
               <Button 
                 variant="secondary" 
                 onClick={onEditTask}
@@ -81,9 +86,11 @@ export function StepViewModal({
                 Редактировать задание
               </Button>
             )}
-            <Button variant="secondary" onClick={onOpenContentEdit}>
-              <Sparkles className="w-4 h-4 mr-2" /> Изменить контент через AI
-            </Button>
+            {!isVideoStep && (
+              <Button variant="secondary" onClick={onOpenContentEdit}>
+                <Sparkles className="w-4 h-4 mr-2" /> Изменить контент через AI
+              </Button>
+            )}
           </div>
         </div>
       ) : null}
