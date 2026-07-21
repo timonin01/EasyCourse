@@ -17,6 +17,7 @@ import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 import org.core.dto.stepik.step.code.response.StepikBlockCodeResponse;
+import org.core.dto.stepik.step.video.response.StepikBlockVideoResponse;
 import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.core.util.CleanerHtmlTags;
 import org.springframework.stereotype.Component;
@@ -53,6 +54,8 @@ public class ConverterStepikStepSourceResponseDataToStepResponseDTO {
                 builder.content(cleanerTags.cleanHtmlTags(textBlock.getText()));
             } else if (stepikStep.getBlock() instanceof StepikBlockCodeResponse codeBlock) {
                 builder.content(codeBlock.getText() != null ? cleanerTags.cleanHtmlTags(codeBlock.getText()) : null);
+            } else if (stepikStep.getBlock() instanceof StepikBlockVideoResponse videoBlock) {
+                builder.content(videoBlock.getText() != null ? cleanerTags.cleanHtmlTags(videoBlock.getText()) : null);
             } else {
                 builder.content(null);
             }
@@ -79,6 +82,7 @@ public class ConverterStepikStepSourceResponseDataToStepResponseDTO {
             case StepikBlockFreeAnswerResponse stepikBlockFreeAnswerResponse -> StepType.FREE_ANSWER;
             case StepikBlockRandomTasksResponse stepikBlockRandomTasksResponse -> StepType.RANDOM_TASKS;
             case StepikBlockCodeResponse stepikBlockCodeResponse -> StepType.CODE;
+            case StepikBlockVideoResponse stepikBlockVideoResponse -> StepType.VIDEO;
             case null, default -> throw new StepikStepIntegrationException("Unknown StepType in step");
         };
     }

@@ -10,6 +10,7 @@ import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 import org.core.dto.stepik.step.code.response.StepikBlockCodeResponse;
+import org.core.dto.stepik.step.video.response.StepikBlockVideoResponse;
 import org.core.exception.exceptions.StepikStepIntegrationException;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class ConverterStepikStepBlockResponseToRequest {
     private final MatchingResponseToRequestConverter matchingConverter;
     private final TableResponseToRequestConverter tableConverter;
     private final CodeResponseToRequestConverter codeConverter;
+    private final VideoResponseToRequestConverter videoConverter;
 
     public StepikBlockRequest convertResponseToRequest(StepikBlockResponse response) {
         if (response instanceof StepikBlockTextResponse textResponse) {
@@ -37,6 +39,8 @@ public class ConverterStepikStepBlockResponseToRequest {
             return tableConverter.convertTableResponseToRequest(tableResponse);
         } else if (response instanceof StepikBlockCodeResponse codeResponse) {
             return codeConverter.convertCodeResponseToRequest(codeResponse);
+        } else if (response instanceof StepikBlockVideoResponse videoResponse) {
+            return videoConverter.convertVideoResponseToRequest(videoResponse);
         } else {
             throw new StepikStepIntegrationException("Unknown block type: " + response.getClass().getSimpleName());
         }

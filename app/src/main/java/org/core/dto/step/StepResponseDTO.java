@@ -14,6 +14,7 @@ import org.core.dto.stepik.step.test.sorting.response.StepikBlockSortingResponse
 import org.core.dto.stepik.step.test.table.response.StepikBlockTableResponse;
 import org.core.dto.stepik.step.text.StepikBlockTextResponse;
 import org.core.dto.stepik.step.code.response.StepikBlockCodeResponse;
+import org.core.dto.stepik.step.video.response.StepikBlockVideoResponse;
 
 import java.time.LocalDateTime;
 
@@ -37,7 +38,8 @@ public class StepResponseDTO {
         @JsonSubTypes.Type(value = StepikBlockSortingResponse.class, name = "sorting"),
         @JsonSubTypes.Type(value = StepikBlockMatchingResponse.class, name = "matching"),
         @JsonSubTypes.Type(value = StepikBlockTableResponse.class, name = "table"),
-        @JsonSubTypes.Type(value = StepikBlockCodeResponse.class, name = "code")
+        @JsonSubTypes.Type(value = StepikBlockCodeResponse.class, name = "code"),
+        @JsonSubTypes.Type(value = StepikBlockVideoResponse.class, name = "video")
     })
     private StepikBlockResponse stepikBlock;
     private String stepikBlockData;
