@@ -56,16 +56,13 @@ export function DeleteCourseModals({
           {course?.stepikCourseId && (
             <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
               <p className="text-sm text-orange-400 mb-2">
-                ⚠️ Внимание! Каскадное удаление со Stepik удалит:
+                ⚠️ Удаление со Stepik:
               </p>
               <ul className="text-sm text-dark-300 list-disc list-inside space-y-1">
-                <li>Курс и все его модули</li>
-                <li>Все уроки в модулях</li>
-                <li>Все шаги в уроках</li>
+                <li>На Stepik удаляется только сам курс</li>
+                <li>Локально снимается связь со Stepik у модулей, уроков и шагов</li>
+                <li>При «Удалить везде» локально удаляются все сущности курса</li>
               </ul>
-              <p className="text-xs text-dark-400 mt-2">
-                Рекомендуется удалять сущности в порядке их позиций (1→2→3) для избежания проблем с позициями на Stepik.
-              </p>
             </div>
           )}
 
@@ -102,7 +99,7 @@ export function DeleteCourseModals({
                   className="w-full justify-start text-orange-400 hover:text-orange-300"
                   onClick={async () => {
                     if (!course) return;
-                    const warningText = `Внимание! Будет удалено каскадно со Stepik: курс "${course.title}", все модули, уроки и шаги.\n\nРекомендуется удалять сущности в порядке их позиций (1→2→3) для избежания проблем с позициями на Stepik.\n\nПродолжить?`;
+                    const warningText = `Удалить курс "${course.title}" со Stepik? На Stepik удалится только курс; локально связь со Stepik будет снята у всех модулей, уроков и шагов.\n\nПродолжить?`;
                     if (!confirm(warningText)) return;
 
                     setDeletingItems((prev) => new Set(prev).add(course.id));
@@ -145,7 +142,7 @@ export function DeleteCourseModals({
                   className="w-full justify-start text-red-400 hover:text-red-300"
                   onClick={async () => {
                     if (!course) return;
-                    const warningText = `ВНИМАНИЕ! Будет удалено ВЕЗДЕ (локально И со Stepik): курс "${course.title}", все модули, уроки и шаги.\n\nЭто действие нельзя отменить!\n\nПродолжить?`;
+                    const warningText = `ВНИМАНИЕ! Будет удалено ВЕЗДЕ: на Stepik — только курс "${course.title}", локально — курс и все модули, уроки и шаги.\n\nЭто действие нельзя отменить!\n\nПродолжить?`;
                     if (!confirm(warningText)) return;
 
                     setDeletingItems((prev) => new Set(prev).add(course.id));

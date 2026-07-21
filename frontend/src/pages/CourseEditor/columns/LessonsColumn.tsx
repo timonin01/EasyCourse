@@ -144,7 +144,7 @@ export function LessonsColumn({
                         className="p-1 text-orange-400 hover:text-orange-300"
                         disabled={deletingItems.has(lesson.id)}
                         onClick={() => onDeleteFromStepik(lesson.id)}
-                        title="Удалить со Stepik (каскадно). Рекомендуется удалять в порядке позиций (1→2→3)."
+                        title="Удалить со Stepik"
                       >
                         {deletingItems.has(lesson.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <StepikIcon className="w-3 h-3" size={12} />}
                       </Button>

@@ -148,7 +148,7 @@ export function ModelsColumn({
                         className="p-1 text-orange-400 hover:text-orange-300"
                         disabled={deletingItems.has(section.id)}
                         onClick={() => onDeleteFromStepik(section.id)}
-                        title="Удалить со Stepik (каскадно)"
+                        title="Удалить со Stepik"
                       >
                         {deletingItems.has(section.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <StepikIcon className="w-3 h-3" size={12} />}
                       </Button>
