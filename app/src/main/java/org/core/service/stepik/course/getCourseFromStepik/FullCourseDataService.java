@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Component
@@ -91,12 +92,12 @@ public class FullCourseDataService {
                         return unitIds.stream()
                                 .map(id -> CompletableFuture.supplyAsync(() -> {
                                     try {
-                                        // Устанавливаем userId в ThreadLocal для вложенного потока
                                         userContextBean.setUserId(userId);
                                         Long stepikLessonId = stepikUnitLessonFetcher.getLessonIdByUnitID(id);
                                         StepikLessonResponseData stepikLessonResponseData = stepikLessonService.getLessonByStepikId(stepikLessonId);
 
-                                        StepikUnitResponseData unit = stepikUnitService.getUnitByLessonId(stepikLessonResponseData.getId());
+                                        StepikUnitResponseData unit =
+                                                stepikUnitService.getUnitByLessonId(stepikLessonResponseData.getId());
                                         Integer position = unit.getPosition();
 
                                         Lesson existingLesson = lessonRepository.findByStepikLessonId(stepikLessonId);
@@ -127,11 +128,15 @@ public class FullCourseDataService {
     }
 
     public List<StepResponseDTO> getStepResponseDTO(List<LessonResponseDTO> lessonsResponseDTOS, Long userId){
+        AtomicInteger failedSteps = new AtomicInteger();
+        AtomicInteger requestedSteps = new AtomicInteger();
+
         List<CompletableFuture<List<StepResponseDTO>>> stepResponseDTOS = lessonsResponseDTOS.stream()
-                .map(lesson -> CompletableFuture.<List<StepResponseDTO>>supplyAsync(() -> {
+                .map(lesson -> CompletableFuture.supplyAsync(() -> {
                     try {
                         userContextBean.setUserId(userId);
                         List<Long> stepIds = stepikStepService.getLessonStepIdsFromStepik(lesson.getStepikLessonId());
+                        requestedSteps.addAndGet(stepIds.size());
                         return stepIds.stream()
                                 .map(id -> CompletableFuture.supplyAsync(() -> {
                                     try {
@@ -146,8 +151,10 @@ public class FullCourseDataService {
                                             stepDTO.setLessonId(lesson.getStepikLessonId());
                                             return stepDTO;
                                         }
+                                        failedSteps.incrementAndGet();
                                         return null;
                                     } catch (Exception e) {
+                                        failedSteps.incrementAndGet();
                                         log.error("Failed to load step {}: {}", id, e.getMessage(), e);
                                         return null;
                                     } finally {
@@ -165,10 +172,19 @@ public class FullCourseDataService {
                     }
                 },virtualExecutor))
                 .toList();
-        return stepResponseDTOS.stream()
+        List<StepResponseDTO> loaded = stepResponseDTOS.stream()
                 .map(CompletableFuture::join)
                 .flatMap(List::stream)
                 .toList();
+
+        int failed = failedSteps.get();
+        if (failed > 0) {
+            log.warn("Loaded {}/{} steps from Stepik ({} failed after retries)",
+                    loaded.size(), requestedSteps.get(), failed);
+        } else {
+            log.info("Loaded {}/{} steps from Stepik", loaded.size(), requestedSteps.get());
+        }
+        return loaded;
     }
 
 }
