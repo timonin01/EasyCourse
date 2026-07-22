@@ -65,11 +65,11 @@ public class ProvodAiService implements AiService {
                 } catch (RuntimeException retryEx) {
                     log.error("Error calling Provod AI API after JSON fallback (model: {}): {}",
                             modelToUse, retryEx.getMessage(), retryEx);
-                    throw new ProvodAiException("Sorry, I couldn't generate a response at the moment.");
+                    throw ProvodAiErrorMapper.toUserFacingException(retryEx);
                 }
             }
             log.error("Error calling Provod AI API (model: {}): {}", modelToUse, e.getMessage(), e);
-            throw new ProvodAiException("Sorry, I couldn't generate a response at the moment.");
+            throw ProvodAiErrorMapper.toUserFacingException(e);
         }
     }
 

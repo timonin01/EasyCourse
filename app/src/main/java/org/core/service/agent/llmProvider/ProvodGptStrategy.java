@@ -3,6 +3,7 @@ package org.core.service.agent.llmProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.core.dto.agent.ChatMessage;
+import org.core.exception.exceptions.ProvodAiException;
 import org.core.service.ai.ProvodAiService;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,8 @@ public class ProvodGptStrategy implements LlmProvider{
                     .anyMatch(chatMessage -> chatMessage.getRole().equals("system"));
 
             return provodAiService.generateResponse(messages, hasSystemPrompt);
+        } catch (ProvodAiException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error in ProvodAI adapter: {}", e.getMessage());
             throw new RuntimeException("Failed to get response from ProvodAi: " + e.getMessage());
@@ -38,6 +41,8 @@ public class ProvodGptStrategy implements LlmProvider{
                     .anyMatch(chatMessage -> chatMessage.getRole().equals("system"));
 
             return provodAiService.generateResponse(messages, hasSystemPrompt, modelUri);
+        } catch (ProvodAiException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error in ProvodAi adapter: {}, with modelUri: {}", e.getMessage(), modelUri);
             throw new RuntimeException("Failed to get response from ProvodAi: " + e.getMessage());
@@ -54,6 +59,8 @@ public class ProvodGptStrategy implements LlmProvider{
                 return provodAiService.generateResponse(messages, hasSystemPrompt, maxTokens);
             }
             return provodAiService.generateResponse(messages, hasSystemPrompt, maxTokens, modelUri);
+        } catch (ProvodAiException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error in ProvodAi adapter: {}, with modelUri: {}", e.getMessage(), modelUri);
             throw new RuntimeException("Failed to get response from ProvodAi: " + e.getMessage());
@@ -72,6 +79,8 @@ public class ProvodGptStrategy implements LlmProvider{
                     .anyMatch(chatMessage -> chatMessage.getRole().equals("system"));
 
             return provodAiService.generateResponse(messages, hasSystemPrompt, maxTokens, modelUri, true);
+        } catch (ProvodAiException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error in ProvodAi JSON adapter (modelUri={}): {}", modelUri, e.getMessage());
             throw new RuntimeException("Failed to get JSON response from ProvodAi: " + e.getMessage());
