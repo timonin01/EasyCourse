@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import { ChevronDown, Lock } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LLM_MODEL_OPTIONS } from '../../constants/llmModels';
 
@@ -16,9 +16,11 @@ interface LlmModelSelectProps {
 }
 
 interface MenuPosition {
-  top: number;
+  top?: number;
+  bottom?: number;
   left: number;
   width: number;
+  maxHeight: number;
 }
 
 function ModelIcon({ src, alt }: { src?: string; alt: string }) {
@@ -58,24 +60,51 @@ export function LlmModelSelect({
 
     const rect = buttonRef.current.getBoundingClientRect();
     const gap = 6;
-    const estimatedMenuHeight = LLM_MODEL_OPTIONS.length * 44 + 8;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const openUp =
-      menuPlacement === 'top' ||
-      (menuPlacement === 'bottom' && spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
+    const viewportPadding = 8;
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const spaceAbove = rect.top - viewportPadding;
+    const measuredHeight = menuRef.current?.offsetHeight;
+    const estimatedMenuHeight = measuredHeight || LLM_MODEL_OPTIONS.length * 44 + 8;
 
-    setMenuPosition({
-      top: openUp ? rect.top - estimatedMenuHeight - gap : rect.bottom + gap,
-      left: rect.left,
-      width: rect.width,
-    });
+    const openUp =
+      menuPlacement === 'top'
+        ? spaceAbove >= Math.min(estimatedMenuHeight, 120) || spaceAbove >= spaceBelow
+        : spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
+
+    const maxHeight = Math.max(
+      160,
+      openUp ? spaceAbove - gap : spaceBelow - gap
+    );
+
+    // Prefer anchoring to the trigger so the menu "flies out" next to the button
+    // instead of floating with a guessed height gap (important near page bottom).
+    if (openUp) {
+      setMenuPosition({
+        bottom: window.innerHeight - rect.top + gap,
+        left: rect.left,
+        width: Math.max(rect.width, 208),
+        maxHeight,
+      });
+    } else {
+      setMenuPosition({
+        top: rect.bottom + gap,
+        left: rect.left,
+        width: Math.max(rect.width, 208),
+        maxHeight,
+      });
+    }
   };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    // Remeasure after portal paint so maxHeight uses real menu size when needed
+    const id = requestAnimationFrame(() => updateMenuPosition());
+    return () => cancelAnimationFrame(id);
+  }, [open, menuPlacement]);
 
   useEffect(() => {
     if (!open) return;
-
-    updateMenuPosition();
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -109,10 +138,12 @@ export function LlmModelSelect({
           aria-labelledby={selectId}
           style={{
             top: menuPosition.top,
+            bottom: menuPosition.bottom,
             left: menuPosition.left,
             width: menuPosition.width,
+            maxHeight: menuPosition.maxHeight,
           }}
-          className="fixed z-[100] overflow-hidden rounded-xl border border-dark-600 bg-dark-800 py-1 shadow-2xl shadow-black/40"
+          className="fixed z-[100] overflow-y-auto overflow-x-hidden rounded-xl border border-dark-600 bg-dark-800 py-1 shadow-2xl shadow-black/40"
         >
           {LLM_MODEL_OPTIONS.map((option) => {
             const isLocked = !canSelectModel && option.value !== '';

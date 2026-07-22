@@ -153,7 +153,7 @@ export function ChatPanel({
                 className="block min-h-[4.5rem] max-h-40 w-full flex-1 resize-none overflow-y-auto bg-transparent px-4 pt-3 pb-2 text-dark-100 placeholder-dark-500 focus:outline-none scrollbar-thin scrollbar-thumb-dark-700 scrollbar-track-transparent"
               />
               <div className="flex flex-shrink-0 items-center justify-between gap-2 px-2 pb-2 pt-2">
-                <div className="w-40 min-w-0 sm:w-44">
+                <div className="w-44 min-w-0 sm:w-52">
                   <LlmModelSelect
                     value={selectedLlmModel}
                     onChange={onLlmModelChange}

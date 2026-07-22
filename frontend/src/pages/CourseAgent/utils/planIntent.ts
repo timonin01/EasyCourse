@@ -1,7 +1,14 @@
 import type { CoursePlanDTO, PlanActionDTO } from '../../../types';
 
+/** Plan contains at least one delete action (may be mixed with create/move/copy). */
 export function isDeletePlan(plan?: CoursePlanDTO | null): boolean {
   return plan?.actions?.some((action) => isDeleteAction(action)) ?? false;
+}
+
+/** Plan is deletes only — used for irreversible confirm UX and non-SSE execute. */
+export function isDeleteOnlyPlan(plan?: CoursePlanDTO | null): boolean {
+  const actions = plan?.actions ?? [];
+  return actions.length > 0 && actions.every((action) => isDeleteAction(action));
 }
 
 export function isDeleteAction(action?: PlanActionDTO | null): boolean {

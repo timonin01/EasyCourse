@@ -9,7 +9,10 @@ import org.core.context.UserContextBean;
 import org.core.service.security.JwtTokenService;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -22,6 +25,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
     private final UserContextBean userContextBean;
+    private final SecurityContextRepository securityContextRepository = new RequestAttributeSecurityContextRepository();
 
     @Override
     protected void doFilterInternal(
@@ -42,11 +46,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         Long userId = jwtTokenService.getUserIdFromToken(token);
         userContextBean.setUserId(userId);
-        SecurityContextHolder.getContext().setAuthentication(
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(
                 new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList())
         );
+        SecurityContextHolder.setContext(context);
+        securityContextRepository.saveContext(context, request, response);
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            userContextBean.clear();
+        }
     }
 
     @Override

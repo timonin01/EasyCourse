@@ -7,7 +7,7 @@ import { useSubscription } from '../../hooks/useSubscription';
 import { ProUpgradeModal } from './ProUpgradeModal';
 
 export function DashboardSubscriptionWidget() {
-  const { isPro, aiUsed, aiLimit, maxBatchSteps } = useSubscription();
+  const { isPro, aiUsed, aiLimit } = useSubscription();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const usagePercent =
@@ -29,7 +29,7 @@ export function DashboardSubscriptionWidget() {
                 <Badge variant="success">Активна</Badge>
               </div>
               <p className="text-sm text-dark-400">
-                Безлимитные AI-генерации, аудит курса и расширенная batch-генерация
+                Безлимитные AI-генерации, все модели и AI-аудит курса
               </p>
             </div>
           </div>
@@ -64,9 +64,6 @@ export function DashboardSubscriptionWidget() {
               </div>
               <h2 className="text-lg font-semibold text-dark-100">AI-лимит</h2>
               <Badge variant="info">Free</Badge>
-              <span className="text-caption text-dark-500">
-                · batch до {maxBatchSteps} шагов
-              </span>
             </div>
 
             <div className="mb-2 flex items-center justify-between gap-2">

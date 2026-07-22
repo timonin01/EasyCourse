@@ -1,4 +1,4 @@
-import { Bot, Check, ClipboardCheck, Crown, Layers, Lock, RefreshCw, Sparkles } from 'lucide-react';
+import { Bot, Check, ClipboardCheck, Crown, Lock, RefreshCw, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useState, type ReactNode } from 'react';
 import { Button, Badge, Card } from '../../components/ui';
@@ -49,7 +49,7 @@ function FeatureRow({ icon, label, value, active = true }: FeatureRowProps) {
 }
 
 export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) {
-  const { isPro, aiUsed, aiLimit, maxBatchSteps } = useSubscription();
+  const { isPro, aiUsed, aiLimit } = useSubscription();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const usagePercent =
@@ -111,7 +111,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
               onClick={() => setIsUpgradeModalOpen(true)}
               className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
             >
-              Batch до {maxBatchSteps} шагов · Перейти на Pro →
+              Перейти на Pro →
             </button>
           )}
         </div>
@@ -178,12 +178,6 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
         {/* Features */}
         <div className="space-y-1.5">
           <FeatureRow
-            icon={<Layers className="h-3.5 w-3.5" />}
-            label="Batch-генерация"
-            value={`до ${maxBatchSteps} шагов`}
-            active
-          />
-          <FeatureRow
             icon={<Bot className="h-3.5 w-3.5" />}
             label="Модели AI"
             value={isPro ? PRO_LLM_MODEL_LABELS.join(', ') : 'Только Auto'}
@@ -209,7 +203,7 @@ export function SubscriptionPanel({ variant = 'full' }: SubscriptionPanelProps) 
             <p className="text-xs leading-relaxed text-dark-300">
               <span className="font-semibold text-primary-400">Pro</span>
               {' — '}
-              безлимитные генерации, все модели, расширенная batch-генерация и AI-аудит курса
+              безлимитные генерации, все модели и AI-аудит курса
             </p>
             <Button
               size="sm"

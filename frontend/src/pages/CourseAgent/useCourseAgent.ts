@@ -14,7 +14,8 @@ import type {
 } from '../../types';
 import type { CourseTreeHighlight, CourseAgentMode } from './types';
 import { buildTreeHighlight } from './utils/planHighlight';
-import { isDeletePlan } from './utils/planIntent';
+import { isDeleteOnlyPlan } from './utils/planIntent';
+import { extractApiErrorMessage } from '../../utils/apiError';
 import { useCourseAgentStore } from '../../store';
 import type { CourseAgentPendingRequest } from '../../utils/buildAuditAgentHandoff';
 import {
@@ -206,7 +207,7 @@ export function useCourseAgent() {
   const [pendingHandoff, setPendingHandoff] = useState<CourseAgentPendingRequest | null>(null);
   const [agentMode, setAgentModeState] = useState<CourseAgentMode>(readStoredAgentMode);
   const [selectedLlmModel, setSelectedLlmModelState] = useState(readStoredLlmModel);
-  const { canSelectModel } = useSubscription();
+  const { canSelectModel, refresh: refreshSubscription, isPro, aiUsed, aiLimit } = useSubscription();
 
   const isExecuting = useCourseAgentExecutionStore((state) => (
     state.isExecuting && state.courseId === selectedCourseId
@@ -292,7 +293,7 @@ export function useCourseAgent() {
     const tick = () => {
       const startedAt = loadingStartedAtRef.current ?? Date.now();
       const elapsed = Date.now() - startedAt;
-      if (isExecuting && pendingPlan && !isDeletePlan(pendingPlan)) {
+      if (isExecuting && pendingPlan && !isDeleteOnlyPlan(pendingPlan)) {
         const estimate = estimatePlanExecution(pendingPlan);
         if (estimate.totalSteps > 0) {
           const done = simulateCompletedSteps(estimate, elapsed, true);
@@ -568,8 +569,8 @@ export function useCourseAgent() {
 
     adoptSessionId(selectedCourseId, sessionIdRef.current);
 
-    const planToRevise = agentMode === 'AGENT' && pendingPlan && !isDeletePlan(pendingPlan) ? pendingPlan : null;
-    if (agentMode === 'AGENT' && pendingPlan && isDeletePlan(pendingPlan)) {
+    const planToRevise = agentMode === 'AGENT' && pendingPlan && !isDeleteOnlyPlan(pendingPlan) ? pendingPlan : null;
+    if (agentMode === 'AGENT' && pendingPlan && isDeleteOnlyPlan(pendingPlan)) {
       toast.error('План удаления нельзя изменить через чат. Подтвердите удаление или отмените план.');
       return;
     }
@@ -596,6 +597,7 @@ export function useCourseAgent() {
             agentMode,
           );
       applyResponse(res);
+      void refreshSubscription();
     } catch (error) {
       console.error('Course agent chat error:', error);
       pushMessage('assistant', 'Произошла ошибка при обработке запроса.');
@@ -603,7 +605,7 @@ export function useCourseAgent() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCourseId, pendingPlan, pushMessage, applyResponse, adoptSessionId, agentMode, selectedLlmModel]);
+  }, [selectedCourseId, pendingPlan, pushMessage, applyResponse, adoptSessionId, agentMode, selectedLlmModel, refreshSubscription]);
 
   const handleSend = useCallback(() => {
     void sendChat(input);
@@ -623,6 +625,7 @@ export function useCourseAgent() {
     }
     if (payload.kind === 'success') {
       applyResponse(payload.response);
+      void refreshSubscription();
       return;
     }
     if (payload.kind === 'partial') {
@@ -640,14 +643,26 @@ export function useCourseAgent() {
       ));
       toast.success('Черновик частично создан');
       structureHandlersRef.current?.refresh();
+      void refreshSubscription();
       return;
     }
-    pushMessage('assistant', 'Не удалось выполнить план.');
-    toast.error('Ошибка выполнения плана');
-  }, [finishPayload, selectedCourseId, applyResponse, pushMessage]);
+    pushMessage('assistant', payload.message || 'Не удалось выполнить план.');
+    toast.error(payload.message || 'Ошибка выполнения плана');
+  }, [finishPayload, selectedCourseId, applyResponse, pushMessage, refreshSubscription]);
 
   const confirmPlan = useCallback(async () => {
     if (!selectedCourseId || !pendingPlan) return;
+
+    if (!isPro && !isDeleteOnlyPlan(pendingPlan) && aiLimit != null) {
+      const plannedSteps = estimatePlanExecution(pendingPlan).totalSteps;
+      const remaining = Math.max(0, aiLimit - aiUsed);
+      if (plannedSteps > remaining) {
+        toast.error(
+          `В плане ${plannedSteps} шаг., осталось ${remaining} из ${aiLimit}. Уменьшите план или оформите Pro.`,
+        );
+        return;
+      }
+    }
 
     const executionStore = useCourseAgentExecutionStore.getState();
     if (executionStore.isExecuting) {
@@ -665,7 +680,7 @@ export function useCourseAgent() {
       return;
     }
 
-    if (!isDeletePlan(pendingPlan)) {
+    if (!isDeleteOnlyPlan(pendingPlan)) {
       toast('Не меняйте структуру курса, пока идёт генерация', {
         duration: 6000,
       });
@@ -678,7 +693,7 @@ export function useCourseAgent() {
     const llmModel = selectedLlmModel || undefined;
 
     try {
-      if (isDeletePlan(planSnapshot)) {
+      if (isDeleteOnlyPlan(planSnapshot)) {
         const res = await agentApi.courseAgentExecutePlan(
           courseIdSnapshot,
           sessionIdSnapshot,
@@ -689,22 +704,13 @@ export function useCourseAgent() {
         return;
       }
 
-      let readyResolved = false;
-      let resolveReady: (() => void) | null = null;
-      const readyPromise = new Promise<void>((resolve) => {
-        resolveReady = () => {
-          if (!readyResolved) {
-            readyResolved = true;
-            resolve();
-          }
-        };
-      });
-
+      // SSE is best-effort progress only — never block or fail execute on stream errors.
+      // Waiting for INIT caused false failures when async SSE hit Access Denied / buffering.
       const streamPromise = agentApi.courseAgentExecutePlanStream(
         courseIdSnapshot,
         sessionIdSnapshot,
         {
-          onReady: () => resolveReady?.(),
+          onReady: () => undefined,
           onProgress: (event) => {
             useCourseAgentExecutionStore.getState().applyProgressEvent(event);
             const type = event.planExecutionEventType;
@@ -732,17 +738,14 @@ export function useCourseAgent() {
           },
         },
         abortController.signal,
-      );
+      ).catch((error) => {
+        console.warn('Course agent SSE stream unavailable, continuing execute', error);
+      });
 
-      await Promise.race([
-        readyPromise,
-        new Promise<void>((resolve) => {
-          window.setTimeout(() => {
-            resolveReady?.();
-            resolve();
-          }, 2500);
-        }),
-      ]);
+      // Give the stream a brief head start so early progress events are not missed.
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 150);
+      });
 
       try {
         const res = await agentApi.courseAgentExecutePlan(
@@ -754,22 +757,23 @@ export function useCourseAgent() {
         useCourseAgentExecutionStore.getState().completeExecution({ kind: 'success', response: res });
       } finally {
         abortController.abort();
-        await streamPromise.catch(() => undefined);
+        await streamPromise;
       }
     } catch (error) {
       console.error('Course agent execute error:', error);
+      const message = extractApiErrorMessage(error, 'Не удалось выполнить план.');
       const created = useCourseAgentExecutionStore.getState().createdIds;
       if (created.stepIds.length > 0 || created.lessonIds.length > 0 || created.sectionIds.length > 0) {
         useCourseAgentExecutionStore.getState().completeExecution({ kind: 'partial', created });
       } else {
-        useCourseAgentExecutionStore.getState().completeExecution({ kind: 'failed' });
+        useCourseAgentExecutionStore.getState().completeExecution({ kind: 'failed', message });
       }
     } finally {
       if (!abortController.signal.aborted) {
         abortController.abort();
       }
     }
-  }, [selectedCourseId, pendingPlan, selectedLlmModel]);
+  }, [selectedCourseId, pendingPlan, selectedLlmModel, isPro, aiUsed, aiLimit]);
 
   const cancelPlan = useCallback(async () => {
     if (!selectedCourseId) return;
@@ -808,13 +812,14 @@ export function useCourseAgent() {
         agentMode,
       );
       applyResponse(res);
+      void refreshSubscription();
     } catch (error) {
       console.error('Course agent candidate error:', error);
       toast.error('Не удалось применить выбранный вариант');
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCourseId, resumeContext, pushMessage, applyResponse, agentMode, selectedLlmModel]);
+  }, [selectedCourseId, resumeContext, pushMessage, applyResponse, agentMode, selectedLlmModel, refreshSubscription]);
 
   const updatePlan = useCallback((plan: CoursePlanDTO) => {
     setPendingPlan(plan);

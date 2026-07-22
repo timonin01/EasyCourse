@@ -99,7 +99,7 @@ public class CourseAgentController {
 
             CourseAgentResponse response = courseAgentService.handleChat(
                     courseId, userId, sessionId, userInput, model, CourseAgentMode.parse(agentMode));
-            if (response.getAction() == CourseAgentAction.STEP_MODIFIED) {
+            if (shouldRecordAgentAiUsage(response.getAction())) {
                 subscriptionService.recordAiUsage(userId, 1);
             }
             return ResponseEntity.ok(response);
@@ -133,7 +133,7 @@ public class CourseAgentController {
 
             CourseAgentResponse response = courseAgentService.handleCandidate(
                     courseId, userId, sessionId, request, model, CourseAgentMode.parse(agentMode));
-            if (response.getAction() == CourseAgentAction.STEP_MODIFIED) {
+            if (shouldRecordAgentAiUsage(response.getAction())) {
                 subscriptionService.recordAiUsage(userId, 1);
             }
             return ResponseEntity.ok(response);
@@ -166,9 +166,11 @@ public class CourseAgentController {
             subscriptionService.validateModelAccess(userId, model);
             subscriptionService.validateAiGenerationAllowed(userId, 1);
 
-            return ResponseEntity.ok(courseAgentService.editPlan(
+            CourseAgentResponse response = courseAgentService.editPlan(
                     courseId, userId, sessionId,
-                    request.getPlan(), request.getInstruction(), model));
+                    request.getPlan(), request.getInstruction(), model);
+            subscriptionService.recordAiUsage(userId, 1);
+            return ResponseEntity.ok(response);
         } catch (PromptLengthExceededException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (SubscriptionLimitExceededException e) {
@@ -226,6 +228,7 @@ public class CourseAgentController {
             }
             return ResponseEntity.ok(response);
         } catch (SubscriptionLimitExceededException e) {
+            log.warn("Execute-plan blocked by subscription for user {}: {}", userId, e.getMessage());
             return ResponseEntity.status(403).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("Invalid execute-plan executePlanRequest: {}", e.getMessage());
@@ -283,6 +286,13 @@ public class CourseAgentController {
             return null;
         }
         return LlmModel.valueOf(llmModel.toUpperCase());
+    }
+
+    private static boolean shouldRecordAgentAiUsage(CourseAgentAction action) {
+        return action == CourseAgentAction.SHOW_PLAN
+                || action == CourseAgentAction.INFO_ANSWER
+                || action == CourseAgentAction.NEED_CLARIFICATION
+                || action == CourseAgentAction.STEP_MODIFIED;
     }
 
 }

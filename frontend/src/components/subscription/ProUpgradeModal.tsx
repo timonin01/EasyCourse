@@ -1,7 +1,6 @@
-import { Bot, ClipboardCheck, Crown, Layers, RefreshCw, Sparkles } from 'lucide-react';
+import { Bot, ClipboardCheck, Crown, RefreshCw, Sparkles } from 'lucide-react';
 import { Modal, Button, Badge } from '../ui';
 import { PRO_LLM_MODEL_LABELS } from '../../constants/llmModels';
-import { PRO_MAX_BATCH_STEPS } from '../../constants/subscription';
 
 interface ProUpgradeModalProps {
   isOpen: boolean;
@@ -18,11 +17,6 @@ const features = [
     icon: Bot,
     title: 'Все модели AI',
     description: PRO_LLM_MODEL_LABELS.join(', '),
-  },
-  {
-    icon: Layers,
-    title: 'Расширенная batch-генерация',
-    description: `До ${PRO_MAX_BATCH_STEPS} шагов за один запрос`,
   },
   {
     icon: RefreshCw,

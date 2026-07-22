@@ -28,7 +28,7 @@ export type CreatedDuringExecute = {
 export type ExecutionFinishPayload =
   | { kind: 'success'; response: CourseAgentResponse }
   | { kind: 'partial'; created: CreatedDuringExecute }
-  | { kind: 'failed' };
+  | { kind: 'failed'; message?: string };
 
 type CourseAgentExecutionState = {
   courseId: number | null;

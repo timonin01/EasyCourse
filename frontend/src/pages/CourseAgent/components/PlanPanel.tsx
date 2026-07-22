@@ -10,15 +10,17 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import type { CountStepDTO, CoursePlanDTO, PlanActionDTO, PlanExecutionLiveProgress } from '../../../types';
 import { LessonPlanEditor, StepPlanEditor } from './PlanEditor';
 import { ExecuteProgress } from './ExecuteProgress';
-import { isCreateAction, isCopyAction, isDeleteAction, isDeletePlan, isMoveAction, planSummaryLabel } from '../utils/planIntent';
+import { isCreateAction, isCopyAction, isDeleteAction, isDeleteOnlyPlan, isDeletePlan, isMoveAction, planSummaryLabel } from '../utils/planIntent';
+import { estimatePlanExecution } from '../utils/planExecutionProgress';
 import { sanitizePlanMessage } from '../utils/sanitizePlanMessage';
+import { useSubscription } from '../../../hooks/useSubscription';
 
 const STEP_TYPE_LABELS: Record<string, string> = {
   text: 'Теория',
@@ -468,12 +470,21 @@ export function PlanPanel({
 }: PlanPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const { isPro, aiUsed, aiLimit } = useSubscription();
 
   const isDelete = isDeletePlan(plan);
+  const isDeleteOnly = isDeleteOnlyPlan(plan);
   const canManualEdit = !isDelete && (plan.actions?.some(isCreateAction) ?? false);
   const intentLabel = planSummaryLabel(plan);
+  const plannedSteps = useMemo(() => estimatePlanExecution(plan).totalSteps, [plan]);
+  const remainingAi = aiLimit != null ? Math.max(0, aiLimit - aiUsed) : null;
+  const exceedsAiQuota = !isPro
+    && !isDeleteOnly
+    && plannedSteps > 0
+    && remainingAi != null
+    && plannedSteps > remainingAi;
 
-  const IntentIcon = isDelete
+  const IntentIcon = isDeleteOnly
     ? Trash2
     : plan.actions?.some((action) => action.type === 'CREATE_SECTION')
       ? FolderPlus
@@ -484,7 +495,7 @@ export function PlanPanel({
   return (
     <div className={clsx(
       'flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-dark-850',
-      isDelete ? 'border-red-500/30' : 'border-primary-500/30',
+      isDeleteOnly ? 'border-red-500/30' : 'border-primary-500/30',
     )}>
       <button
         type="button"
@@ -492,7 +503,7 @@ export function PlanPanel({
         className="flex w-full shrink-0 items-center justify-between gap-3 px-4 py-3 text-left"
       >
         <div className="flex items-center gap-2 text-sm font-medium text-dark-100">
-          <IntentIcon className={clsx('h-4 w-4', isDelete ? 'text-red-400' : 'text-primary-400')} />
+          <IntentIcon className={clsx('h-4 w-4', isDeleteOnly ? 'text-red-400' : 'text-primary-400')} />
           План: {intentLabel}
         </div>
         {isExpanded
@@ -504,6 +515,12 @@ export function PlanPanel({
         <>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-dark-700/60 px-4 py-3">
             {isDelete && <DeletePlanWarning actions={plan.actions ?? []} />}
+            {exceedsAiQuota && (
+              <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                В плане {plannedSteps} шаг., осталось {remainingAi} из {aiLimit} AI в этом месяце.
+                Уменьшите план через чат или вручную, либо оформите Pro.
+              </div>
+            )}
             {isEditing && canManualEdit ? (
               <PlanManualEditor plan={plan} isExecuting={isExecuting} onChange={onChange} />
             ) : (
@@ -511,17 +528,19 @@ export function PlanPanel({
             )}
 
             <p className="mt-3 text-xs text-dark-500">
-              {isDelete
+              {isDeleteOnly
                 ? 'Подтвердите удаление или отмените план. Изменить его через чат нельзя. Удаление необратимо.'
-                : isEditing
-                  ? 'Измените поля вручную или нажмите «Готово», чтобы вернуться к preview.'
-                  : canManualEdit
-                    ? 'Измените план вручную, через чат или подтвердите выполнение.'
-                    : 'Измените план через чат или подтвердите выполнение.'}
+                : isDelete
+                  ? 'В плане есть удаление. Проверьте действия, измените через чат или подтвердите выполнение.'
+                  : isEditing
+                    ? 'Измените поля вручную или нажмите «Готово», чтобы вернуться к preview.'
+                    : canManualEdit
+                      ? 'Измените план вручную, через чат или подтвердите выполнение.'
+                      : 'Измените план через чат или подтвердите выполнение.'}
             </p>
 
             {isExecuting && (
-              <ExecuteProgress plan={plan} isDelete={isDelete} live={executionLive} />
+              <ExecuteProgress plan={plan} isDelete={isDeleteOnly} live={executionLive} />
             )}
           </div>
 
@@ -548,16 +567,21 @@ export function PlanPanel({
               <X className="h-4 w-4" />
             </Button>
             <Button
-              variant={isDelete ? 'danger' : 'primary'}
+              variant={isDeleteOnly ? 'danger' : 'primary'}
               size="sm"
               onClick={onConfirm}
-              disabled={isExecuting || (canManualEdit && (plan.actions?.length ?? 0) === 0)}
+              disabled={
+                isExecuting
+                || exceedsAiQuota
+                || (canManualEdit && (plan.actions?.length ?? 0) === 0)
+              }
               isLoading={isExecuting}
               icon={!isExecuting ? <Check className="h-4 w-4" /> : undefined}
+              title={exceedsAiQuota ? 'План превышает оставшийся лимит AI' : undefined}
             >
               {isExecuting
-                ? (isDelete ? 'Удаляю…' : 'Генерирую…')
-                : (isDelete ? 'Удалить навсегда' : 'Сгенерировать')}
+                ? (isDeleteOnly ? 'Удаляю…' : 'Генерирую…')
+                : (isDeleteOnly ? 'Удалить навсегда' : 'Сгенерировать')}
             </Button>
           </div>
         </>
