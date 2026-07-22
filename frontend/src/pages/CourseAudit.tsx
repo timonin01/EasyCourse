@@ -623,6 +623,9 @@ export function CourseAudit() {
               </span>
             </div>
             <p className="pl-8 text-xs text-dark-500">
+              Генерация аудита может занять несколько минут — зависит от размера курса.
+            </p>
+            <p className="pl-8 text-xs text-dark-500">
               Можно переключаться на другие вкладки — аудит продолжится в фоне.
             </p>
           </div>
