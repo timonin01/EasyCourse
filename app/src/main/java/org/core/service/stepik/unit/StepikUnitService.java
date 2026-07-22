@@ -1,5 +1,8 @@
 package org.core.service.stepik.unit;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +72,9 @@ public class StepikUnitService {
     }
 
     @RequiresStepikToken
+    @Bulkhead(name = "stepikService")
+    @Retry(name = "stepikService")
+    @CircuitBreaker(name = "stepikService", fallbackMethod = "processGetUnitByStepikLessonIdFallbackFromStepik")
     public StepikUnitResponseData getUnitByLessonId(Long stepikLessonId) {
         try {
             String url = baseUrl + "/units?lesson=" + stepikLessonId;
@@ -133,5 +139,10 @@ public class StepikUnitService {
             log.error("Error updating unit {} position: {}", unitId, e.getMessage());
             throw new StepikUnitIntegrationException("Failed to update unit position: " + e.getMessage(), e);
         }
+    }
+
+    private StepikUnitResponseData processGetUnitByStepikLessonIdFallbackFromStepik(Long stepikLessonId, Throwable throwable){
+        log.error("Не удалось выполнить получения unit со степика по stepikLessonId: {}, ex: {}",stepikLessonId, throwable.getMessage());
+        return null;
     }
 }

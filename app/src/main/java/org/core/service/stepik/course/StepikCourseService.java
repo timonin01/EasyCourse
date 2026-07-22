@@ -1,5 +1,8 @@
 package org.core.service.stepik.course;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +13,7 @@ import org.core.dto.stepik.course.StepikCourseRequest;
 import org.core.dto.stepik.course.StepikCourseRequestData;
 import org.core.dto.stepik.course.StepikCourseResponse;
 import org.core.dto.stepik.course.StepikCourseResponseData;
+import org.core.dto.stepik.lesson.StepikLessonResponseData;
 import org.core.exception.exceptions.StepikCourseIntegrationException;
 import org.core.exception.exceptions.StepikLessonIntegrationException;
 import org.core.util.HeaderBuilder;
@@ -130,6 +134,9 @@ public class StepikCourseService {
     }
 
     @RequiresStepikToken
+    @Bulkhead(name = "stepikService")
+    @Retry(name = "stepikService")
+    @CircuitBreaker(name = "stepikService", fallbackMethod = "processGetCourseByStepikCourseIdFallbackFromStepik")
     public StepikCourseResponseData getCourse(Long stepikCourseId) {
         try {
             String url = baseUrl + "/courses/" + stepikCourseId;
@@ -195,5 +202,10 @@ public class StepikCourseService {
                 requestData.getTitle(), requestData.getDescription(), requestData.getCourseType(), requestData.getIsPublic());
         
         return requestData;
+    }
+
+    private StepikCourseResponseData processGetCourseByStepikCourseIdFallbackFromStepik(Long stepikCourseId, Throwable throwable){
+        log.error("Не удалось выполнить получения курс со степика по stepikCourseId: {}, ex: {}",stepikCourseId, throwable.getMessage());
+        return null;
     }
 }

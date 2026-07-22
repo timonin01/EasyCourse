@@ -2,6 +2,9 @@ package org.core.service.stepik.step;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +73,6 @@ public class StepikStepService {
                     throw new StepikStepIntegrationException("No step data in Stepik response");
                 }
             } else {
-                // Обработка ошибок от Stepik API
                 String errorMessage = parseStepikError(rawResponse.getBody());
                 log.error("Failed to create step in Stepik for step ID: {}. Status: {}, Error: {}", 
                     step.getId(), rawResponse.getStatusCode(), errorMessage);
@@ -193,6 +195,9 @@ public class StepikStepService {
     }
 
     @RequiresStepikToken
+    @Bulkhead(name = "stepikService")
+    @Retry(name = "stepikService")
+    @CircuitBreaker(name = "stepikService", fallbackMethod = "processGetAllStepsByStepikLessonIdFallbackFromStepik")
     public List<Long> getLessonStepIdsFromStepik(Long stepikLessonId) {
         try {
             String url = baseUrl + "/lessons/" + stepikLessonId;
@@ -235,6 +240,9 @@ public class StepikStepService {
     }
 
     @RequiresStepikToken
+    @Bulkhead(name = "stepikService")
+    @Retry(name = "stepikService")
+    @CircuitBreaker(name = "stepikService", fallbackMethod = "processGetStepByStepikStepIdFallbackFromStepik")
     public StepikStepSourceResponseData getStepikStepById(Long stepikStepId) {
         try {
             String url = baseUrl + "/step-sources/" + stepikStepId;
@@ -267,5 +275,15 @@ public class StepikStepService {
             throw new StepikStepIntegrationException("Failed to get step " + stepikStepId +
                     " from Stepik: " + e.getMessage());
         }
+    }
+
+    private List<Long> processGetAllStepsByStepikLessonIdFallbackFromStepik(Long stepikLessonId, Throwable throwable){
+        log.error("Не удалось выполнить получения id шагов со степика по stepikLessonId: {}, ex: {}",stepikLessonId, throwable.getMessage());
+        return List.of();
+    }
+
+    private StepikStepSourceResponseData processGetStepByStepikStepIdFallbackFromStepik(Long stepikStepId, Throwable throwable){
+        log.error("Не удалось выполнить получения шага со степика stepikStepId: {}, ex: {}", stepikStepId, throwable.getMessage());
+        return null;
     }
 }

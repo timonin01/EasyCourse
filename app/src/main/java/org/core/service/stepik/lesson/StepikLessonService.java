@@ -1,5 +1,8 @@
 package org.core.service.stepik.lesson;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,10 +43,6 @@ public class StepikLessonService {
     private final StepikLessonRequestDataBuilder stepikLessonRequestDataBuilder;
     private final HeaderBuilder headerBuilder;
     private final RestTemplate restTemplate;
-
-    public StepikLessonResponse createLesson(Lesson lesson) {
-        return createLesson(lesson, null);
-    }
 
     @RequiresStepikToken
     public StepikLessonResponse createLesson(Lesson lesson, String captchaToken) {
@@ -130,6 +129,9 @@ public class StepikLessonService {
     }
 
     @RequiresStepikToken
+    @Bulkhead(name = "stepikService")
+    @Retry(name = "stepikService")
+    @CircuitBreaker(name = "stepikService", fallbackMethod = "processGetLessonByStepikLessonIdFallbackFromStepik")
     public StepikLessonResponseData getLessonByStepikId(Long stepikLessonId) {
         try {
             String url = baseUrl + "/lessons/" + stepikLessonId;
@@ -189,5 +191,10 @@ public class StepikLessonService {
             log.error("Failed to create lesson in Stepik: {}", e.getMessage());
             throw e;
         }
+    }
+
+    private StepikLessonResponseData processGetLessonByStepikLessonIdFallbackFromStepik(Long stepikLessonId, Throwable throwable){
+        log.error("Не удалось выполнить получения урока со степика по stepikLessonId: {}, ex: {}",stepikLessonId, throwable.getMessage());
+        return null;
     }
 }

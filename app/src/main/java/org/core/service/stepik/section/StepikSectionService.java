@@ -2,6 +2,9 @@ package org.core.service.stepik.section;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -116,6 +119,9 @@ public class StepikSectionService {
     }
 
     @RequiresStepikToken
+    @Bulkhead(name = "stepikService")
+    @Retry(name = "stepikService")
+    @CircuitBreaker(name = "stepikService", fallbackMethod = "processGetSectionByStepikSectionIdFallbackFromStepik")
     public StepikSectionResponseData getSectionByStepikId(Long sectionId) {
         try {
             String url = baseUrl + "/sections/" + sectionId;
@@ -146,6 +152,9 @@ public class StepikSectionService {
     }
 
     @RequiresStepikToken
+    @Bulkhead(name = "stepikService")
+    @Retry(name = "stepikService")
+    @CircuitBreaker(name = "stepikService", fallbackMethod = "processGetSectionIdsByStepikCourseIdFallbackFromStepik")
     public List<Long> getCourseSectionIds(Long stepikCourseId) {
         try {
             String url = baseUrl + "/courses/" + stepikCourseId;
@@ -181,6 +190,16 @@ public class StepikSectionService {
             throw new StepikSectionIntegrationException("Failed to get section IDs for course " + stepikCourseId +
                     " from Stepik: " + e.getMessage());
         }
+    }
+
+    private List<Long> processGetSectionIdsByStepikCourseIdFallbackFromStepik(Long stepikCourseId, Throwable throwable){
+        log.error("Не удалось выполнить получения id модулей со степика по stepikCourseId: {}, ex: {}",stepikCourseId, throwable.getMessage());
+        return List.of();
+    }
+
+    private StepikSectionResponseData processGetSectionByStepikSectionIdFallbackFromStepik(Long stepikSectionId, Throwable throwable){
+        log.error("Не удалось выполнить получения модуля со степика stepikSectionId: {}, ex: {}", stepikSectionId, throwable.getMessage());
+        return null;
     }
 
 }
