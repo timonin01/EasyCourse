@@ -186,6 +186,16 @@ export function Landing() {
               </Button>
             </Link>
           </section>
+
+          <p className="mt-6 text-center text-xs text-dark-500">
+            <Link to="/consent" className="hover:text-dark-300">
+              Согласие на обработку ПДн
+            </Link>
+            {' · '}
+            <Link to="/privacy" className="hover:text-dark-300">
+              Политика обработки персональных данных
+            </Link>
+          </p>
         </main>
       </div>
     </div>

@@ -16,6 +16,7 @@ export interface RegistrationMessage {
 export interface RegistrationConfig {
   enabled: boolean;
   inviteRequired: boolean;
+  privacyConsentVersion: string;
 }
 
 export interface VerifyEmailDTO {
@@ -32,6 +33,8 @@ export interface CreateUserDTO {
   email: string;
   password: string;
   inviteCode?: string;
+  privacyAccepted: boolean;
+  privacyConsentVersion: string;
 }
 
 export interface UserLoginDTO {

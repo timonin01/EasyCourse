@@ -103,11 +103,16 @@ export function Login() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 space-y-3 text-center">
             <p className="text-dark-400">
               Нет аккаунта?{' '}
               <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
                 Зарегистрируйтесь
+              </Link>
+            </p>
+            <p className="text-xs text-dark-500">
+              <Link to="/privacy" className="hover:text-dark-300">
+                Политика обработки персональных данных
               </Link>
             </p>
           </div>

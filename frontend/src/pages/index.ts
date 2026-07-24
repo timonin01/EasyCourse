@@ -1,6 +1,8 @@
 export { Landing } from './Landing';
 export { Login } from './Login';
 export { Register } from './Register';
+export { PrivacyPolicy } from './PrivacyPolicy';
+export { PersonalDataConsent } from './PersonalDataConsent';
 export { Dashboard } from './Dashboard';
 export { Courses } from './Courses';
 export { CourseEditor } from './CourseEditor';

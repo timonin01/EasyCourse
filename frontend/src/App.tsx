@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store';
-import { Landing, Login, Register } from './pages';
+import { Landing, Login, PersonalDataConsent, PrivacyPolicy, Register } from './pages';
 
 const Dashboard = lazy(() =>
   import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })),
@@ -85,6 +85,8 @@ export default function App() {
             </PublicRoute>
           }
         />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/consent" element={<PersonalDataConsent />} />
 
         {/* Private routes — code-split so landing does not download the app shell */}
         <Route
