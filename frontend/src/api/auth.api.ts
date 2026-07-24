@@ -18,11 +18,13 @@ export const authApi = {
       enabled?: boolean;
       registrationEnabled?: boolean;
       inviteRequired?: boolean;
+      privacyConsentVersion?: string;
     }>('/v1/users/registration-config');
 
     return {
       enabled: data.enabled ?? data.registrationEnabled ?? false,
       inviteRequired: Boolean(data.inviteRequired),
+      privacyConsentVersion: data.privacyConsentVersion ?? '',
     };
   },
 

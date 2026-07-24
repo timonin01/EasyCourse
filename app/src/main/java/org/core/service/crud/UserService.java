@@ -12,12 +12,13 @@ import org.core.exception.exceptions.UserAlreadyExistsException;
 import org.core.exception.exceptions.UserNotFoundException;
 import org.core.repository.UserRepository;
 import org.core.service.UserValidationService;
-import org.core.service.registration.RegistrationService;
 import org.core.service.security.JwtTokenService;
 import org.core.util.EmailNormalizer;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @Slf4j
@@ -87,7 +88,8 @@ public class UserService {
         log.info("Delete user with ID: {}", userId);
     }
 
-    public UserLoginResponseDTO createVerifiedUserAndLogin(String name, String email, String passwordHash) {
+    public UserLoginResponseDTO createVerifiedUserAndLogin(String name, String email, String passwordHash,
+            LocalDateTime privacyAcceptedAt, String privacyConsentVersion, String privacyAcceptedIp) {
         User user = User.builder()
                 .name(name)
                 .email(email)
@@ -95,6 +97,9 @@ public class UserService {
                 //TODO В дальнейшем убрать PRO и вернуть DEFAULT
                 .role(UserRole.PRO)
                 .emailVerified(true)
+                .privacyAcceptedAt(privacyAcceptedAt != null ? privacyAcceptedAt : LocalDateTime.now())
+                .privacyConsentVersion(privacyConsentVersion)
+                .privacyAcceptedIp(privacyAcceptedIp)
                 .build();
 
         log.info("Create verified user with name - {} and email - {}", user.getName(), user.getEmail());

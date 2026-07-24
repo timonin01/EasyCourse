@@ -1,0 +1,2 @@
+export const PRIVACY_CONSENT_VERSION = '2026-07-24';
+export const PRIVACY_CONSENT_EFFECTIVE_DATE = '24 июля 2026 г.';

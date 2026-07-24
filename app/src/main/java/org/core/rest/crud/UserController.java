@@ -1,5 +1,6 @@
 package org.core.rest.crud;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +32,11 @@ public class UserController {
     }
 
     @PostMapping
-    public RegistrationMessageDTO requestRegistration(@Valid @RequestBody CreateUserDTO createUserDTO) {
-        return registrationService.requestRegistration(createUserDTO);
+    public RegistrationMessageDTO requestRegistration(
+            @Valid @RequestBody CreateUserDTO createUserDTO,
+            HttpServletRequest request
+    ) {
+        return registrationService.requestRegistration(createUserDTO, resolveClientIp(request));
     }
 
     @PostMapping("/verify-email")
@@ -60,5 +64,17 @@ public class UserController {
     public void deleteUser(@PathVariable Long userId) {
         AuthUtils.requireSameUser(userContextBean, userId);
         userService.deleteUser(userId);
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 }

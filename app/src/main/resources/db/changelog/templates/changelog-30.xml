@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.2.xsd">
+
+    <changeSet id="30-users-privacy-consent" author="easycourse">
+        <comment>Store personal data processing consent evidence on user registration</comment>
+        <addColumn tableName="users">
+            <column name="privacy_accepted_at" type="DATETIME"/>
+            <column name="privacy_consent_version" type="VARCHAR(32)"/>
+            <column name="privacy_accepted_ip" type="VARCHAR(64)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

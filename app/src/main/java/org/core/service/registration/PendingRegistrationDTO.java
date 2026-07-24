@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,4 +20,7 @@ public class PendingRegistrationDTO {
     private String passwordHash;
     private String codeHash;
     private int failedAttempts;
+    private LocalDateTime privacyAcceptedAt;
+    private String privacyConsentVersion;
+    private String privacyAcceptedIp;
 }

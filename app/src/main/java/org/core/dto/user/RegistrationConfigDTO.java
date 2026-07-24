@@ -13,4 +13,7 @@ public class RegistrationConfigDTO {
 
     @JsonProperty("inviteRequired")
     private final boolean inviteRequired;
+
+    @JsonProperty("privacyConsentVersion")
+    private final String privacyConsentVersion;
 }

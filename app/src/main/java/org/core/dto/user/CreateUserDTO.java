@@ -1,7 +1,9 @@
 package org.core.dto.user;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,4 +31,11 @@ public class CreateUserDTO {
 
     @Size(max = 100, message = "Код приглашения не должен превышать 100 символов")
     private String inviteCode;
+
+    @NotNull(message = "Необходимо согласие на обработку персональных данных")
+    private Boolean privacyAccepted;
+
+    @NotBlank(message = "Не указана версия согласия на обработку персональных данных")
+    @Size(max = 32, message = "Версия согласия не должна превышать 32 символа")
+    private String privacyConsentVersion;
 }

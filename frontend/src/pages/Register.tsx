@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, User, ArrowRight, KeyRound, Ticket } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Button, Input, PasswordInput, FadeIn } from '../components/ui';
+import { Button, Checkbox, Input, PasswordInput, FadeIn } from '../components/ui';
 import { authApi } from '../api';
 import { useAuthStore } from '../store';
 import { extractApiErrorMessage, getApiErrorStatus, isNetworkError } from '../utils/apiError';
 import { validateEmail, validateUserName } from '../utils/validation';
 import { SITE_ORIGIN } from '../constants/seo';
+import { PRIVACY_CONSENT_VERSION } from '../constants/privacyConsent';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 type RegisterStep = 'form' | 'verify';
@@ -35,10 +36,17 @@ export function Register() {
   });
   const [verificationCode, setVerificationCode] = useState('');
   const [inviteRequired, setInviteRequired] = useState<boolean | null>(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [privacyConsentVersion, setPrivacyConsentVersion] = useState(PRIVACY_CONSENT_VERSION);
 
   useEffect(() => {
     authApi.getRegistrationConfig()
-      .then((config) => setInviteRequired(config.inviteRequired))
+      .then((config) => {
+        setInviteRequired(config.inviteRequired);
+        if (config.privacyConsentVersion) {
+          setPrivacyConsentVersion(config.privacyConsentVersion);
+        }
+      })
       .catch((error) => {
         console.error('Failed to load registration config:', error);
         setInviteRequired(false);
@@ -77,6 +85,11 @@ export function Register() {
       return;
     }
 
+    if (!privacyAccepted) {
+      toast.error('Подтвердите согласие на обработку персональных данных');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -85,6 +98,8 @@ export function Register() {
         email: formData.email.trim(),
         password: formData.password,
         inviteCode: inviteRequired ? formData.inviteCode.trim() : undefined,
+        privacyAccepted: true,
+        privacyConsentVersion,
       });
       toast.success(response.message);
       setStep('verify');
@@ -224,11 +239,40 @@ export function Register() {
                 />
               )}
 
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  checked={privacyAccepted}
+                  onChange={setPrivacyAccepted}
+                  variant="primary"
+                />
+                <p className="pt-0.5 text-sm leading-snug text-dark-300">
+                  Я даю{' '}
+                  <Link
+                    to="/consent"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary-400 hover:text-primary-300"
+                  >
+                    согласие на обработку персональных данных
+                  </Link>
+                  {' '}и подтверждаю, что ознакомлен с{' '}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary-400 hover:text-primary-300"
+                  >
+                    Политикой обработки персональных данных
+                  </Link>
+                </p>
+              </div>
+
               <Button
                 type="submit"
                 className="w-full"
                 size="lg"
                 isLoading={isLoading}
+                disabled={!privacyAccepted}
                 icon={<ArrowRight className="w-5 h-5" />}
               >
                 Получить код
@@ -283,11 +327,20 @@ export function Register() {
             </form>
           )}
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 space-y-3 text-center">
             <p className="text-dark-400">
               Уже есть аккаунт?{' '}
               <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium">
                 Войти
+              </Link>
+            </p>
+            <p className="text-xs text-dark-500">
+              <Link to="/consent" className="hover:text-dark-300">
+                Согласие на обработку ПДн
+              </Link>
+              {' · '}
+              <Link to="/privacy" className="hover:text-dark-300">
+                Политика
               </Link>
             </p>
           </div>
