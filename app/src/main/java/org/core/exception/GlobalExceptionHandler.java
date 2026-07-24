@@ -210,7 +210,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
         log.error("Validation error: {}", ex.getMessage());
 
-        String message = ex.getBindingResult().getFieldErrors().stream()
+        String message = ex.getBindingResult().getAllErrors().stream()
                 .map(error -> error.getDefaultMessage())
                 .filter(msg -> msg != null && !msg.isBlank())
                 .distinct()
@@ -284,6 +284,18 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    @ExceptionHandler(PrivacyConsentRequiredException.class)
+    public ResponseEntity<ErrorResponse> handlePrivacyConsentRequiredException(PrivacyConsentRequiredException ex) {
+        log.warn("Privacy consent required: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Privacy consent required",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler({ResourceAccessDeniedException.class, CourseDoesntBelongToUserException.class})

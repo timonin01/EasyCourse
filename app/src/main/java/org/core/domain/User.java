@@ -42,6 +42,15 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "privacy_accepted_at")
+    private LocalDateTime privacyAcceptedAt;
+
+    @Column(name = "privacy_consent_version", length = 32)
+    private String privacyConsentVersion;
+
+    @Column(name = "privacy_accepted_ip", length = 64)
+    private String privacyAcceptedIp;
+
     @Column(name = "stepik_client_id", length = 100)
     private String stepikClientId;
 

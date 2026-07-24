@@ -8,6 +8,7 @@ import org.core.dto.user.RegistrationMessageDTO;
 import org.core.dto.user.UserLoginResponseDTO;
 import org.core.dto.user.VerifyEmailDTO;
 import org.core.exception.exceptions.InvalidVerificationCodeException;
+import org.core.exception.exceptions.PrivacyConsentRequiredException;
 import org.core.exception.exceptions.RegistrationNotAllowedException;
 import org.core.exception.exceptions.UserAlreadyExistsException;
 import org.core.service.UserValidationService;
@@ -20,7 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
-import java.time.Duration;
+import java.time.LocalDateTime;
 
 @Service
 @Slf4j
@@ -49,8 +50,13 @@ public class RegistrationService {
     @Value("${app.registration.invite-code}")
     private String expectedInviteCode;
 
-    public RegistrationMessageDTO requestRegistration(CreateUserDTO createDto) {
+    @Value("${app.privacy.consent.version}")
+    private String privacyConsentVersion;
+
+    public RegistrationMessageDTO requestRegistration(CreateUserDTO createDto, String clientIp) {
         validateRegistrationAllowed(createDto.getInviteCode());
+        validatePrivacyConsent(createDto);
+
         String email = emailNormalizer.normalizeEmail(createDto.getEmail());
         if (validationService.checkUserInDBByEmail(email)) {
             throw new UserAlreadyExistsException("Пользователь с email " + email + " уже зарегистрирован");
@@ -63,6 +69,9 @@ public class RegistrationService {
                 .passwordHash(passwordEncoder.encode(createDto.getPassword()))
                 .codeHash(passwordEncoder.encode(code))
                 .failedAttempts(0)
+                .privacyAcceptedAt(LocalDateTime.now())
+                .privacyConsentVersion(privacyConsentVersion)
+                .privacyAcceptedIp(truncateIp(clientIp))
                 .build();
 
         pendingService.savePending(email, pendingDTO);
@@ -89,7 +98,14 @@ public class RegistrationService {
             throw new UserAlreadyExistsException("Пользователь с email " + email + " уже зарегистрирован");
         }
         redisTemplate.delete(pendingService.pendingKey(email));
-        return userService.createVerifiedUserAndLogin(pendingDTO.getName(), email, pendingDTO.getPasswordHash());
+        return userService.createVerifiedUserAndLogin(
+                pendingDTO.getName(),
+                email,
+                pendingDTO.getPasswordHash(),
+                pendingDTO.getPrivacyAcceptedAt(),
+                pendingDTO.getPrivacyConsentVersion(),
+                pendingDTO.getPrivacyAcceptedIp()
+        );
     }
 
     public RegistrationMessageDTO resendVerificationCode(String emailRaw) {
@@ -107,7 +123,29 @@ public class RegistrationService {
     }
 
     public RegistrationConfigDTO getRegistrationConfig() {
-        return new RegistrationConfigDTO(registrationEnabled, isInviteCodeRequired());
+        return new RegistrationConfigDTO(registrationEnabled, isInviteCodeRequired(), privacyConsentVersion);
+    }
+
+    private void validatePrivacyConsent(CreateUserDTO createDto) {
+        if (!Boolean.TRUE.equals(createDto.getPrivacyAccepted())) {
+            throw new PrivacyConsentRequiredException(
+                    "Необходимо согласие на обработку персональных данных"
+            );
+        }
+        if (createDto.getPrivacyConsentVersion() == null
+                || !privacyConsentVersion.equals(createDto.getPrivacyConsentVersion().trim())) {
+            throw new PrivacyConsentRequiredException(
+                    "Устаревшая версия согласия. Обновите страницу и подтвердите согласие снова."
+            );
+        }
+    }
+
+    private String truncateIp(String clientIp) {
+        if (clientIp == null || clientIp.isBlank()) {
+            return null;
+        }
+        String trimmed = clientIp.trim();
+        return trimmed.length() <= 64 ? trimmed : trimmed.substring(0, 64);
     }
 
     private String generateVerificationCode() {
