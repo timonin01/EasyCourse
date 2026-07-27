@@ -101,7 +101,7 @@ export function Register() {
         privacyAccepted: true,
         privacyConsentVersion,
       });
-      toast.success(response.message);
+      toast.success(`${response.message} Если письма нет — проверьте папку «Спам».`);
       setStep('verify');
     } catch (error) {
       handleRegistrationError(error);
@@ -142,7 +142,7 @@ export function Register() {
       const response = await authApi.resendVerification({
         email: formData.email.trim(),
       });
-      toast.success(response.message);
+      toast.success(`${response.message} Если письма нет — проверьте папку «Спам».`);
     } catch (error) {
       handleRegistrationError(error);
     } finally {
@@ -283,6 +283,11 @@ export function Register() {
               <p className="text-sm text-dark-400 text-center">
                 Мы отправили 6-значный код на{' '}
                 <span className="text-dark-200">{formData.email.trim()}</span>
+              </p>
+
+              <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-center text-xs leading-relaxed text-amber-200/90">
+                Если письмо не пришло в течение нескольких минут, проверьте папку «Спам» или
+                «Нежелательная почта».
               </p>
 
               <Input
