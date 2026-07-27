@@ -34,3 +34,4 @@ export {
 } from './Skeleton';
 export { FadeIn, StaggerList, StaggerItem, ContentReveal, fadeInUp, fadeIn, scaleIn, easeOut } from './motion';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
+export { MobileSideDrawer, SidePanelOpenButton } from './MobileSideDrawer';

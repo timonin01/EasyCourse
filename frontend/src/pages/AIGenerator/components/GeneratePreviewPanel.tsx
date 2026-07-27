@@ -23,6 +23,7 @@ interface GeneratePreviewPanelProps {
   onRefreshLessons: () => void;
   onLessonChange: (lessonId: number | null) => void;
   onSave: () => void;
+  embedded?: boolean;
 }
 
 export function GeneratePreviewPanel({
@@ -39,6 +40,7 @@ export function GeneratePreviewPanel({
   onRefreshLessons,
   onLessonChange,
   onSave,
+  embedded = false,
 }: GeneratePreviewPanelProps) {
   const { width, isResizing, startResize } = useResizableWidth({
     storageKey: 'ai-generator-preview-width',
@@ -50,7 +52,8 @@ export function GeneratePreviewPanel({
   return (
     <div
       className={clsx(
-        'relative flex h-full min-h-0 flex-1 flex-col xl:flex-none xl:shrink-0 xl:w-[var(--preview-width)]',
+        'relative flex h-full min-h-0 flex-col',
+        !embedded && 'flex-1 xl:flex-none xl:shrink-0 xl:w-[var(--preview-width)]',
         isResizing && 'select-none'
       )}
       style={{ '--preview-width': `${width}px` } as CSSProperties}
@@ -69,7 +72,9 @@ export function GeneratePreviewPanel({
             : 'before:bg-transparent hover:before:bg-dark-600'
         )}
       />
-      <h2 className="mb-3 shrink-0 font-semibold text-dark-200">Предпросмотр</h2>
+      <h2 className={clsx('mb-3 shrink-0 font-semibold text-dark-200', embedded && 'hidden')}>
+        Предпросмотр
+      </h2>
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden" padding="none">
         {previewStep ? (
           <>

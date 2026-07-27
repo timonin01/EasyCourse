@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { clsx } from 'clsx';
 import {
   DndContext,
   DragOverlay,
@@ -11,7 +13,6 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { useState } from 'react';
 import { MainLayout } from '../../components/Layout';
 import { Breadcrumbs, StaggerList, StaggerItem } from '../../components/ui';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
@@ -22,16 +23,43 @@ import { EDIT_TASK_BLOCK_NAMES } from './types';
 import { CreateModelModal, CreateLessonModal, CreateStepModal, StepViewModal, StepTypeChangeModal, StepDiffModal } from './modals';
 import { ModelsColumn, LessonsColumn, StepsColumn } from './columns';
 import { CourseEditorHeader } from './components/CourseEditorHeader';
+import { MobileColumnBack } from './components/MobileColumnBack';
 import { StepContentAiEditModal } from './components/StepContentAiEditModal';
 import { DeleteCourseModals } from './components/DeleteCourseModals';
 import { useCourseEditorPage } from './hooks/useCourseEditorPage';
 import { parseEditorDragId } from './utils/editorDragIds';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import type { Lesson, Model } from '../../types';
+
+type MobileEditorView = 'sections' | 'lessons' | 'steps';
 
 export function CourseEditor() {
   const page = useCourseEditorPage();
   const navigate = useNavigate();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [mobileView, setMobileView] = useState<MobileEditorView>('sections');
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
   const [draggingType, setDraggingType] = useState<'step' | 'lesson' | null>(null);
+
+  const handleSelectModel = (model: Model) => {
+    page.setSelectedModel(model);
+    if (!isDesktop) {
+      setMobileView('lessons');
+    }
+  };
+
+  const handleSelectLesson = (lesson: Lesson) => {
+    page.setSelectedLesson(lesson);
+    if (!isDesktop) {
+      setMobileView('steps');
+    }
+  };
+
+  const columnVisibilityClass = (view: MobileEditorView, desktopWidthClass: string) =>
+    clsx(
+      desktopWidthClass,
+      isDesktop ? 'flex-shrink-0' : mobileView === view ? 'w-full min-w-0 flex-1' : 'hidden',
+    );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -96,12 +124,12 @@ export function CourseEditor() {
         onDragCancel={clearDragState}
       >
         <StaggerList className="flex gap-6" stagger={0.08}>
-          <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
+          <StaggerItem className={columnVisibilityClass('sections', 'w-80 min-w-[280px]')}>
             <ModelsColumn
               sections={page.sections}
               isLoading={page.isSectionsLoading}
               selectedModel={page.selectedModel}
-              onSelectModel={page.setSelectedModel}
+              onSelectModel={handleSelectModel}
               onAddClick={() => page.setIsModelModalOpen(true)}
               onReorder={page.handleReorderModels}
               isUnsynced={page.isModelUnsynced}
@@ -114,12 +142,18 @@ export function CourseEditor() {
               dropHighlight={draggingType === 'lesson'}
             />
           </StaggerItem>
-          <StaggerItem className="flex-shrink-0 w-80 min-w-[280px]">
+          <StaggerItem className={columnVisibilityClass('lessons', 'w-80 min-w-[280px]')}>
+            {!isDesktop && (
+              <MobileColumnBack
+                label={page.selectedModel?.title ?? 'Модули'}
+                onBack={() => setMobileView('sections')}
+              />
+            )}
             <LessonsColumn
               lessons={page.lessons}
               selectedLesson={page.selectedLesson}
               hasSelectedModel={!!page.selectedModel}
-              onSelectLesson={page.setSelectedLesson}
+              onSelectLesson={handleSelectLesson}
               onAddClick={() => page.setIsLessonModalOpen(true)}
               onReorder={page.handleReorderLessons}
               isUnsynced={page.isLessonUnsynced}
@@ -133,7 +167,13 @@ export function CourseEditor() {
               dropHighlight={draggingType === 'step'}
             />
           </StaggerItem>
-          <StaggerItem className="flex-shrink-0 w-96 min-w-[320px]">
+          <StaggerItem className={columnVisibilityClass('steps', 'w-96 min-w-[320px]')}>
+            {!isDesktop && (
+              <MobileColumnBack
+                label={page.selectedLesson?.title ?? 'Уроки'}
+                onBack={() => setMobileView('lessons')}
+              />
+            )}
             <StepsColumn
               steps={page.steps}
               selectedLesson={page.selectedLesson}

@@ -1,4 +1,5 @@
 import { Sparkles, Trash2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Button, PageHeader } from '../../../components/ui';
 import { MODE_SUBTITLES } from '../constants';
 import type { AIGeneratorMode } from '../types';
@@ -10,6 +11,7 @@ interface AIGeneratorHeaderProps {
   generatedStepHistoryRefreshKey: number;
   onClear: () => void;
   onOpenGeneratedStepFromHistory: (entry: GeneratedStepHistory) => void;
+  sidePanelAction?: ReactNode;
 }
 
 export function AIGeneratorHeader({
@@ -17,6 +19,7 @@ export function AIGeneratorHeader({
   generatedStepHistoryRefreshKey,
   onClear,
   onOpenGeneratedStepFromHistory,
+  sidePanelAction,
 }: AIGeneratorHeaderProps) {
   return (
     <PageHeader
@@ -26,7 +29,8 @@ export function AIGeneratorHeader({
       title="Генерация шагов"
       description={MODE_SUBTITLES[mode]}
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {sidePanelAction}
           {mode === 'generate' && (
             <GeneratedStepHistoryPanel
               refreshTrigger={generatedStepHistoryRefreshKey}

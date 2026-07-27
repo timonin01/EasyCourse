@@ -1,6 +1,8 @@
 import { clsx } from 'clsx';
 import { MainLayout } from '../../components/Layout';
+import { MobileSideDrawer, SidePanelOpenButton } from '../../components/ui';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
+import { useCollapsibleSidePanel } from '../../hooks/useCollapsibleSidePanel';
 import { BatchPlanModal } from './components/BatchPlanModal';
 import { AIGeneratorHeader } from './components/AIGeneratorHeader';
 import { ModeToggle } from './components/ModeToggle';
@@ -13,6 +15,38 @@ import { useAIGeneratorPage } from './hooks/useAIGeneratorPage';
 export function AIGenerator() {
   const page = useAIGeneratorPage();
   const isGenerateMode = page.mode === 'generate';
+  const sidePanel = useCollapsibleSidePanel();
+  const sidePanelLabel = isGenerateMode ? 'Предпросмотр' : 'Настройки';
+
+  const previewPanel = isGenerateMode ? (
+    <GeneratePreviewPanel
+      previewStep={page.previewStep}
+      isLoading={page.isLoading}
+      lastGeneratePrompt={page.lastGeneratePrompt}
+      groupedLessons={page.groupedLessons}
+      allLessonsCount={page.allLessons.length}
+      selectedLessonId={page.selectedLessonId}
+      isLoadingLessons={page.isLoadingLessons}
+      onEdit={page.openEditGeneratedStep}
+      onRegenerate={() => void page.handleRegenerate()}
+      onCopy={page.handleCopyContent}
+      onRefreshLessons={page.handleRefreshLessons}
+      onLessonChange={page.setSelectedLessonId}
+      onSave={() => void page.handleSaveStep()}
+      embedded={!sidePanel.isDesktop}
+    />
+  ) : (
+    <BatchSettingsSidebar
+      groupedLessons={page.groupedLessons}
+      allLessonsCount={page.allLessons.length}
+      selectedLessonId={page.selectedLessonId}
+      batchHistoryRefreshKey={page.batchHistoryRefreshKey}
+      onLessonChange={page.setSelectedLessonId}
+      onViewBatchSteps={page.handleViewBatchSteps}
+      onRerunBatchHistory={page.handleRerunBatchHistory}
+      embedded={!sidePanel.isDesktop}
+    />
+  );
 
   return (
     <MainLayout>
@@ -33,6 +67,9 @@ export function AIGenerator() {
             generatedStepHistoryRefreshKey={page.generatedStepHistoryRefreshKey}
             onClear={() => void page.handleClear()}
             onOpenGeneratedStepFromHistory={page.handleOpenGeneratedStepFromHistory}
+            sidePanelAction={
+              <SidePanelOpenButton label={sidePanelLabel} onClick={sidePanel.open} />
+            }
           />
 
           <ModeToggle mode={page.mode} onModeChange={page.handleModeChange} />
@@ -81,34 +118,16 @@ export function AIGenerator() {
           </div>
         </div>
 
-        {isGenerateMode && (
-          <GeneratePreviewPanel
-            previewStep={page.previewStep}
-            isLoading={page.isLoading}
-            lastGeneratePrompt={page.lastGeneratePrompt}
-            groupedLessons={page.groupedLessons}
-            allLessonsCount={page.allLessons.length}
-            selectedLessonId={page.selectedLessonId}
-            isLoadingLessons={page.isLoadingLessons}
-            onEdit={page.openEditGeneratedStep}
-            onRegenerate={() => void page.handleRegenerate()}
-            onCopy={page.handleCopyContent}
-            onRefreshLessons={page.handleRefreshLessons}
-            onLessonChange={page.setSelectedLessonId}
-            onSave={() => void page.handleSaveStep()}
-          />
-        )}
+        {sidePanel.isDesktop && previewPanel}
 
-        {page.mode === 'batch' && (
-          <BatchSettingsSidebar
-            groupedLessons={page.groupedLessons}
-            allLessonsCount={page.allLessons.length}
-            selectedLessonId={page.selectedLessonId}
-            batchHistoryRefreshKey={page.batchHistoryRefreshKey}
-            onLessonChange={page.setSelectedLessonId}
-            onViewBatchSteps={page.handleViewBatchSteps}
-            onRerunBatchHistory={page.handleRerunBatchHistory}
-          />
+        {!sidePanel.isDesktop && (
+          <MobileSideDrawer
+            isOpen={sidePanel.isOpen}
+            onClose={sidePanel.close}
+            label={sidePanelLabel}
+          >
+            {previewPanel}
+          </MobileSideDrawer>
         )}
       </div>
 

@@ -1,4 +1,5 @@
 import { FolderOpen } from 'lucide-react';
+import { clsx } from 'clsx';
 import { Card } from '../../../components/ui';
 import { SubscriptionPanel } from '../../../components/subscription/SubscriptionPanel';
 import type { BatchGenerationHistory } from '../../../types';
@@ -14,6 +15,7 @@ interface BatchSettingsSidebarProps {
   onLessonChange: (lessonId: number | null) => void;
   onViewBatchSteps: (entry: BatchGenerationHistory) => void;
   onRerunBatchHistory: (entry: BatchGenerationHistory) => void;
+  embedded?: boolean;
 }
 
 export function BatchSettingsSidebar({
@@ -24,10 +26,18 @@ export function BatchSettingsSidebar({
   onLessonChange,
   onViewBatchSteps,
   onRerunBatchHistory,
+  embedded = false,
 }: BatchSettingsSidebarProps) {
   return (
-    <div className="w-full xl:w-72 2xl:w-80 xl:flex-shrink-0 flex flex-col min-h-0 max-h-[35vh] xl:max-h-none">
-      <h2 className="font-semibold text-dark-200 mb-4 flex-shrink-0">Настройки</h2>
+    <div
+      className={clsx(
+        'flex min-h-0 w-full flex-col xl:w-72 xl:flex-shrink-0 2xl:w-80',
+        !embedded && 'max-h-[35vh] xl:max-h-none',
+      )}
+    >
+      <h2 className={clsx('mb-4 flex-shrink-0 font-semibold text-dark-200', embedded && 'hidden')}>
+        Настройки
+      </h2>
       <SubscriptionPanel variant="compact" />
       <div className="mb-4">
         <BatchHistoryPanel

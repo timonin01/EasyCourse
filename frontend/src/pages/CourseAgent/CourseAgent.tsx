@@ -6,9 +6,9 @@ import toast from 'react-hot-toast';
 import { lessonsApi, sectionsApi, stepsApi } from '../../api';
 import type { Step, StepType } from '../../types';
 import { MainLayout } from '../../components/Layout';
-import { PageHeader } from '../../components/ui/PageHeader';
-import { Select } from '../../components/ui/Select';
+import { MobileSideDrawer, PageHeader, Select, SidePanelOpenButton } from '../../components/ui';
 import { StepikBlockEditModal } from '../../components/steps/StepikBlockEditModal';
+import { useCollapsibleSidePanel } from '../../hooks/useCollapsibleSidePanel';
 import { useResizableWidth } from '../../hooks/useResizableWidth';
 import { extractApiErrorMessage } from '../../utils/apiError';
 import { validateTitle } from '../../utils/validation';
@@ -33,6 +33,7 @@ import { resolveTreeNode } from './utils/resolveTreeNode';
 
 export function CourseAgent() {
   const agent = useCourseAgent();
+  const treePanel = useCollapsibleSidePanel();
   const { pendingHandoff, clearPendingHandoff } = agent;
   const structure = useCourseStructure(agent.selectedCourseId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -177,6 +178,9 @@ export function CourseAgent() {
   const handleSelectNode = useCallback((selection: CourseTreeSelection) => {
     setTreeSelection(selection);
     structure.expandToNode(selection.type, selection.id);
+    if (!treePanel.isDesktop) {
+      treePanel.close();
+    }
 
     if (selection.type === 'step') {
       setStepModalOpen(true);
@@ -197,7 +201,7 @@ export function CourseAgent() {
     setPreviewStep(null);
     const context = buildContextPrompt(selection, structure.sections);
     agent.appendInputContext(context);
-  }, [agent.appendInputContext, structure.expandToNode, structure.sections]);
+  }, [agent.appendInputContext, structure.expandToNode, structure.sections, treePanel.close, treePanel.isDesktop]);
 
   const handleClosePreview = useCallback(() => {
     setStepModalOpen(false);
@@ -376,6 +380,48 @@ export function CourseAgent() {
     [treeWidth],
   );
 
+  const courseTreePanel = (
+    <CourseTreePanel
+      sections={structure.sections}
+      isLoading={structure.isLoading}
+      expandedSections={structure.expandedSections}
+      expandedLessons={structure.expandedLessons}
+      highlight={agent.treeHighlight}
+      selection={treeSelection}
+      busyIds={structureActions.busyIds}
+      canCreate={!!agent.selectedCourseId}
+      structureLocked={structureLocked}
+      embedded={!treePanel.isDesktop}
+      onToggleSection={structure.toggleSection}
+      onToggleLesson={structure.toggleLesson}
+      onSelectNode={handleSelectNode}
+      onCreateSection={openCreateSection}
+      onCreateLesson={openCreateLesson}
+      onCreateStep={openCreateStep}
+      onRenameSection={(sectionId) => guardStructureMutation(() => structureActions.openRenameSection(sectionId))}
+      onRenameLesson={(lessonId) => guardStructureMutation(() => structureActions.openRenameLesson(lessonId))}
+      onDeleteSection={(sectionId) => guardStructureMutation(() => structureActions.openDeleteSection(sectionId))}
+      onDeleteLesson={(lessonId) => guardStructureMutation(() => structureActions.openDeleteLesson(lessonId))}
+      onDeleteStep={(stepId) => guardStructureMutation(() => structureActions.openDeleteStep(stepId))}
+      onReorderSections={(ordered) => guardStructureMutation(() => {
+        void structureActions.persistSectionOrder(ordered);
+      })}
+      onReorderLessons={(sectionId, ordered) => guardStructureMutation(() => {
+        void structureActions.persistLessonOrder(sectionId, ordered);
+      })}
+      onReorderSteps={(lessonId, ordered) => guardStructureMutation(() => {
+        void structureActions.persistStepOrder(lessonId, ordered);
+      })}
+      onRequestMoveStep={(sourceStepId, targetLessonId) => guardStructureMutation(() => {
+        structureActions.requestMoveStep(sourceStepId, targetLessonId);
+      })}
+      onRequestMoveLesson={(sourceLessonId, targetSectionId) => guardStructureMutation(() => {
+        structureActions.requestMoveLesson(sourceLessonId, targetSectionId);
+      })}
+      onRefresh={handleRefreshStructure}
+    />
+  );
+
   return (
     <MainLayout>
       <div className="flex min-h-0 h-[calc(100dvh-7rem)] max-h-[calc(100dvh-7rem)] flex-col gap-4 overflow-hidden">
@@ -387,23 +433,30 @@ export function CourseAgent() {
             iconAccent="purple"
             className="mb-0"
           />
-          <div className="w-full max-w-sm shrink-0">
-            <Select
-              label="Курс"
-              options={agent.courseOptions.length ? agent.courseOptions : [{ value: '', label: 'Нет курсов' }]}
-              value={agent.selectedCourseId ? String(agent.selectedCourseId) : ''}
-              onChange={(event) => {
-                setTreeSelection(null);
-                setPreviewStep(null);
-                setPreviewStepLoading(false);
-                setStepModalOpen(false);
-                agent.setSelectedCourseId(event.target.value ? Number(event.target.value) : null);
-              }}
+          <div className="flex w-full max-w-sm shrink-0 flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <Select
+                label="Курс"
+                options={agent.courseOptions.length ? agent.courseOptions : [{ value: '', label: 'Нет курсов' }]}
+                value={agent.selectedCourseId ? String(agent.selectedCourseId) : ''}
+                onChange={(event) => {
+                  setTreeSelection(null);
+                  setPreviewStep(null);
+                  setPreviewStepLoading(false);
+                  setStepModalOpen(false);
+                  agent.setSelectedCourseId(event.target.value ? Number(event.target.value) : null);
+                }}
+              />
+            </div>
+            <SidePanelOpenButton
+              label="Структура"
+              onClick={treePanel.open}
+              className="w-full shrink-0 sm:w-auto"
             />
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
+        <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <CourseAgentChatPanel
               messages={agent.messages}
@@ -431,67 +484,43 @@ export function CourseAgent() {
             />
           </div>
 
-          <div
-            className={clsx(
-              'relative flex min-h-[280px] shrink-0 flex-col xl:min-h-0 xl:w-[var(--tree-width)]',
-              isResizing && 'select-none',
-            )}
-            style={treePanelStyle}
-          >
+          {treePanel.isDesktop && (
             <div
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Изменить ширину панели структуры"
-              title="Потяните, чтобы изменить ширину"
-              onMouseDown={startResize}
               className={clsx(
-                'absolute -left-3 top-0 z-10 hidden h-full w-6 cursor-col-resize xl:block',
-                'before:absolute before:left-1/2 before:top-0 before:h-full before:w-1 before:-translate-x-1/2 before:rounded-full before:transition-colors',
-                isResizing
-                  ? 'before:bg-primary-400'
-                  : 'before:bg-transparent hover:before:bg-dark-600',
+                'relative flex min-h-0 shrink-0 flex-col xl:w-[var(--tree-width)]',
+                isResizing && 'select-none',
               )}
-            />
-            <CourseTreePanel
-              sections={structure.sections}
-              isLoading={structure.isLoading}
-              expandedSections={structure.expandedSections}
-              expandedLessons={structure.expandedLessons}
-              highlight={agent.treeHighlight}
-              selection={treeSelection}
-              busyIds={structureActions.busyIds}
-              canCreate={!!agent.selectedCourseId}
-              structureLocked={structureLocked}
-              onToggleSection={structure.toggleSection}
-              onToggleLesson={structure.toggleLesson}
-              onSelectNode={handleSelectNode}
-              onCreateSection={openCreateSection}
-              onCreateLesson={openCreateLesson}
-              onCreateStep={openCreateStep}
-              onRenameSection={(sectionId) => guardStructureMutation(() => structureActions.openRenameSection(sectionId))}
-              onRenameLesson={(lessonId) => guardStructureMutation(() => structureActions.openRenameLesson(lessonId))}
-              onDeleteSection={(sectionId) => guardStructureMutation(() => structureActions.openDeleteSection(sectionId))}
-              onDeleteLesson={(lessonId) => guardStructureMutation(() => structureActions.openDeleteLesson(lessonId))}
-              onDeleteStep={(stepId) => guardStructureMutation(() => structureActions.openDeleteStep(stepId))}
-              onReorderSections={(ordered) => guardStructureMutation(() => {
-                void structureActions.persistSectionOrder(ordered);
-              })}
-              onReorderLessons={(sectionId, ordered) => guardStructureMutation(() => {
-                void structureActions.persistLessonOrder(sectionId, ordered);
-              })}
-              onReorderSteps={(lessonId, ordered) => guardStructureMutation(() => {
-                void structureActions.persistStepOrder(lessonId, ordered);
-              })}
-              onRequestMoveStep={(sourceStepId, targetLessonId) => guardStructureMutation(() => {
-                structureActions.requestMoveStep(sourceStepId, targetLessonId);
-              })}
-              onRequestMoveLesson={(sourceLessonId, targetSectionId) => guardStructureMutation(() => {
-                structureActions.requestMoveLesson(sourceLessonId, targetSectionId);
-              })}
-              onRefresh={handleRefreshStructure}
-            />
-          </div>
+              style={treePanelStyle}
+            >
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Изменить ширину панели структуры"
+                title="Потяните, чтобы изменить ширину"
+                onMouseDown={startResize}
+                className={clsx(
+                  'absolute -left-3 top-0 z-10 hidden h-full w-6 cursor-col-resize xl:block',
+                  'before:absolute before:left-1/2 before:top-0 before:h-full before:w-1 before:-translate-x-1/2 before:rounded-full before:transition-colors',
+                  isResizing
+                    ? 'before:bg-primary-400'
+                    : 'before:bg-transparent hover:before:bg-dark-600',
+                )}
+              />
+              {courseTreePanel}
+            </div>
+          )}
         </div>
+
+        {!treePanel.isDesktop && (
+          <MobileSideDrawer
+            isOpen={treePanel.isOpen}
+            onClose={treePanel.close}
+            label="Структура курса"
+            dense
+          >
+            {courseTreePanel}
+          </MobileSideDrawer>
+        )}
       </div>
 
       <StepPreviewModal

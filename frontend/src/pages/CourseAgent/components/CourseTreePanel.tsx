@@ -72,6 +72,7 @@ interface CourseTreePanelProps {
   onRequestMoveStep: (sourceStepId: number, targetLessonId: number) => void;
   onRequestMoveLesson: (sourceLessonId: number, targetSectionId: number) => void;
   onRefresh: () => void;
+  embedded?: boolean;
 }
 
 function isHighlighted(
@@ -292,6 +293,7 @@ export function CourseTreePanel({
   onRequestMoveStep,
   onRequestMoveLesson,
   onRefresh,
+  embedded = false,
 }: CourseTreePanelProps) {
   const [activeDragId, setActiveDragId] = useState<TreeDragId | null>(null);
   const sensors = useSensors(
@@ -398,13 +400,23 @@ export function CourseTreePanel({
   })();
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-xl border border-dark-700/60 bg-dark-900">
+    <div
+      className={clsx(
+        'flex h-full min-h-0 flex-col bg-dark-900',
+        embedded ? 'rounded-none border-0' : 'rounded-xl border border-dark-700/60',
+      )}
+    >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dark-700/60 px-4 py-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-dark-200">
+        <div
+          className={clsx(
+            'flex items-center gap-2 text-sm font-semibold text-dark-200',
+            embedded && 'sr-only',
+          )}
+        >
           <ListTree className="h-4 w-4 text-dark-400" />
           Структура курса
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className={clsx('flex items-center gap-0.5', embedded && 'ml-auto')}>
           {canCreate && (
             <Button
               variant="ghost"
