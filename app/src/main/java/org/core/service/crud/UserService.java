@@ -94,8 +94,7 @@ public class UserService {
                 .name(name)
                 .email(email)
                 .password(passwordHash)
-                //TODO В дальнейшем убрать PRO и вернуть DEFAULT
-                .role(UserRole.PRO)
+                .role(UserRole.DEFAULT)
                 .emailVerified(true)
                 .privacyAcceptedAt(privacyAcceptedAt != null ? privacyAcceptedAt : LocalDateTime.now())
                 .privacyConsentVersion(privacyConsentVersion)
