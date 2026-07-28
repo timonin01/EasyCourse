@@ -316,8 +316,8 @@ export function Settings() {
             <h3 className="text-sm font-medium text-dark-300 mb-2">Инструкция:</h3>
             <ol className="text-sm text-dark-400 space-y-1 list-decimal list-inside">
               <li>Перейдите на stepik.org/oauth2/applications</li>
-              <li>Создайте новое приложение (тип: Confidential)</li>
-              <li>Authorization Grant Type: client-credentials</li>
+              <li>Создайте новое приложение (Client type: Confidential)</li>
+              <li>Authorization grant type: client-credentials (только для Confidential)</li>
               <li>Redirect URI: оставьте пустым или укажите localhost</li>
               <li>Скопируйте Client ID и Client Secret</li>
               <li>Вставьте их в поля выше</li>
