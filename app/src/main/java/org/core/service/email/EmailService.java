@@ -25,21 +25,33 @@ public class EmailService {
     private String mailFromName;
 
     public void sendVerificationCode(String email, String code) {
+        sendHtmlEmail(email, "Подтверждение регистрации EasyCourse",
+                messageTemplateService.createEmailVerificationMessageHtml(code),
+                "Verification email sent to: {}", "Failed to send verification email to {}: {}"
+        );
+    }
+
+    public void sendPasswordResetCode(String email, String code) {
+        sendHtmlEmail(email, "Сброс пароля EasyCourse",
+                messageTemplateService.createPasswordResetMessageHtml(code),
+                "Password reset email sent to: {}", "Failed to send password reset email to {}: {}"
+        );
+    }
+
+    private void sendHtmlEmail(String email, String subject, String htmlContent, String successLog, String errorLog) {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
             helper.setFrom(mailFrom, mailFromName);
             helper.setTo(email);
-            helper.setSubject("Подтверждение регистрации EasyCourse");
-
-            String htmlContent = messageTemplateService.createEmailVerificationMessageHtml(code);
+            helper.setSubject(subject);
             helper.setText(htmlContent, true);
 
             mailSender.send(mimeMessage);
-            log.info("Verification email sent to: {}", email);
+            log.info(successLog, email);
         } catch (Exception e) {
-            log.error("Failed to send verification email to {}: {}", email, e.getMessage());
+            log.error(errorLog, email, e.getMessage());
             throw new EmailSendException("Не удалось отправить письмо с кодом подтверждения");
         }
     }
