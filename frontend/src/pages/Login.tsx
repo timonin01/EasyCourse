@@ -101,6 +101,15 @@ export function Login() {
             >
               Войти
             </Button>
+
+            <div className="text-center">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-primary-400 hover:text-primary-300 font-medium"
+              >
+                Забыли пароль?
+              </Link>
+            </div>
           </form>
 
           <div className="mt-6 space-y-3 text-center">

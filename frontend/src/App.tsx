@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store';
-import { Landing, Login, PersonalDataConsent, PrivacyPolicy, Register } from './pages';
+import { Landing, Login, PersonalDataConsent, PrivacyPolicy, Register, ForgotPassword } from './pages';
 
 const Dashboard = lazy(() =>
   import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })),
@@ -82,6 +82,14 @@ export default function App() {
           element={
             <PublicRoute>
               <Register />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPassword />
             </PublicRoute>
           }
         />

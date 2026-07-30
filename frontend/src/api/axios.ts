@@ -32,6 +32,9 @@ function isPublicAuthRequest(url?: string): boolean {
     url.includes('/v1/users/registration-config') ||
     url.includes('/v1/users/verify-email') ||
     url.includes('/v1/users/resend-verification') ||
+    url.includes('/v1/users/forgot-password') ||
+    url.includes('/v1/users/verify-reset-code') ||
+    url.includes('/v1/users/reset-password') ||
     /\/v1\/users\/?$/.test(url)
   );
 }

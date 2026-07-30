@@ -10,6 +10,9 @@ import type {
   RegistrationConfig,
   VerifyEmailDTO,
   ResendVerificationDTO,
+  ForgotPasswordDTO,
+  PasswordResetTokenResponse,
+  ResetPasswordDTO,
 } from '../types';
 
 export const authApi = {
@@ -45,6 +48,21 @@ export const authApi = {
 
   login: async (data: UserLoginDTO): Promise<UserLoginResponse> => {
     const response = await api.post<UserLoginResponse>('/v1/users/login', data);
+    return response.data;
+  },
+
+  forgotPassword: async (data: ForgotPasswordDTO): Promise<RegistrationMessage> => {
+    const response = await api.post<RegistrationMessage>('/v1/users/forgot-password', data);
+    return response.data;
+  },
+
+  verifyResetCode: async (data: VerifyEmailDTO): Promise<PasswordResetTokenResponse> => {
+    const response = await api.post<PasswordResetTokenResponse>('/v1/users/verify-reset-code', data);
+    return response.data;
+  },
+
+  resetPassword: async (data: ResetPasswordDTO): Promise<RegistrationMessage> => {
+    const response = await api.post<RegistrationMessage>('/v1/users/reset-password', data);
     return response.data;
   },
 
