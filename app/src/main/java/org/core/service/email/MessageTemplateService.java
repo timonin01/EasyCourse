@@ -11,31 +11,23 @@ import java.nio.charset.StandardCharsets;
 public class MessageTemplateService {
 
     private final String emailVerificationTemplate;
+    private final String passwordResetTemplate;
 
     public MessageTemplateService() throws IOException {
-        ClassPathResource resource = new ClassPathResource("email-verification.html");
-        this.emailVerificationTemplate = StreamUtils.copyToString(
-            resource.getInputStream(), 
-            StandardCharsets.UTF_8
-        );
-    }
-
-    public String createEmailVerificationMessage(String code) {
-        return String.format("""
-            Verify your email address
-            
-            You need to verify your email address to continue using your account. Enter the following code to verify your email address:
-            
-            %s
-            
-            If you did not request this email, please ignore it.
-            
-            Thanks,
-            Support Team
-            """, code);
+        this.emailVerificationTemplate = loadTemplate("email-verification.html");
+        this.passwordResetTemplate = loadTemplate("email-password-reset.html");
     }
 
     public String createEmailVerificationMessageHtml(String code) {
         return emailVerificationTemplate.replace("{{code}}", code);
+    }
+
+    public String createPasswordResetMessageHtml(String code) {
+        return passwordResetTemplate.replace("{{code}}", code);
+    }
+
+    private static String loadTemplate(String classpathLocation) throws IOException {
+        ClassPathResource resource = new ClassPathResource(classpathLocation);
+        return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
     }
 }

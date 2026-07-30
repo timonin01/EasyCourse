@@ -1,6 +1,7 @@
 package org.core.service.registration;
 
 import lombok.RequiredArgsConstructor;
+import org.core.dto.registration.PendingRegistrationDTO;
 import org.core.exception.exceptions.InvalidVerificationCodeException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -10,11 +11,11 @@ import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
-public class PendingService {
+public class RegistrationPendingService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    @Value("${app.pending.prefix}")
+    @Value("${app.registration.pending.prefix}")
     private String pendingPrefix;
 
     @Value("${app.registration.verification.ttl-minutes}")
@@ -38,7 +39,11 @@ public class PendingService {
         );
     }
 
-    public String pendingKey(String email) {
+    public void deletePendingKey(String email){
+        redisTemplate.delete(pendingKey(email));
+    }
+
+    private String pendingKey(String email) {
         return pendingPrefix + email;
     }
 

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -45,13 +46,30 @@ public class UserService {
         }
 
         boolean isCorrectPassword = passwordEncoder.matches(loginDto.getPassword(), user.getPassword());
-
         if (!isCorrectPassword) {
             throw new InvalidPasswordException("Incorrect password");
         }
-
         String token = jwtTokenService.generateToken(user.getId());
         return new UserLoginResponseDTO(mapToResponseDto(user), token);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean checkUserByEmail(String email) {
+        String normalizedEmail = emailNormalizer.normalizeEmail(email);
+        return userRepository.findByEmail(normalizedEmail).isPresent();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> findUserByEmail(String email) {
+        String normalizedEmail = emailNormalizer.normalizeEmail(email);
+        return userRepository.findByEmail(normalizedEmail);
+    }
+
+    public void updatePassword(Long userId, String rawPassword) {
+        User user = findUserBiUserId(userId);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        userRepository.save(user);
+        log.info("Password updated for user ID: {}", userId);
     }
 
     public UserResponseDTO getUserByUserId(Long userId) {

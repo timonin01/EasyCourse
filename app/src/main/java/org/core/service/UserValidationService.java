@@ -3,7 +3,6 @@ package org.core.service;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.core.repository.UserRepository;
-import org.core.service.registration.RegistrationService;
 import org.core.util.EmailNormalizer;
 import org.springframework.stereotype.Service;
 

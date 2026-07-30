@@ -1,4 +1,4 @@
-package org.core.service.registration;
+package org.core.dto.registration;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
