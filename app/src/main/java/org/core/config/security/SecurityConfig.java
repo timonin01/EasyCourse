@@ -21,12 +21,13 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                // Need auto-save so async SSE dispatches keep the SecurityContext from JwtAuthFilter.
                 .securityContext(securityContext -> securityContext.requireExplicitSave(false))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/users/login", "/api/v1/users").permitAll()
                         .requestMatchers("/api/v1/users/verify-email", "/api/v1/users/resend-verification").permitAll()
+                        .requestMatchers("/api/v1/users/forgot-password","/api/v1/users/reset-password").permitAll()
+                        .requestMatchers("/api/v1/users/verify-reset-code").permitAll()
                         .requestMatchers("/api/v1/users/registration-config").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()
