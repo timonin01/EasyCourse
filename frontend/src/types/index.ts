@@ -28,6 +28,19 @@ export interface ResendVerificationDTO {
   email: string;
 }
 
+export interface ForgotPasswordDTO {
+  email: string;
+}
+
+export interface PasswordResetTokenResponse {
+  resetToken: string;
+}
+
+export interface ResetPasswordDTO {
+  resetToken: string;
+  newPassword: string;
+}
+
 export interface CreateUserDTO {
   name: string;
   email: string;

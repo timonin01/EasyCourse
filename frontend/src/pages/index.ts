@@ -1,6 +1,7 @@
 export { Landing } from './Landing';
 export { Login } from './Login';
 export { Register } from './Register';
+export { ForgotPassword } from './ForgotPassword';
 export { PrivacyPolicy } from './PrivacyPolicy';
 export { PersonalDataConsent } from './PersonalDataConsent';
 export { Dashboard } from './Dashboard';

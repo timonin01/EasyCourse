@@ -5,9 +5,13 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.core.context.UserContextBean;
+import org.core.dto.resetPassword.PasswordResetTokenDTO;
+import org.core.dto.resetPassword.ResetPasswordDTO;
+import org.core.dto.resetPassword.ResetPasswordMessageDTO;
 import org.core.dto.user.*;
 import org.core.service.crud.UserService;
 import org.core.service.registration.RegistrationService;
+import org.core.service.restPassword.ResetPasswordService;
 import org.core.util.AuthUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +22,7 @@ public class UserController {
 
     private final UserService userService;
     private final RegistrationService registrationService;
+    private final ResetPasswordService resetPasswordService;
     private final UserContextBean userContextBean;
 
     @GetMapping("/registration-config")
@@ -29,6 +34,21 @@ public class UserController {
     public UserResponseDTO getUserByUserId(@PathVariable Long userId) {
         AuthUtils.requireSameUser(userContextBean, userId);
         return userService.getUserByUserId(userId);
+    }
+    
+    @PostMapping("/forgot-password")
+    public ResetPasswordMessageDTO forgotPassword(@Valid @RequestBody CheckUserEmailDTO checkUserEmailDTO) {
+        return resetPasswordService.requestResetPassword(checkUserEmailDTO.getEmail());
+    }
+
+    @PostMapping("/verify-reset-code")
+    public PasswordResetTokenDTO verifyResetCode(@Valid @RequestBody VerifyEmailDTO verifyEmailDTO) {
+        return resetPasswordService.verifyEmail(verifyEmailDTO);
+    }
+
+    @PostMapping("/reset-password")
+    public ResetPasswordMessageDTO resetPassword(@Valid @RequestBody ResetPasswordDTO resetPasswordDTO){
+        return resetPasswordService.resetPassword(resetPasswordDTO);
     }
 
     @PostMapping
