@@ -10,3 +10,5 @@ deploy
 **/build
 !app/build/libs/
 !app/build/libs/*.jar
+!bot/build/libs/
+!bot/build/libs/*.jar
