@@ -6,12 +6,12 @@ Backend — Java 21 / Spring Boot 3.2, фронтенд — React 18 + TypeScrip
 ## Модули
 
 - `app/` — основной backend (порт 8080, пакет `org.core`). REST API (JWT-аутентификация), JPA/MariaDB + Liquibase, Redis, Kafka-продюсер (Avro), интеграции с LLM (Provod, DeepSeek, YandexGPT — через `openai-java`), Stepik API (resilience4j: retry/bulkhead/circuit breaker), email, подписки (free/pro лимиты).
-- `bot/` — Telegram-бот (порт 8081, пакет `org`). Консьюмер Kafka, шлёт уведомления о регистрации/подписке (`java-telegram-bot-api` от pengrad).
+- `bot/` — Telegram-бот (порт 8081, пакет `org.bot`). Консьюмер Kafka, шлёт уведомления о регистрации/подписке (`java-telegram-bot-api` от pengrad).
 - `events/` — Avro-схемы событий (`src/main/avro/*.avsc`, namespace `org.core.event`). Кодогенерация таской `generateAvroJava` при `compileJava`.
 - `frontend/` — SPA: Vite, Tailwind, zustand, react-query, framer-motion, axios. Прокси `/api` в dev-режиме (см. `vite.config.ts`).
 - `deploy/` — nginx-конфиги, observability (Grafana + Loki + Promtail), `prod-environment.env` (env для прода).
 
-**Связь app ↔ bot — только через Kafka** (прямых зависимостей Gradle между ними нет): топик `account-update-listener` (свойство `app.kafka.account-update-topic`), событие `AccountUpdateEvent` (Avro) со Schema Registry `http://localhost:8085`, кластер `localhost:9092,9094,9096`.
+**Связь app ↔ bot — только через Kafka** (прямых зависимостей Gradle между ними нет): топик `account-update-listener` (свойство `app.kafka.account-update-topic`), событие `AccountUpdateEvent` (Avro; сериализация — `AccountUpdateEventSerializer`/`AccountUpdateEventDeserializer` в `events`, бинарный Avro без Confluent-обёртки и Schema Registry), кластер `localhost:9092,9094,9096`.
 
 ## Команды
 
@@ -63,6 +63,6 @@ npx tsc -b         # только типчек
 - Windows + Git Bash: в шелле использовать прямые слэши (`C:/Projects/easyCourse`), обратные ломают sed/поиск.
 - `gradle.properties` пинит `org.gradle.java.home=C:/Program Files/Java/jdk-21` и Gradle-кэш в `C:/GradleCache` — на другой машине поправить.
 - Dev-прокси `/api` по умолчанию смотрит на `http://127.0.0.1:8081` (`VITE_DEV_API_PROXY` в `vite.config.ts`), а `app` поднимается на 8080 — при локальной разработке задавать `VITE_DEV_API_PROXY=http://127.0.0.1:8080`.
-- Прод-сборка: Dockerfile'ы в `bot/` (jar `easy-course-bot-1.0.0.jar`) и `frontend/` (node build + nginx); prod-compose перенесён из `deploy/` в корень (`docker-compose-prod.yml`).
+- Прод-сборка: Dockerfile'ы в `bot/` (jar `easy-course-bot-1.0.0.jar`) и `frontend/` (node build + nginx). Прежний `deploy/docker-compose-prod.yml` удалён; локальный compose лежит в корне (`docker-compose.yml`: MariaDB/Redis с репликами + Kafka-кластер 9092/9094/9096 + kafka-ui).
 - `course-captcha-test.html`, `lesson-captcha-test.html` в корне — временные тестовые файлы, не часть продукта.
-- Инфра локально: MariaDB 3306, Redis 6379, Kafka 9092/9094/9096, Schema Registry 8085.
+- Инфра локально: MariaDB 3306, Redis 6379, Kafka 9092/9094/9096.
