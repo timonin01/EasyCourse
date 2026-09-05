@@ -1,0 +1,37 @@
+{
+  "namespace": "org.core.event",
+  "type": "record",
+  "name": "AccountUpdateEvent",
+  "doc": "Событие об изменении аккаунта пользователя (регистрация или оформление подписки), передаётся из app в bot через Kafka",
+  "fields": [
+    {
+      "name": "userName",
+      "type": "string",
+      "doc": "Имя пользователя"
+    },
+    {
+      "name": "subscriptionStatus",
+      "type": {
+        "type": "enum",
+        "name": "SubscriptionStatus",
+        "doc": "Статус подписки",
+        "symbols": [
+          "PRO",
+          "DEFAULT"
+        ]
+      }
+    },
+    {
+      "name": "actionType",
+      "type": {
+        "type": "enum",
+        "name": "ActionType",
+        "doc": "Тип действия",
+        "symbols": [
+          "SUBSCRIPTION",
+          "REGISTRATION"
+        ]
+      }
+    }
+  ]
+}
