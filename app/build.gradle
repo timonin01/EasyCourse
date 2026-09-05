@@ -37,6 +37,8 @@ ext {
 
 dependencies {
 
+    implementation project(':events')
+
     implementation('org.mariadb.jdbc:mariadb-java-client:3.4.1')
     implementation('org.hibernate:hibernate-core:6.5.0.Final')
     implementation ('org.liquibase:liquibase-core:4.27.0')
@@ -57,6 +59,8 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
     implementation 'com.openai:openai-java:4.37.0'
+
+    implementation("org.springframework.kafka:spring-kafka")
 
     compileOnly('org.projectlombok:lombok:1.18.42')
     annotationProcessor('org.projectlombok:lombok:1.18.42')

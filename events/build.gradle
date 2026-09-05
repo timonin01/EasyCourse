@@ -1,0 +1,49 @@
+import org.apache.avro.Schema
+import org.apache.avro.compiler.specific.SpecificCompiler
+import org.apache.avro.generic.GenericData
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.apache.avro:avro-compiler:1.11.4'
+    }
+}
+
+plugins {
+    id 'java-library'
+}
+
+group = 'org.example'
+
+def avroVersion = '1.11.4'
+def generatedAvroDir = layout.buildDirectory.dir('generated/avro-java')
+
+dependencies {
+    api "org.apache.avro:avro:${avroVersion}"
+
+    compileOnly 'org.apache.kafka:kafka-clients:3.6.1'
+}
+
+tasks.register('generateAvroJava') {
+    def avroSrc = file('src/main/avro')
+    inputs.dir(avroSrc)
+    outputs.dir(generatedAvroDir)
+
+    doLast {
+        def outputDir = generatedAvroDir.get().asFile
+        outputDir.mkdirs()
+
+        fileTree(avroSrc) { include '**/*.avsc' }.each { schemaFile ->
+            Schema schema = new Schema.Parser().parse(schemaFile)
+            SpecificCompiler compiler = new SpecificCompiler(schema)
+            compiler.setStringType(GenericData.StringType.String)
+            compiler.compileToDestination(schemaFile, outputDir)
+        }
+    }
+}
+
+sourceSets.main.java.srcDir generatedAvroDir
+
+compileJava.dependsOn 'generateAvroJava'

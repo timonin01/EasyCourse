@@ -2,12 +2,17 @@ package org.core.service.registration;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.core.domain.telegram.TelegramOutbox;
+import org.core.domain.telegram.TelegramOutboxStatus;
 import org.core.dto.registration.PendingRegistrationDTO;
 import org.core.dto.user.*;
+import org.core.event.ActionType;
+import org.core.event.SubscriptionStatus;
 import org.core.exception.exceptions.InvalidVerificationCodeException;
 import org.core.exception.exceptions.PrivacyConsentRequiredException;
 import org.core.exception.exceptions.RegistrationNotAllowedException;
 import org.core.exception.exceptions.UserAlreadyExistsException;
+import org.core.repository.telegram.TelegramOutboxRepository;
 import org.core.service.UserValidationService;
 import org.core.service.crud.UserService;
 import org.core.service.email.EmailService;
@@ -32,6 +37,7 @@ public class RegistrationService {
     private final EmailNormalizer emailNormalizer;
     private final RegistrationPendingService registrationPendingService;
     private final PasswordEncoder passwordEncoder;
+    private final TelegramOutboxRepository telegramOutboxRepository;
 
     @Value("${app.registration.verification.ttl-minutes}")
     private int verificationTtlMinutes;
@@ -93,6 +99,14 @@ public class RegistrationService {
             throw new UserAlreadyExistsException("Пользователь с email " + email + " уже зарегистрирован");
         }
         registrationPendingService.deletePendingKey(email);
+
+        telegramOutboxRepository.save(TelegramOutbox.builder()
+                        .userName(pendingDTO.getName())
+                        .subscriptionStatus(SubscriptionStatus.DEFAULT)
+                        .actionType(ActionType.REGISTRATION)
+                        .status(TelegramOutboxStatus.READY_TO_SEND)
+                .build());
+
         return userService.createVerifiedUserAndLogin(
                 pendingDTO.getName(),
                 email,

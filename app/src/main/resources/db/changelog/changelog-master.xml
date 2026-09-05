@@ -35,5 +35,7 @@
     <include file="db/changelog/templates/changelog-28.xml"/>
     <include file="db/changelog/templates/changelog-29.xml"/>
     <include file="db/changelog/templates/changelog-30.xml"/>
+    <include file="db/changelog/templates/changelog-31.xml"/>
+    <include file="db/changelog/templates/changelog-32.xml"/>
 
 </databaseChangeLog>

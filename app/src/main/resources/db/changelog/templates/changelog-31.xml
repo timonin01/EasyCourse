@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.2.xsd">
+
+    <changeSet id="31-telegram-outbox" author="easycourse">
+        <comment>Transactional outbox for Telegram notifications (user registration / subscription events)</comment>
+        <createTable tableName="telegram_outbox">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_telegram_outbox"/>
+            </column>
+            <column name="user_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subscription_status" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action_type" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="DATETIME"/>
+        </createTable>
+        <createIndex indexName="idx_telegram_outbox_sent_created" tableName="telegram_outbox">
+            <column name="sent"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

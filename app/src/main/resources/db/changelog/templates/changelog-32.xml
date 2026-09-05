@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.2.xsd">
+
+    <changeSet id="32-telegram-outbox-status-enum" author="easycourse">
+        <comment>Replace boolean sent flag with status enum (READY_TO_SEND / ALREADY_SENT)</comment>
+        <dropIndex indexName="idx_telegram_outbox_sent_created" tableName="telegram_outbox"/>
+        <addColumn tableName="telegram_outbox">
+            <column name="status" type="VARCHAR(32)" defaultValue="READY_TO_SEND">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <dropColumn tableName="telegram_outbox" columnName="sent"/>
+        <createIndex indexName="idx_telegram_outbox_status_created" tableName="telegram_outbox">
+            <column name="status"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

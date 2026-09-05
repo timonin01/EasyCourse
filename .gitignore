@@ -45,5 +45,9 @@ bin/
 ### VS Code ###
 .vscode/
 
+### Promo video materials (working files, not part of the product) ###
+promo/
+.video_agent/
+
 ### Mac OS ###
 .DS_Store
