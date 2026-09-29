@@ -238,6 +238,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
+    @ExceptionHandler(PaymentServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handlePaymentServiceUnavailableException(PaymentServiceUnavailableException ex) {
+        log.error("Payment service unavailable: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Payment service unavailable",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
     @ExceptionHandler(PromptLengthExceededException.class)
     public ResponseEntity<ErrorResponse> handlePromptLengthExceededException(PromptLengthExceededException ex) {
         log.warn("Prompt length exceeded: {}", ex.getMessage());
