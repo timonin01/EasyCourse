@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Service
@@ -142,7 +143,8 @@ public class SubscriptionService {
     }
 
     private boolean isPro(User user) {
-        return user.getRole() == UserRole.PRO;
+        return user.getRole() == UserRole.PRO &&
+                (user.getProUntil() == null || user.getProUntil().isAfter(LocalDateTime.now()));
     }
 
     private User findUser(Long userId) {
