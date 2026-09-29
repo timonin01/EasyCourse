@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/users/forgot-password","/api/v1/users/reset-password").permitAll()
                         .requestMatchers("/api/v1/users/verify-reset-code").permitAll()
                         .requestMatchers("/api/v1/users/registration-config").permitAll()
+                        .requestMatchers("/api/v1/payments/webhook").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()
                 )
