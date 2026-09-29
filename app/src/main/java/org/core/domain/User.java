@@ -2,6 +2,7 @@ package org.core.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.core.domain.payments.yookassa.SubscriptionPayment;
 import org.core.enums.UserRole;
 
 import java.time.LocalDateTime;
@@ -39,6 +40,9 @@ public class User {
     @Builder.Default
     private UserRole role = UserRole.DEFAULT;
 
+    @Column(name = "pro_until")
+    private LocalDateTime proUntil;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -64,6 +68,10 @@ public class User {
     @OrderBy("createdAt DESC")
     @Builder.Default
     private List<Course> courses = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<SubscriptionPayment> subscriptionPayments = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
